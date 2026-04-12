@@ -1,0 +1,9 @@
+# Normalise line endings to LF everywhere
+* text=auto eol=lf
+
+# Binaries — no line ending normalisation
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
+*.wasm binary

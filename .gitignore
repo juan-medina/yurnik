@@ -1,0 +1,33 @@
+# Go
+bin/
+dist/
+*.exe
+*.test
+*.out
+coverage.txt
+
+# Node / pnpm
+node_modules/
+web/node_modules/
+web/dist/
+web/.vite/
+pnpm-debug.log*
+
+# Environment — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
