@@ -4,19 +4,25 @@ Architecture decisions and the reasoning behind them. This is not a tutorial and
 
 ## What we are building
 
-A social feed for gaming sessions, built on AT Proto. The core loop: a tray agent detects when you are playing a game and for how long, proposes a session record when you stop, you confirm or discard it, confirmed sessions publish to your AT Proto feed and become visible to followers.
+A social feed for gaming sessions, built on AT Proto. The core loop: a client detects or the user manually logs when they are playing a game and for how long, proposes a session record when they stop, the user confirms or discards it, confirmed sessions publish to their AT Proto feed and become visible to followers.
 
 Discovery and recommendations are a secondary goal, enabled by the session data that accumulates over time.
 
-## Components
+## Core product
 
-Three deployable things:
+Two things form the core product:
 
-**API server** — a single Go binary. Handles all backend logic, proxies IGDB with a server-side cache, holds unconfirmed sessions until the user acts on them, and serves the exclusion list to the agent.
+**API server** — a single Go binary. Handles all backend logic, proxies IGDB with a server-side cache, holds unconfirmed sessions until the user acts on them, and serves the exclusion list to clients.
 
-**Tray agent** — a small C# application distributed as a Windows installer via Velopack. Watches for games, creates and heartbeats sessions via the API, fires an OS notification with a URL when a game closes. Has no UI beyond a system tray icon and a quit menu item. Registers the `agon://` custom URL scheme on install so the OS can wake it for configuration updates.
+**Web frontend** — a React SPA deployed to Cloudflare Pages. Handles session confirmation, the social feed, game search, personal stats, and exclusion management. Works standalone — no client installation required. Users who only play on platforms without an automatic detection client (PS5, Switch, etc.) log sessions manually through the web app.
 
-**Web frontend** — a React SPA deployed to Cloudflare Pages. Handles session confirmation, the social feed, game search, personal stats, and exclusion management.
+## Clients
+
+Clients are optional. The web app is fully functional without any client installed.
+
+**Windows tray agent** — a C# application distributed as a Windows installer via Velopack. Watches for games via graphics API detection, creates and heartbeats sessions via the API, fires an OS notification with a URL when a game closes. Has no UI beyond a system tray icon and a quit menu item. Registers the `agon://` custom URL scheme on install so the OS can wake it for configuration updates.
+
+This is the first client. Future clients could include agents for other platforms, mobile apps, or console companions — anything that can call the API.
 
 ## Tech stack
 
@@ -28,7 +34,7 @@ Go is used for the API server. `net/http` from the standard library handles rout
 
 Go was chosen over Kotlin/JVM (too much memory at idle for a cheap VPS), Python (slower, two languages needed anyway once the agent language is decided), Node/TypeScript (same problem), and PHP (no meaningful advantage). C# was considered but Go produces a self-contained binary with no runtime required on the server, which simplifies deployment and keeps the VPS footprint minimal.
 
-### Tray agent — C#, .NET 9, Velopack
+### Windows tray agent — C#, .NET 9, Velopack
 
 C# is used for the Windows tray agent. .NET 9 provides first-class Windows API access for process enumeration, system tray integration, OS notifications, and custom URL scheme registration. Velopack handles installation, auto-updates via GitHub Releases, and clean uninstall — all things a proper Windows desktop application needs.
 
@@ -70,7 +76,7 @@ The scope does not justify a gateway, a reverse proxy, or multiple services. Go'
 
 ## Game detection
 
-The tray agent detects games by watching for new processes that load a graphics API — DirectX, OpenGL, or Vulkan. Specifically it looks for `d3d9.dll`, `d3d10.dll`, `d3d11.dll`, `d3d12.dll`, `opengl32.dll`, or `vulkan-1.dll` in the process's loaded modules. This covers virtually every PC game regardless of store or launcher.
+The Windows tray agent detects games by watching for new processes that load a graphics API — DirectX, OpenGL, or Vulkan. Specifically it looks for `d3d9.dll`, `d3d10.dll`, `d3d11.dll`, `d3d12.dll`, `opengl32.dll`, or `vulkan-1.dll` in the process's loaded modules. This covers virtually every PC game regardless of store or launcher.
 
 When a matching process appears, the agent captures the window title and sends it to the API for fuzzy matching against IGDB. The match is a suggestion, not a fact — the user confirms or corrects it.
 
@@ -79,8 +85,8 @@ We do not maintain an executable-to-game database. The window title approach wor
 ## Session lifecycle
 
 ```
-active      game is running, agent is sending heartbeats every 10 minutes
-ended       game process closed, IGDB match attempted, notification fired
+active      game is running, client is sending heartbeats every 10 minutes
+ended       game process closed (or user manually ended), IGDB match attempted, notification fired
 confirmed   user reviewed and approved, published to AT Proto feed
 discarded   user dismissed
 ```
@@ -95,17 +101,17 @@ When a session is confirmed, the AT Proto record contains all game metadata — 
 
 ## IGDB
 
-IGDB (owned by Twitch) is free for non-commercial use and is the most comprehensive game database available. We use it for game metadata, cover art, genres, and similar game relationships. The Twitch client secret lives server-side only — the frontend and the agent never touch it.
+IGDB (owned by Twitch) is free for non-commercial use and is the most comprehensive game database available. We use it for game metadata, cover art, genres, and similar game relationships. The Twitch client secret lives server-side only — the frontend and clients never touch it.
 
 IGDB responses are cached in Postgres with a TTL. This cache is server-side infrastructure to stay within IGDB rate limits during detection and confirmation. Clients read game metadata from the denormalised AT Proto records instead.
 
 ## Exclusion list
 
-Users can mark specific executables as non-games so the agent ignores them. Exclusions are stored in Postgres per user DID and fetched by the agent on startup. When the user saves a change in the web app, the web app opens `agon://refresh-exclusions`, the OS routes this to the running agent, and the agent fetches the updated list from the API. If the agent is not running there are no sessions being detected and exclusions are irrelevant — the agent always loads fresh exclusions on startup anyway.
+Users can mark specific executables as non-games so the agent ignores them. Exclusions are stored in Postgres per user DID. The agent fetches the full exclusion list from the API on startup and again each time a new process is detected, before deciding whether to create a session. Game launches are infrequent events so this is negligible traffic. No persistent connection, no polling, no push mechanism needed — exclusions are only relevant at the moment of detection.
 
 ## Custom URL scheme
 
-The agent registers `agon://` as a custom URL scheme on install via Velopack. This allows the web app and OS notifications to wake the agent without maintaining a persistent connection. No SSE, no polling, no open connections.
+The agent registers `agon://` as a custom URL scheme on install via Velopack. Its sole purpose is the OAuth callback: after the user completes Bluesky OAuth in the browser, the web app redirects to `agon://auth?token=...`, the OS routes this to the running agent, and the agent stores the token. This is the standard pattern for desktop OAuth flows.
 
 ## Data boundaries
 
@@ -126,7 +132,7 @@ Tests are written from the start. Go packages have unit tests alongside the code
 
 ## What we are not building yet
 
-- macOS and Linux tray agent (Windows first)
+- Tray agent for platforms other than Windows
 - Console session detection (PSN / Xbox APIs are a future consideration)
 - The language-based recommendation engine (requires session note data at scale)
 - Self-hosted PDS
