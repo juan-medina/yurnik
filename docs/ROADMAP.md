@@ -23,10 +23,6 @@ Initial monorepo structure, tooling config, and documentation baseline.
 - `docs/DEPLOYMENT.md` — infrastructure topology and operational decisions
 - Windows dev setup scripts: `scripts/setup.ps1`, `scripts/db-init.ps1`, `scripts/db-init.sql`, `scripts/db-start.ps1`, `scripts/db-stop.ps1`
 
----
-
-## In Progress
-
 ### 1 — Frontend shell
 Layout, routing, and design system foundations. No data, no API calls — structure and navigation only.
 
@@ -34,8 +30,36 @@ Layout, routing, and design system foundations. No data, no API calls — struct
 - [x] React Router v7 — nested layout route with `createBrowserRouter`
 - [x] Shell layout: left sidebar with nav links, top bar with theme toggle and avatar placeholder
 - [x] Design tokens: Tailwind v4 CSS variables, violet accent, dark mode default with light mode toggle
-- [x] Placeholder pages: feed, inbox, profile, game search, settings
+- [x] Placeholder pages: Realm, Quests, Players, Hero, Settings
+- [x] Echoes page (`/echoes`) and bell NavLink in TopBar with unread badge support
 - [x] Vitest + React Testing Library wired up — 2 tests passing
+
+---
+
+## In Progress
+
+### 2 — Frontend with mock data
+Full UI and user flows built with inline mock data. No backend required at this stage.
+
+**Realm feed**
+- [x] Session cards: cover art, player, game title, genres, duration, timestamp, log, inline like toggle
+- [x] Cards navigate to `/quest/:id`
+
+**Quest detail (`/quest/:id`)**
+- [x] Session header: back navigation, player info, cover art, game metadata, log as blockquote
+- [x] Likes: inline toggle, liked-by avatar stack, expandable count
+- [x] "On this quest": Friends section (follow graph) and Others section (discovery + Follow toggle)
+- [x] Comments: flat chronological list, comment input, Post button
+
+**Remaining**
+- [ ] Quests page — your own sessions: confirmed history and pending confirmation inbox
+- [ ] Session confirmation flow — review game match, duration, write log, confirm or discard
+- [ ] Players page — who you follow, who follows you
+- [ ] Hero page — your profile, confirmed session history, stats
+- [ ] Echoes page — notification list (new comment, new follower)
+- [ ] Game search — IGDB-backed search UI (mocked)
+- [ ] Exclusion management — add/remove executable exclusions
+- [ ] Vitest tests for all flows
 
 ---
 
@@ -43,23 +67,12 @@ Layout, routing, and design system foundations. No data, no API calls — struct
 
 Work is sequenced intentionally. Each phase produces something usable before the next begins.
 
-### 2 — API contracts
+### 3 — API contracts
 HTTP API shapes defined and documented before any implementation is written. The frontend mock layer and the Go implementation will both be built against these contracts.
 
 - Request and response types for every endpoint the frontend needs
 - Documented in `docs/API.md`
 - Error shape and status code conventions established
-
-### 3 — Frontend with mock data
-Full UI and user flows built against the API contracts from phase 2. Mock handlers return realistic data; no real backend required.
-
-- Session feed — list of confirmed sessions from followed users
-- Session inbox — unconfirmed sessions pending review, confirm/discard actions
-- Session confirmation flow — game match review, duration, notes
-- Game search — IGDB-backed search UI (mocked)
-- Profile page — user's confirmed session history
-- Exclusion management — add/remove executable exclusions
-- All flows covered by Vitest tests
 
 ### 4 — API: authentication
 Bluesky OAuth wired end-to-end. The most external-dependency-heavy slice; doing it before the rest of the API means everything else can assume working auth.

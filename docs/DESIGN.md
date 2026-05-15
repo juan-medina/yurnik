@@ -99,6 +99,107 @@ Heartbeats serve two purposes: accurate duration if the machine crashes, and liv
 
 When a session is confirmed, the AT Proto record contains all game metadata — title, cover art URL, genres, IGDB ID — baked in at publish time. A friend's feed never needs to query the API or IGDB to render a session card. The record is self-contained and portable.
 
+## Session record schema
+
+The AT Proto session record (`app.agon.session`) contains:
+
+- Game title, cover art URL, genres, IGDB ID — baked in at publish time
+- Duration in seconds
+- Start and end timestamps
+- Optional `log` — the owner's narrative note, written at confirmation time
+
+The `log` field is defined in the lexicon from the start. Records published without a log will permanently lack one — there is no retrofit path once a record is on the PDS. The log is immutable after publish; it is not a comment and cannot be edited post-confirmation.
+
+## Likes
+
+Likes are AT Proto records that reference the session's AT URI. They are separate records in the liker's repo — the original session record is never modified. Sessions published today are already likeable when the like feature ships; no migration is needed.
+
+Likes are **not surfaced as feed items** in the Realm and do **not** trigger an Echo notification — they are too frequent and low-signal for a focused gaming audience. The like button appears inline on each Realm feed card (heart icon + count) so users can like without navigating away. The full liked-by list (avatars, expandable) lives in the session detail only.
+
+## Log and comments
+
+Two distinct concepts for text attached to a quest:
+
+**Log** — the session owner's narrative, written once at confirmation time. It is a field on the session record (`app.agon.session.log`). Shown in the Realm feed card and in the session detail. Only the owner has a log; it cannot be edited after publish.
+
+**Comments** — text written by any player (including the session owner) after the session is published. Separate AT Proto records (`app.agon.comment`) that reference the session URI. Shown in the session detail only — never in the Realm feed. Comments are flat and chronological — no threading, no hierarchy, no reply-to chains. Comments cannot be liked. A new comment on your session by another player triggers an Echo notification; your own comments on your own session do not.
+
+## Navigation structure
+
+The shell has a fixed sidebar on the left and a top bar across the top.
+
+**Sidebar** — primary navigation, five items:
+
+| Item | Route | Purpose |
+|------|-------|---------|
+| Realm | `/` | Social feed — sessions from people you follow |
+| Quests | `/quests` | Your own sessions — confirmed, pending, history |
+| Players | `/players` | Social graph — who you follow, who follows you |
+| Hero | `/hero` | Your profile and stats |
+| Settings | `/settings` | App preferences and account |
+
+**TopBar** — secondary controls, right-aligned:
+
+| Item | Purpose |
+|------|---------|
+| Echoes bell | Notifications — always visible, badge when unread |
+| Theme toggle | Light / dark mode |
+| Hero avatar | Quick link to `/hero` |
+
+The Echoes bell is always present in the TopBar regardless of route. It navigates to `/echoes` — a dedicated page listing notifications. The bell highlights (same primary colour as active sidebar items) when on that route, and shows an unread badge when there are unseen notifications.
+
+## Echoes
+
+Echoes are in-app notifications. They surface in the TopBar bell icon, which shows a badge when there are unread items. Clicking the bell opens a panel listing recent Echoes without navigating away from the current page.
+
+Events that produce an Echo:
+- A new comment on one of your sessions by another player
+- A new follower
+
+Events that do **not** produce an Echo:
+- Likes — too frequent and low-signal for a focused gaming audience
+- Your own comments on your own session
+
+Echoes are stored server-side (Postgres) per user DID so they persist across devices and sessions. They are marked read when the user visits `/echoes`.
+
+## Realm feed
+
+The Realm is the home feed. It shows confirmed sessions from people you follow, reverse chronological. Each session card displays:
+
+- Player avatar, display name, Bluesky handle
+- Game cover art (square thumbnail, left-aligned)
+- Game title and genre chips
+- Duration and relative timestamp ("3h 14m · 2 hours ago")
+- Like button (heart icon + count, inline) — toggleable without leaving the feed
+- Log text if the session has a `log` value
+
+The only action on the card is the like. There are no comments or reply actions on the card. Likes as feed items ("X liked Y's session") are not shown — the feed answers only "what did people I follow play?"
+
+## Session detail
+
+Tapping a session card opens the session detail at `/quest/:id`. It shows:
+
+- Full session metadata and log
+- Like button — the only place the like action is exposed
+- Liked-by avatars — a subset shown inline, expandable to the full list
+- Comments — flat, chronological, posted by any player including the owner; not likeable
+- **Friends on this quest** — people you follow who have also played this game, ordered by most recent session, up to 20
+- **Others on this quest** — players outside your follow graph who have played this game, ordered by most recent session, up to 20
+
+The two quest sections drive discovery and engagement: seeing a friend on the same game invites a like on their session; seeing a stranger invites a follow.
+
+## Game sessions index
+
+Querying AT Proto for "all sessions with game X" across the network is impractical — AT Proto has no cross-PDS index for arbitrary record fields. Instead, the API server maintains a lightweight Postgres index:
+
+```
+game_sessions_index(igdb_id, user_did, session_uri, played_at)
+```
+
+A row is written when a session is confirmed and published. The session detail query is a single cheap Postgres read: top 20 rows by `played_at` for the given `igdb_id`. The AT Proto record at `session_uri` provides all display data.
+
+Limitation: only sessions confirmed through this API server are indexed. Sessions from other Agōn instances would not appear. This is acceptable for MVP — federation is a future concern.
+
 ## IGDB
 
 IGDB (owned by Twitch) is free for non-commercial use and is the most comprehensive game database available. We use it for game metadata, cover art, genres, and similar game relationships. The Twitch client secret lives server-side only — the frontend and clients never touch it.
@@ -117,11 +218,15 @@ The agent registers `agon://` as a custom URL scheme on install via Velopack. It
 
 ```
 AT Proto      confirmed sessions — fully denormalised, permanent, user-owned
+              likes — separate records referencing session AT URIs
               social graph, identity, feed
 
 Postgres      unconfirmed sessions — evicted after 7 days
               exe exclusions — per user DID, permanent until removed
               game cache — server-side IGDB responses with TTL
+              game_sessions_index — igdb_id / user_did / session_uri / played_at
+                                    written on confirm, used for "on this quest" queries
+              echoes — per user DID, new comment / new follower events, marked read on open
 
 localStorage  UI preferences only
 ```
