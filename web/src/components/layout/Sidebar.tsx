@@ -12,7 +12,7 @@ type NavItem = {
   end?: boolean;
 };
 
-const navItems: NavItem[] = [
+export const navItems: NavItem[] = [
   { to: "/", label: "Realm", icon: Globe2, end: true },
   { to: "/journeys", label: "Journeys", icon: ScrollText },
   { to: "/players", label: "Players", icon: Users },

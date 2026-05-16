@@ -2,30 +2,32 @@
 // SPDX-License-Identifier: MIT
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import Sidebar from "./Sidebar";
+import Sidebar, { navItems } from "./Sidebar";
 
 describe("Sidebar", () => {
-  it("renders all navigation links", () => {
+  it("each navigation link points to its declared route", () => {
     render(
       <MemoryRouter>
         <Sidebar />
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Realm")).toBeInTheDocument();
-    expect(screen.getByText("Journeys")).toBeInTheDocument();
-    expect(screen.getByText("Players")).toBeInTheDocument();
-    expect(screen.getByText("Hero")).toBeInTheDocument();
-    expect(screen.getByText("Settings")).toBeInTheDocument();
+    for (const { label, to } of navItems) {
+      expect(screen.getByRole("link", { name: label })).toHaveAttribute("href", to);
+    }
   });
 
-  it("renders the app name", () => {
+  it("marks the active route link as current and leaves others unmarked", () => {
+    const active = navItems.find(({ end }) => !end)!;
+    const other = navItems.find(({ to }) => to !== active.to)!;
+
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[active.to]}>
         <Sidebar />
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("agōn")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: active.label })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: other.label })).not.toHaveAttribute("aria-current", "page");
   });
 });
