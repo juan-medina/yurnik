@@ -28,7 +28,7 @@ export type MockComment = {
   timestamp: string;
 };
 
-export type QuestPlayer = {
+export type JourneyPlayer = {
   player: Player;
   duration: string;
   timestamp: string;
@@ -161,13 +161,13 @@ export const MOCK_COMMENTS: MockComment[] = [
   },
 ];
 
-export const MOCK_FRIENDS_ON_QUEST: QuestPlayer[] = [
+export const MOCK_FRIENDS_ON_JOURNEY: JourneyPlayer[] = [
   { player: PLAYERS[1], duration: "2h 44m", timestamp: "2d ago", isFollowing: true },
   { player: PLAYERS[2], duration: "1h 30m", timestamp: "5d ago", isFollowing: true },
   { player: PLAYERS[3], duration: "4h 10m", timestamp: "1w ago", isFollowing: true },
 ];
 
-export const MOCK_OTHERS_ON_QUEST: QuestPlayer[] = [
+export const MOCK_OTHERS_ON_JOURNEY: JourneyPlayer[] = [
   {
     player: { id: "o1", name: "Jordan Park", handle: "jordanp.bsky.social", color: "#0284c7" },
     duration: "3h 02m",

@@ -3,11 +3,11 @@
 import { RouterProvider, createBrowserRouter } from "react-router";
 import Shell from "@/components/layout/Shell";
 import Realm from "@/pages/Realm";
-import Quests from "@/pages/Quests";
+import Journeys from "@/pages/Journeys";
 import Players from "@/pages/Players";
 import Hero from "@/pages/Hero";
 import Echoes from "@/pages/Echoes";
-import QuestDetail from "@/pages/QuestDetail";
+import JourneyDetail from "@/pages/JourneyDetail";
 import Settings from "@/pages/Settings";
 
 const router = createBrowserRouter([
@@ -16,10 +16,10 @@ const router = createBrowserRouter([
     element: <Shell />,
     children: [
       { index: true, element: <Realm /> },
-      { path: "quests", element: <Quests /> },
+      { path: "journeys", element: <Journeys /> },
       { path: "players", element: <Players /> },
       { path: "hero", element: <Hero /> },
-      { path: "quest/:id", element: <QuestDetail /> },
+      { path: "journey/:id", element: <JourneyDetail /> },
       { path: "echoes", element: <Echoes /> },
       { path: "settings", element: <Settings /> },
     ],

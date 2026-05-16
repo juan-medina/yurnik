@@ -13,7 +13,7 @@ describe("Sidebar", () => {
     );
 
     expect(screen.getByText("Realm")).toBeInTheDocument();
-    expect(screen.getByText("Quests")).toBeInTheDocument();
+    expect(screen.getByText("Journeys")).toBeInTheDocument();
     expect(screen.getByText("Players")).toBeInTheDocument();
     expect(screen.getByText("Hero")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();

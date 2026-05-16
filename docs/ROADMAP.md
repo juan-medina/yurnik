@@ -30,7 +30,7 @@ Layout, routing, and design system foundations. No data, no API calls — struct
 - [x] React Router v7 — nested layout route with `createBrowserRouter`
 - [x] Shell layout: left sidebar with nav links, top bar with theme toggle and avatar placeholder
 - [x] Design tokens: Tailwind v4 CSS variables, violet accent, dark mode default with light mode toggle
-- [x] Placeholder pages: Realm, Quests, Players, Hero, Settings
+- [x] Placeholder pages: Realm, Journeys, Players, Hero, Settings
 - [x] Echoes page (`/echoes`) and bell NavLink in TopBar with unread badge support
 - [x] Vitest + React Testing Library wired up — 2 tests passing
 
@@ -43,16 +43,16 @@ Full UI and user flows built with inline mock data. No backend required at this 
 
 **Realm feed**
 - [x] Session cards: cover art, player, game title, genres, duration, timestamp, log, inline like toggle
-- [x] Cards navigate to `/quest/:id`
+- [x] Cards navigate to `/journey/:id`
 
-**Quest detail (`/quest/:id`)**
+**Journey detail (`/journey/:id`)**
 - [x] Session header: back navigation, player info, cover art, game metadata, log as blockquote
 - [x] Likes: inline toggle, liked-by avatar stack, expandable count
-- [x] "On this quest": Friends section (follow graph) and Others section (discovery + Follow toggle)
+- [x] "On this journey": Friends section (follow graph) and Others section (discovery + Follow toggle)
 - [x] Comments: flat chronological list, comment input, Post button
 
 **Remaining**
-- [ ] Quests page — your own sessions: confirmed history and pending confirmation inbox
+- [ ] Journeys page — your own sessions: confirmed history and pending confirmation inbox
 - [ ] Session confirmation flow — review game match, duration, write log, confirm or discard
 - [ ] Players page — who you follow, who follows you
 - [ ] Hero page — your profile, confirmed session history, stats

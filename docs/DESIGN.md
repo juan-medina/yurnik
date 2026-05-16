@@ -118,7 +118,7 @@ Likes are **not surfaced as feed items** in the Realm and do **not** trigger an 
 
 ## Log and comments
 
-Two distinct concepts for text attached to a quest:
+Two distinct concepts for text attached to a journey:
 
 **Log** — the session owner's narrative, written once at confirmation time. It is a field on the session record (`app.agon.session.log`). Shown in the Realm feed card and in the session detail. Only the owner has a log; it cannot be edited after publish.
 
@@ -133,7 +133,7 @@ The shell has a fixed sidebar on the left and a top bar across the top.
 | Item | Route | Purpose |
 |------|-------|---------|
 | Realm | `/` | Social feed — sessions from people you follow |
-| Quests | `/quests` | Your own sessions — confirmed, pending, history |
+| Journeys | `/journeys` | Your own sessions — confirmed, pending, history |
 | Players | `/players` | Social graph — who you follow, who follows you |
 | Hero | `/hero` | Your profile and stats |
 | Settings | `/settings` | App preferences and account |
@@ -177,16 +177,16 @@ The only action on the card is the like. There are no comments or reply actions 
 
 ## Session detail
 
-Tapping a session card opens the session detail at `/quest/:id`. It shows:
+Tapping a session card opens the session detail at `/journey/:id`. It shows:
 
 - Full session metadata and log
 - Like button — the only place the like action is exposed
 - Liked-by avatars — a subset shown inline, expandable to the full list
 - Comments — flat, chronological, posted by any player including the owner; not likeable
-- **Friends on this quest** — people you follow who have also played this game, ordered by most recent session, up to 20
-- **Others on this quest** — players outside your follow graph who have played this game, ordered by most recent session, up to 20
+- **Friends on this journey** — people you follow who have also played this game, ordered by most recent session, up to 20
+- **Others on this journey** — players outside your follow graph who have played this game, ordered by most recent session, up to 20
 
-The two quest sections drive discovery and engagement: seeing a friend on the same game invites a like on their session; seeing a stranger invites a follow.
+The two journey sections drive discovery and engagement: seeing a friend on the same game invites a like on their session; seeing a stranger invites a follow.
 
 ## Game sessions index
 
@@ -225,7 +225,7 @@ Postgres      unconfirmed sessions — evicted after 7 days
               exe exclusions — per user DID, permanent until removed
               game cache — server-side IGDB responses with TTL
               game_sessions_index — igdb_id / user_did / session_uri / played_at
-                                    written on confirm, used for "on this quest" queries
+                                    written on confirm, used for "on this journey" queries
               echoes — per user DID, new comment / new follower events, marked read on open
 
 localStorage  UI preferences only

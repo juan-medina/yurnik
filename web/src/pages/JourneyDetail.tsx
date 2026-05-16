@@ -5,14 +5,14 @@ import { useNavigate, useParams } from "react-router";
 import { Check, ChevronLeft, Clock, Heart, UserPlus } from "lucide-react";
 import {
   MOCK_COMMENTS,
-  MOCK_FRIENDS_ON_QUEST,
+  MOCK_FRIENDS_ON_JOURNEY,
   MOCK_LIKERS,
-  MOCK_OTHERS_ON_QUEST,
+  MOCK_OTHERS_ON_JOURNEY,
   SESSIONS,
   initials,
   type MockComment,
   type Player,
-  type QuestPlayer,
+  type JourneyPlayer,
 } from "@/lib/mock";
 
 function PlayerAvatar({ player, size = "md" }: { player: Player; size?: "sm" | "md" | "lg" }) {
@@ -28,7 +28,7 @@ function PlayerAvatar({ player, size = "md" }: { player: Player; size?: "sm" | "
   );
 }
 
-function QuestPlayerRow({ entry }: { entry: QuestPlayer }) {
+function JourneyPlayerRow({ entry }: { entry: JourneyPlayer }) {
   const [following, setFollowing] = useState(false);
 
   return (
@@ -85,7 +85,7 @@ function CommentRow({ comment }: { comment: MockComment }) {
   );
 }
 
-export default function QuestDetail() {
+export default function JourneyDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const session = SESSIONS.find((s) => s.id === id);
@@ -97,7 +97,7 @@ export default function QuestDetail() {
   if (!session) {
     return (
       <div className="mx-auto max-w-2xl pt-8 text-center text-muted-foreground">
-        Quest not found.
+        Journey not found.
       </div>
     );
   }
@@ -193,33 +193,33 @@ export default function QuestDetail() {
         </div>
       </div>
 
-      {/* On this quest */}
+      {/* On this journey */}
       <div className="mt-4 rounded-lg border border-border bg-card">
         <div className="border-b border-border px-4 py-3">
-          <h2 className="text-sm font-semibold">On this quest</h2>
+          <h2 className="text-sm font-semibold">On this journey</h2>
         </div>
 
-        {MOCK_FRIENDS_ON_QUEST.length > 0 && (
+        {MOCK_FRIENDS_ON_JOURNEY.length > 0 && (
           <div className="px-4">
             <p className="pt-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Friends
             </p>
             <div className="divide-y divide-border">
-              {MOCK_FRIENDS_ON_QUEST.map((entry) => (
-                <QuestPlayerRow key={entry.player.id} entry={entry} />
+              {MOCK_FRIENDS_ON_JOURNEY.map((entry) => (
+                <JourneyPlayerRow key={entry.player.id} entry={entry} />
               ))}
             </div>
           </div>
         )}
 
-        {MOCK_OTHERS_ON_QUEST.length > 0 && (
+        {MOCK_OTHERS_ON_JOURNEY.length > 0 && (
           <div className="px-4 pb-2">
             <p className="pt-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Others
             </p>
             <div className="divide-y divide-border">
-              {MOCK_OTHERS_ON_QUEST.map((entry) => (
-                <QuestPlayerRow key={entry.player.id} entry={entry} />
+              {MOCK_OTHERS_ON_JOURNEY.map((entry) => (
+                <JourneyPlayerRow key={entry.player.id} entry={entry} />
               ))}
             </div>
           </div>

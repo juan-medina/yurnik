@@ -20,7 +20,7 @@ function SessionCard({ session }: SessionCardProps) {
   return (
     <article
       className="flex cursor-pointer gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent/5"
-      onClick={() => navigate(`/quest/${session.id}`)}
+      onClick={() => navigate(`/journey/${session.id}`)}
     >
       <div
         className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md"

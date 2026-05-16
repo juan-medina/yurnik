@@ -14,7 +14,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { to: "/", label: "Realm", icon: Globe2, end: true },
-  { to: "/quests", label: "Quests", icon: ScrollText },
+  { to: "/journeys", label: "Journeys", icon: ScrollText },
   { to: "/players", label: "Players", icon: Users },
   { to: "/hero", label: "Hero", icon: Shield },
   { to: "/settings", label: "Settings", icon: Settings },

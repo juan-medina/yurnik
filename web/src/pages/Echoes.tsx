@@ -6,7 +6,7 @@ export default function Echoes() {
     <div>
       <h1 className="text-2xl font-bold">Echoes</h1>
       <p className="mt-2 text-muted-foreground">
-        Notifications from your quests will appear here.
+        Notifications from your journeys will appear here.
       </p>
     </div>
   );

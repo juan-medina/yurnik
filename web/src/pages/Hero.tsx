@@ -6,7 +6,7 @@ export default function Hero() {
     <div>
       <h1 className="text-2xl font-bold">Hero</h1>
       <p className="mt-2 text-muted-foreground">
-        Your character — avatar, display name, and your public quest history.
+        Your character — avatar, display name, and your public journey history.
       </p>
     </div>
   );
