@@ -29,6 +29,16 @@ The agent is built with .NET tooling — see `agent/README.md`.
 - Tests from the start — behaviour that would be painful to debug manually gets a test
 - Comments only for non-obvious logic
 
+## Rate limiting
+
+Rate limiting is not a hardening afterthought — it is a first-class constraint that every API route is built within. It protects against external abuse and our own bugs equally.
+
+The Go API server uses a global token bucket limiter (`golang.org/x/time/rate`) applied as middleware before any handler runs. The limit is read from `RATE_LIMIT_RPS` at startup. When the limit is exceeded the server returns `429 Too Many Requests` immediately — it does not queue, retry, or slow down.
+
+The IGDB proxy enforces a separate hard sub-limit of 4 requests/second upstream, regardless of how many inbound requests are in flight. This is enforced in code, not relied upon from IGDB's own 429 responses.
+
+When writing code that calls external services or downstream dependencies, never assume rate limiting is someone else's problem. Any retry logic must use exponential backoff with a cap. Unbounded retry loops are bugs.
+
 ## Go — api/
 
 - `gofmt` always. CI rejects unformatted code
@@ -47,6 +57,7 @@ The agent is built with .NET tooling — see `agent/README.md`.
 - No exceptions for control flow. Prefer returning null or a result type for expected failures
 - No UI beyond the system tray icon — any configuration or session management opens the web app via the default browser
 - The agent registers `agon://` as a custom URL scheme. URL handlers are the only way the web app communicates back to the agent
+- The agent must never hammer the API. Heartbeats are every 10 minutes. Any retry on failure must use exponential backoff. There is no scenario in which the agent sends requests in a tight loop
 - File header on every `.cs` file:
 
 ```csharp
@@ -71,7 +82,7 @@ Session records are published to AT Proto only when the user explicitly confirms
 
 ## IGDB
 
-All IGDB calls go through the Go API server. The Twitch client secret never reaches the frontend or the agent. Responses are cached in Postgres with a TTL.
+All IGDB calls go through the Go API server. The Twitch client secret never reaches the frontend or the agent. Responses are cached in Postgres with a TTL. The IGDB proxy enforces a hard upstream rate limit of 4 req/s — a cache hit must never result in an IGDB call.
 
 ## Authentication
 

@@ -241,3 +241,21 @@ Tests are written from the start. Go packages have unit tests alongside the code
 - Console session detection (PSN / Xbox APIs are a future consideration)
 - The language-based recommendation engine (requires session note data at scale)
 - Self-hosted PDS
+
+## Rate limiting
+
+Rate limiting is built into the API server from the start, not added later as a hardening step.
+
+The reason is not primarily abuse prevention — it is predictability. A misconfigured cache, a retry loop with no backoff, or a bad deployment can generate runaway internal traffic just as effectively as a malicious actor. The rate limits define what this infrastructure is sized for. Anything above that ceiling gets a `429 Too Many Requests` immediately. The server does not queue, does not slow down, and does not accumulate cost — it refuses.
+
+This gives the "outage not bill" failure mode deliberately: under extreme load the API degrades cleanly rather than saturating downstream dependencies or generating unexpected charges.
+
+Two layers enforce this:
+
+**Cloudflare (per-IP)** — 100 requests per IP per minute, configured in the Cloudflare dashboard. This is the outermost layer; it acts before any request reaches the VPS.
+
+**Go API (global token bucket)** — a global limiter caps total throughput at 200 req/s regardless of source. Implemented with `golang.org/x/time/rate`. The limit is a configuration value read from `RATE_LIMIT_RPS` at startup so it can be adjusted without a rebuild.
+
+The IGDB proxy enforces a separate sub-limit of 4 requests/second upstream — matching IGDB's documented rate limit — independent of how many inbound requests are in flight.
+
+These numbers reflect side-project scale and the real request patterns of a social feed app: a handful of calls on page load, heartbeats every 10 minutes per agent session. They are not arbitrary. Revisit them when there is real traffic data.

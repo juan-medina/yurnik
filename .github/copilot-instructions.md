@@ -16,6 +16,7 @@ See `docs/DESIGN.md` for architecture decisions. See `docs/DEPLOYMENT.md` for ho
 - AT Proto session records are only written on explicit user confirmation
 - AT Proto records are fully denormalised — bake all game metadata in at publish time
 - IGDB is only called from the Go API server. Never from the frontend or the agent
+- IGDB responses are cached in Postgres with a TTL — a cache hit must never result in an IGDB call
 - The agent has no UI — configuration and session management open the web app via browser
 - The agent communicates with the web app only through `agon://` URL scheme calls
 - Bluesky OAuth is the only authentication method. Do not add alternatives
@@ -25,6 +26,16 @@ See `docs/DESIGN.md` for architecture decisions. See `docs/DEPLOYMENT.md` for ho
 - TypeScript strict mode. No `any`
 - Functional components only
 - Tests sit next to the code they cover. Go: `go test ./...`. C#: xUnit in `agent.Tests/`. React: Vitest via `pnpm test`
+
+## Rate limiting
+
+Rate limiting is a first-class constraint, not an afterthought.
+
+**Go API server:** a global token bucket limiter (`golang.org/x/time/rate`) runs as middleware before any handler. Limit is read from `RATE_LIMIT_RPS` at startup. Requests over the limit receive `429 Too Many Requests` immediately — no queuing, no retry. The IGDB proxy enforces a separate hard sub-limit of 4 req/s upstream regardless of inbound load.
+
+**C# agent:** the agent must never send requests in a tight loop. Heartbeats are every 10 minutes. Any retry on API failure must use exponential backoff with a cap. There is no scenario in which the agent generates sustained high-frequency requests.
+
+**General:** any code that calls an external service or downstream dependency must treat rate limiting as a real constraint. Unbounded retry loops are bugs. Exponential backoff is required wherever retries exist.
 
 ## Testing Philosophy
 
