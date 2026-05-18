@@ -194,6 +194,62 @@ export const MOCK_OTHERS_ON_JOURNEY: JourneyPlayer[] = [
   },
 ];
 
+export const MY_PLAYER_ID = "p1"; // Maria Chen is "me" in the mockup
+
+export type MockPendingSession = {
+  id: string;
+  game: string;
+  coverColor: string;
+  coverAccent: string;
+  genres: string[];
+  duration: string;
+  timestamp: string;
+};
+
+export type MockGameResult = {
+  id: string;
+  game: string;
+  coverColor: string;
+  coverAccent: string;
+  genres: string[];
+};
+
+export const GAME_LIBRARY: MockGameResult[] = [
+  { id: "g1", game: "Elden Ring", coverColor: "#3d2b1f", coverAccent: "#c9a84c", genres: ["RPG", "Soulslike", "Open World"] },
+  { id: "g2", game: "Baldur's Gate 3", coverColor: "#1a1f3e", coverAccent: "#818cf8", genres: ["RPG", "Strategy", "Co-op"] },
+  { id: "g3", game: "Hollow Knight", coverColor: "#1c1c2e", coverAccent: "#94a3b8", genres: ["Metroidvania", "Action", "Indie"] },
+  { id: "g4", game: "Cyberpunk 2077", coverColor: "#0a0a12", coverAccent: "#eab308", genres: ["RPG", "Open World", "Sci-fi"] },
+  { id: "g5", game: "Hades II", coverColor: "#2d0a0a", coverAccent: "#f97316", genres: ["Roguelite", "Action", "Indie"] },
+  { id: "g6", game: "Dead Cells", coverColor: "#0f2a1e", coverAccent: "#22c55e", genres: ["Roguelike", "Action", "Platformer"] },
+  { id: "g7", game: "Dark Souls III", coverColor: "#1a1a1a", coverAccent: "#d4af37", genres: ["RPG", "Soulslike", "Action"] },
+  { id: "g8", game: "Sekiro", coverColor: "#1a0a0a", coverAccent: "#dc2626", genres: ["Action", "Soulslike"] },
+  { id: "g9", game: "Celeste", coverColor: "#0d0d2b", coverAccent: "#60a5fa", genres: ["Platformer", "Indie"] },
+  { id: "g10", game: "Disco Elysium", coverColor: "#1e1b2e", coverAccent: "#a78bfa", genres: ["RPG", "Adventure", "Narrative"] },
+  { id: "g11", game: "Persona 5 Royal", coverColor: "#1a0000", coverAccent: "#ef4444", genres: ["RPG", "JRPG", "Turn-based"] },
+  { id: "g12", game: "Monster Hunter: World", coverColor: "#0f1e0f", coverAccent: "#84cc16", genres: ["Action", "RPG", "Co-op"] },
+];
+
+export const MOCK_PENDING_SESSIONS: MockPendingSession[] = [
+  {
+    id: "ps1",
+    game: "Cyberpunk 2077",
+    coverColor: "#0a0a12",
+    coverAccent: "#eab308",
+    genres: ["RPG", "Open World", "Sci-fi"],
+    duration: "1h 52m",
+    timestamp: "just now",
+  },
+  {
+    id: "ps2",
+    game: "Dead Cells",
+    coverColor: "#0f2a1e",
+    coverAccent: "#22c55e",
+    genres: ["Roguelike", "Action", "Platformer"],
+    duration: "1h 18m",
+    timestamp: "2h ago",
+  },
+];
+
 export type EchoKind = "comment" | "follower";
 
 export type MockEcho = {
