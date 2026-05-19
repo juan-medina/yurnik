@@ -1,13 +1,15 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { Check, ChevronLeft, Clock, Heart, UserPlus } from "lucide-react";
 import {
   MOCK_COMMENTS,
   MOCK_FRIENDS_ON_JOURNEY,
   MOCK_LIKERS,
   MOCK_OTHERS_ON_JOURNEY,
+  MY_PLAYER_ID,
+  PLAYERS,
   SESSIONS,
   initials,
   type MockComment,
@@ -33,19 +35,21 @@ function JourneyPlayerRow({ entry }: { entry: JourneyPlayer }) {
 
   return (
     <div className="flex items-center gap-3 py-2">
-      <PlayerAvatar player={entry.player} size="md" />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-sm font-semibold">{entry.player.name}</span>
-          <span className="truncate text-xs text-muted-foreground">@{entry.player.handle}</span>
+      <Link to={`/player/${entry.player.handle}`} className="flex items-center gap-3 min-w-0 flex-1">
+        <PlayerAvatar player={entry.player} size="md" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-sm font-semibold">{entry.player.name}</span>
+            <span className="truncate text-xs text-muted-foreground">@{entry.player.handle}</span>
+          </div>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock size={11} />
+            <span>{entry.duration}</span>
+            <span className="mx-1 opacity-40">·</span>
+            <span>{entry.timestamp}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Clock size={11} />
-          <span>{entry.duration}</span>
-          <span className="mx-1 opacity-40">·</span>
-          <span>{entry.timestamp}</span>
-        </div>
-      </div>
+      </Link>
       {!entry.isFollowing && (
         <button
           onClick={() => setFollowing((f) => !f)}
@@ -94,6 +98,13 @@ export default function JourneyDetail() {
   const [comment, setComment] = useState("");
   const likeCount = (session?.likes ?? 0) + (liked ? 1 : 0);
 
+  const initOwnerFollowing = MOCK_FRIENDS_ON_JOURNEY.some(
+    (jp) => jp.player.handle === session?.player.handle,
+  );
+  const [ownerFollowing, setOwnerFollowing] = useState(initOwnerFollowing);
+  const myHandle = PLAYERS.find((p) => p.id === MY_PLAYER_ID)?.handle;
+  const showOwnerFollow = session && session.player.handle !== myHandle;
+
   if (!session) {
     return (
       <div className="mx-auto max-w-2xl pt-8 text-center text-muted-foreground">
@@ -113,9 +124,37 @@ export default function JourneyDetail() {
         >
           <ChevronLeft size={20} />
         </button>
-        <PlayerAvatar player={session.player} size="sm" />
-        <span className="text-sm font-semibold">{session.player.name}</span>
+        <Link
+          to={`/player/${session.player.handle}`}
+          className="flex items-center gap-2"
+        >
+          <PlayerAvatar player={session.player} size="sm" />
+          <span className="text-sm font-semibold">{session.player.name}</span>
+        </Link>
         <span className="text-xs text-muted-foreground">@{session.player.handle}</span>
+        {showOwnerFollow && (
+          <button
+            onClick={() => setOwnerFollowing((f) => !f)}
+            aria-label={ownerFollowing ? "Unfollow" : "Follow"}
+            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              ownerFollowing
+                ? "border-border bg-muted text-muted-foreground"
+                : "border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+            }`}
+          >
+            {ownerFollowing ? (
+              <>
+                <Check size={12} />
+                Unfollow
+              </>
+            ) : (
+              <>
+                <UserPlus size={12} />
+                Follow
+              </>
+            )}
+          </button>
+        )}
         <span className="ml-auto text-xs text-muted-foreground">{session.timestamp}</span>
       </div>
 
@@ -193,6 +232,35 @@ export default function JourneyDetail() {
         </div>
       </div>
 
+      {/* Comments */}
+      <div className="mt-4 rounded-lg border border-border bg-card">
+        <div className="border-b border-border px-4 py-3">
+          <h2 className="text-sm font-semibold">Comments</h2>
+        </div>
+        <div className="divide-y divide-border px-4">
+          {MOCK_COMMENTS.map((c) => (
+            <CommentRow key={c.id} comment={c} />
+          ))}
+        </div>
+        <div className="border-t border-border p-4">
+          <div className="flex gap-3">
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Add a comment…"
+              rows={2}
+              className="flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <button
+              disabled={!comment.trim()}
+              className="self-end rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-40"
+            >
+              Post
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* On this journey */}
       <div className="mt-4 rounded-lg border border-border bg-card">
         <div className="border-b border-border px-4 py-3">
@@ -224,35 +292,6 @@ export default function JourneyDetail() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Comments */}
-      <div className="mt-4 rounded-lg border border-border bg-card">
-        <div className="border-b border-border px-4 py-3">
-          <h2 className="text-sm font-semibold">Comments</h2>
-        </div>
-        <div className="divide-y divide-border px-4">
-          {MOCK_COMMENTS.map((c) => (
-            <CommentRow key={c.id} comment={c} />
-          ))}
-        </div>
-        <div className="border-t border-border p-4">
-          <div className="flex gap-3">
-            <textarea
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Add a comment…"
-              rows={2}
-              className="flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-            <button
-              disabled={!comment.trim()}
-              className="self-end rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-40"
-            >
-              Post
-            </button>
-          </div>
-        </div>
       </div>
 
       <div className="h-8" />

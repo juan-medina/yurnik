@@ -8,6 +8,7 @@ import Players from "@/pages/Players";
 import Hero from "@/pages/Hero";
 import Echoes from "@/pages/Echoes";
 import JourneyDetail from "@/pages/JourneyDetail";
+import PlayerProfile from "@/pages/PlayerProfile";
 import Settings from "@/pages/Settings";
 
 const router = createBrowserRouter([
@@ -20,6 +21,7 @@ const router = createBrowserRouter([
       { path: "players", element: <Players /> },
       { path: "hero", element: <Hero /> },
       { path: "journey/:id", element: <JourneyDetail /> },
+      { path: "player/:handle", element: <PlayerProfile /> },
       { path: "echoes", element: <Echoes /> },
       { path: "settings", element: <Settings /> },
     ],

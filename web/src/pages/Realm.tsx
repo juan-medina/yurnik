@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Clock, Heart } from "lucide-react";
 import { type MockSession, SESSIONS, initials } from "@/lib/mock";
 
@@ -36,13 +36,19 @@ function SessionCard({ session }: SessionCardProps) {
 
       <div className="min-w-0 flex-1">
         <div className="mb-1.5 flex items-center gap-2">
-          <div
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-            style={{ backgroundColor: session.player.color }}
+          <Link
+            to={`/player/${session.player.handle}`}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-2"
           >
-            {initials(session.player.name)}
-          </div>
-          <span className="text-sm font-semibold leading-none">{session.player.name}</span>
+            <div
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+              style={{ backgroundColor: session.player.color }}
+            >
+              {initials(session.player.name)}
+            </div>
+            <span className="text-sm font-semibold leading-none">{session.player.name}</span>
+          </Link>
           <span className="truncate text-xs text-muted-foreground">
             @{session.player.handle}
           </span>
