@@ -578,6 +578,27 @@ export const MOCK_GAME_ACTIVITY: MockGameActivity[] = [
   },
 ];
 
+export type MockExclusion = {
+  exeName: string;
+};
+
+export type MockGameHint = {
+  exeName: string;
+  game: string;
+};
+
+export const MOCK_EXCLUSIONS: MockExclusion[] = [
+  { exeName: "cyberpunk2077.exe" },
+  { exeName: "svb.exe" },
+  { exeName: "launcher.exe" },
+];
+
+export const MOCK_GAME_HINTS: MockGameHint[] = [
+  { exeName: "eldenring.exe", game: "Elden Ring" },
+  { exeName: "bg3.exe", game: "Baldur's Gate 3" },
+  { exeName: "hollowknight.exe", game: "Hollow Knight" },
+];
+
 export function initials(name: string): string {
   return name
     .split(" ")
