@@ -3,7 +3,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
-import { MOCK_GAME_ACTIVITY } from "@/lib/mock";
+import { MOCK_GAME_ACTIVITY, playerHref } from "@/lib/mock";
 import Players from "./Players";
 
 function renderPlayers() {
@@ -64,7 +64,7 @@ describe("Players", () => {
     const firstEntry = firstGame.entries[0];
     const links = screen.getAllByRole("link");
     const link = links.find((el) => el.textContent?.includes(firstEntry.player.name))!;
-    expect(link).toHaveAttribute("href", `/player/${firstEntry.player.handle}`);
+    expect(link).toHaveAttribute("href", playerHref(firstEntry.player));
   });
 
   it("empty state appears when nothing matches search", async () => {

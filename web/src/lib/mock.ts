@@ -6,6 +6,10 @@ export type Player = {
   name: string;
   handle: string;
   color: string;
+  avatarUrl?: string;
+  bio?: string;
+  followers?: number;
+  following?: number;
 };
 
 export type MockSession = {
@@ -36,10 +40,30 @@ export type JourneyPlayer = {
 };
 
 export const PLAYERS: Player[] = [
-  { id: "p1", name: "Maria Chen", handle: "maria.bsky.social", color: "#7c3aed" },
-  { id: "p2", name: "Alex Torres", handle: "alextorres.bsky.social", color: "#059669" },
-  { id: "p3", name: "Sam Okafor", handle: "samokafor.bsky.social", color: "#d97706" },
-  { id: "p4", name: "Rin Nakamura", handle: "rin.bsky.social", color: "#e11d48" },
+  {
+    id: "p1", name: "Maria Chen", handle: "maria.bsky.social", color: "#7c3aed",
+    avatarUrl: "https://i.pravatar.cc/150?img=47",
+    bio: "Chasing bosses and logging every moment. Soulslike enjoyer.",
+    followers: 142, following: 37,
+  },
+  {
+    id: "p2", name: "Alex Torres", handle: "alextorres.bsky.social", color: "#059669",
+    avatarUrl: "https://i.pravatar.cc/150?img=12",
+    bio: "Tactical RPG enthusiast. Always in co-op.",
+    followers: 89, following: 64,
+  },
+  {
+    id: "p3", name: "Sam Okafor", handle: "samokafor.bsky.social", color: "#d97706",
+    avatarUrl: "https://i.pravatar.cc/150?img=25",
+    bio: "Metroidvania completionist. Every map cell, every achievement.",
+    followers: 213, following: 51,
+  },
+  {
+    id: "p4", name: "Rin Nakamura", handle: "rin.bsky.social", color: "#e11d48",
+    avatarUrl: "https://i.pravatar.cc/150?img=33",
+    bio: "Open world wanderer. Story over speed.",
+    followers: 58, following: 92,
+  },
 ];
 
 export const SESSIONS: MockSession[] = [
@@ -250,6 +274,15 @@ export const MOCK_OTHERS_ON_JOURNEY: JourneyPlayer[] = [
 ];
 
 export const MY_PLAYER_ID = "p1"; // Maria Chen is "me" in the mockup
+export const MY_PLAYER = PLAYERS.find((p) => p.id === MY_PLAYER_ID)!;
+
+export function avatarSrc(player: Player): string {
+  return player.avatarUrl ?? `https://i.pravatar.cc/64?u=${encodeURIComponent(player.id)}`;
+}
+
+export function playerHref(player: Player): string {
+  return player.id === MY_PLAYER_ID ? "/hero" : `/player/${player.handle}`;
+}
 
 export type MockPendingSession = {
   id: string;

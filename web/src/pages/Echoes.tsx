@@ -3,18 +3,17 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { MessageSquare, UserPlus } from "lucide-react";
-import { MOCK_ECHOES, initials, type MockEcho, type Player } from "@/lib/mock";
+import { MOCK_ECHOES, avatarSrc, type MockEcho, type Player } from "@/lib/mock";
 
 type Filter = "all" | "comments" | "followers";
 
 function PlayerAvatar({ player }: { player: Player }) {
   return (
-    <div
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-      style={{ backgroundColor: player.color }}
-    >
-      {initials(player.name)}
-    </div>
+    <img
+      src={avatarSrc(player)}
+      alt={player.name}
+      className="h-8 w-8 shrink-0 rounded-full object-cover"
+    />
   );
 }
 

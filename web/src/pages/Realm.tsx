@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Clock, Heart } from "lucide-react";
-import { type MockSession, SESSIONS, initials } from "@/lib/mock";
+import { type MockSession, SESSIONS, avatarSrc, playerHref } from "@/lib/mock";
 
 type SessionCardProps = { session: MockSession };
 
@@ -37,16 +37,15 @@ function SessionCard({ session }: SessionCardProps) {
       <div className="min-w-0 flex-1">
         <div className="mb-1.5 flex items-center gap-2">
           <Link
-            to={`/player/${session.player.handle}`}
+            to={playerHref(session.player)}
             onClick={(e) => e.stopPropagation()}
             className="flex items-center gap-2"
           >
-            <div
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-              style={{ backgroundColor: session.player.color }}
-            >
-              {initials(session.player.name)}
-            </div>
+            <img
+              src={avatarSrc(session.player)}
+              alt={session.player.name}
+              className="h-6 w-6 shrink-0 rounded-full object-cover"
+            />
             <span className="text-sm font-semibold leading-none">{session.player.name}</span>
           </Link>
           <span className="truncate text-xs text-muted-foreground">

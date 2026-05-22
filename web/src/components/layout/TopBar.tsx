@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { Bell, Moon, Sun, User } from "lucide-react";
+import { Bell, Moon, Sun } from "lucide-react";
 import { NavLink } from "react-router";
 import { useTheme } from "@/hooks/useTheme";
-import { MOCK_ECHOES } from "@/lib/mock";
+import { MOCK_ECHOES, MY_PLAYER, avatarSrc } from "@/lib/mock";
 
 const MOCK_UNREAD = MOCK_ECHOES.some((e) => !e.read);
 
@@ -37,16 +37,16 @@ export default function TopBar() {
       </button>
       <NavLink
         to="/hero"
-        className={({ isActive }) =>
-          `flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-            isActive
-              ? "bg-primary text-primary-foreground"
-              : "bg-secondary text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-          }`
-        }
         aria-label="Your hero"
+        className={({ isActive }) =>
+          `block rounded-full transition-opacity ${isActive ? "opacity-100" : "opacity-70 hover:opacity-100"}`
+        }
       >
-        <User size={16} />
+        <img
+          src={avatarSrc(MY_PLAYER)}
+          alt={MY_PLAYER.name}
+          className="h-8 w-8 rounded-full object-cover"
+        />
       </NavLink>
     </header>
   );

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Clock, Search } from "lucide-react";
-import { MOCK_GAME_ACTIVITY, initials, type MockGameActivity, type MockJourneyEntry } from "@/lib/mock";
+import { MOCK_GAME_ACTIVITY, avatarSrc, playerHref, type MockGameActivity, type MockJourneyEntry } from "@/lib/mock";
 
 function GameCover({ coverColor, coverAccent, game }: { coverColor: string; coverAccent: string; game: string }) {
   return (
@@ -29,16 +29,15 @@ function JourneyRow({ entry }: { entry: MockJourneyEntry }) {
       onClick={() => navigate(`/journey/${entry.sessionId}`)}
     >
       <Link
-        to={`/player/${entry.player.handle}`}
+        to={playerHref(entry.player)}
         onClick={(e) => e.stopPropagation()}
         className="flex items-center gap-3 min-w-0"
       >
-        <div
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-          style={{ backgroundColor: entry.player.color }}
-        >
-          {initials(entry.player.name)}
-        </div>
+        <img
+          src={avatarSrc(entry.player)}
+          alt={entry.player.name}
+          className="h-7 w-7 shrink-0 rounded-full object-cover"
+        />
         <p className="text-sm font-medium leading-tight">{entry.player.name}</p>
       </Link>
       {entry.log && (

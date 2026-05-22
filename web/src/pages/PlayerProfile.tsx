@@ -9,11 +9,14 @@ import {
   MY_PLAYER_ID,
   PLAYERS,
   SESSIONS,
+  avatarSrc,
   initials,
   type Player,
 } from "@/lib/mock";
 
 function findPlayer(handle: string): Player | undefined {
+  const fromPlayers = PLAYERS.find((p) => p.handle === handle);
+  if (fromPlayers) return fromPlayers;
   const fromSessions = SESSIONS.find((s) => s.player.handle === handle)?.player;
   if (fromSessions) return fromSessions;
   return MOCK_GAME_ACTIVITY.flatMap((g) => g.entries)
@@ -34,6 +37,7 @@ export default function PlayerProfile() {
 
   const player = handle ? findPlayer(handle) : undefined;
   const playerSessions = SESSIONS.filter((s) => s.player.handle === handle);
+  const journeyCount = playerSessions.length;
 
   const [following, setFollowing] = useState(() => (handle ? initFollowing(handle) : false));
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
@@ -59,7 +63,7 @@ export default function PlayerProfile() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      {/* Header */}
+      {/* Back */}
       <div className="mb-4 flex items-center gap-3">
         <button
           onClick={() => navigate(-1)}
@@ -71,41 +75,71 @@ export default function PlayerProfile() {
       </div>
 
       {/* Profile card */}
-      <div className="mb-4 flex items-center gap-4 rounded-lg border border-border bg-card p-5">
-        <div
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-bold text-white"
-          style={{ backgroundColor: player.color }}
-        >
-          {initials(player.name)}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-lg font-bold leading-tight">{player.name}</p>
-          <p className="text-sm text-muted-foreground">@{player.handle}</p>
-        </div>
-        {showFollow && !isMe(player) && (
-          <button
-            onClick={() => setFollowing((f) => !f)}
-            aria-label={following ? "Unfollow" : "Follow"}
-            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-              following
-                ? "border-border bg-muted text-muted-foreground"
-                : "border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-            }`}
-          >
-            {following ? (
-              <>
-                <Check size={14} />
-                Unfollow
-              </>
-            ) : (
-              <>
-                <UserPlus size={14} />
-                Follow
-              </>
+      <div className="mb-4 rounded-lg border border-border bg-card p-5">
+        <div className="flex items-start gap-4">
+          <img
+            src={avatarSrc(player)}
+            alt={player.name}
+            className="h-16 w-16 shrink-0 rounded-full object-cover"
+            onError={(e) => {
+              const target = e.currentTarget;
+              target.style.display = "none";
+              const fallback = document.createElement("div");
+              fallback.className =
+                "flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-xl font-bold text-white";
+              fallback.style.backgroundColor = player.color;
+              fallback.textContent = initials(player.name);
+              target.parentNode?.insertBefore(fallback, target);
+            }}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-xl font-bold leading-tight">{player.name}</p>
+            <p className="mb-2 text-sm text-muted-foreground">@{player.handle}</p>
+            {player.bio && (
+              <p className="text-sm text-muted-foreground">{player.bio}</p>
             )}
-          </button>
-        )}
+          </div>
+          {showFollow && !isMe(player) && (
+            <button
+              onClick={() => setFollowing((f) => !f)}
+              aria-label={following ? "Unfollow" : "Follow"}
+              className={`flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                following
+                  ? "border-border bg-muted text-muted-foreground"
+                  : "border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              }`}
+            >
+              {following ? (
+                <>
+                  <Check size={14} />
+                  Unfollow
+                </>
+              ) : (
+                <>
+                  <UserPlus size={14} />
+                  Follow
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Stats */}
+      {(player.followers !== undefined || player.following !== undefined) && (
+        <div className="mb-6 grid grid-cols-3 divide-x divide-border rounded-lg border border-border bg-card">
+          {[
+            { label: "Journeys", value: journeyCount },
+            { label: "Followers", value: player.followers ?? 0 },
+            { label: "Following", value: player.following ?? 0 },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex flex-col items-center py-4">
+              <span className="text-lg font-bold">{value}</span>
+              <span className="text-xs text-muted-foreground">{label}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Journeys */}
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">

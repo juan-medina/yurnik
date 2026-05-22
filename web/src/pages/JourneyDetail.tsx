@@ -11,22 +11,22 @@ import {
   MY_PLAYER_ID,
   PLAYERS,
   SESSIONS,
+  avatarSrc,
   initials,
+  playerHref,
   type MockComment,
   type Player,
   type JourneyPlayer,
 } from "@/lib/mock";
 
 function PlayerAvatar({ player, size = "md" }: { player: Player; size?: "sm" | "md" | "lg" }) {
-  const dims =
-    size === "sm" ? "h-6 w-6 text-[10px]" : size === "lg" ? "h-10 w-10 text-sm" : "h-8 w-8 text-xs";
+  const dims = size === "sm" ? "h-6 w-6" : size === "lg" ? "h-10 w-10" : "h-8 w-8";
   return (
-    <div
-      className={`${dims} flex shrink-0 items-center justify-center rounded-full font-bold text-white`}
-      style={{ backgroundColor: player.color }}
-    >
-      {initials(player.name)}
-    </div>
+    <img
+      src={avatarSrc(player)}
+      alt={player.name}
+      className={`${dims} shrink-0 rounded-full object-cover`}
+    />
   );
 }
 
@@ -35,7 +35,7 @@ function JourneyPlayerRow({ entry }: { entry: JourneyPlayer }) {
 
   return (
     <div className="flex items-center gap-3 py-2">
-      <Link to={`/player/${entry.player.handle}`} className="flex items-center gap-3 min-w-0 flex-1">
+      <Link to={playerHref(entry.player)} className="flex items-center gap-3 min-w-0 flex-1">
         <PlayerAvatar player={entry.player} size="md" />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-1.5">
@@ -80,7 +80,7 @@ function CommentRow({ comment }: { comment: MockComment }) {
   return (
     <div className="py-3">
       <div className="mb-1 flex items-center gap-2">
-        <Link to={`/player/${comment.player.handle}`} className="flex items-center gap-2">
+        <Link to={playerHref(comment.player)} className="flex items-center gap-2">
           <PlayerAvatar player={comment.player} size="sm" />
           <span className="text-sm font-semibold">{comment.player.name}</span>
         </Link>
@@ -127,7 +127,7 @@ export default function JourneyDetail() {
           <ChevronLeft size={20} />
         </button>
         <Link
-          to={`/player/${session.player.handle}`}
+          to={playerHref(session.player)}
           className="flex items-center gap-2"
         >
           <PlayerAvatar player={session.player} size="sm" />
@@ -219,14 +219,13 @@ export default function JourneyDetail() {
           <div className="flex items-center gap-2">
             <div className="flex -space-x-2">
               {MOCK_LIKERS.map((liker) => (
-                <div
+                <img
                   key={liker.id}
-                  className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-card text-[9px] font-bold text-white"
-                  style={{ backgroundColor: liker.color }}
+                  src={avatarSrc(liker)}
+                  alt={liker.name}
                   title={liker.name}
-                >
-                  {initials(liker.name)}
-                </div>
+                  className="h-7 w-7 rounded-full border-2 border-card object-cover"
+                />
               ))}
             </div>
             <span className="text-xs text-muted-foreground">+42 more</span>
