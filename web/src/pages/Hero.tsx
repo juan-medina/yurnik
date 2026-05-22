@@ -16,6 +16,7 @@ import {
   type Player,
 } from "@/lib/mock";
 import FollowListModal from "@/components/FollowListModal";
+import { formatSessionDate } from "@/lib/time";
 
 const MY_SESSIONS = SESSIONS.filter((s) => s.player.id === MY_PLAYER_ID);
 
@@ -272,7 +273,7 @@ export default function Hero() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="mb-1">
-                    <span className="text-xs text-muted-foreground">{session.timestamp}</span>
+                    <span className="text-xs text-muted-foreground">{formatSessionDate(session.playedAt)}</span>
                   </div>
                   <div className="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
                     <span className="font-bold">{session.game}</span>

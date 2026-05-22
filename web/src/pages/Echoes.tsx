@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { MessageSquare, UserPlus } from "lucide-react";
 import { MOCK_ECHOES, avatarSrc, type MockEcho, type Player } from "@/lib/mock";
+import { formatCommentAge } from "@/lib/time";
 
 type Filter = "all" | "comments" | "followers";
 
@@ -56,7 +57,7 @@ function EchoRow({ echo }: { echo: MockEcho }) {
           </p>
         )}
       </div>
-      <span className="shrink-0 text-xs text-muted-foreground">{echo.timestamp}</span>
+      <span className="shrink-0 text-xs text-muted-foreground">{formatCommentAge(echo.occurredAt)}</span>
     </Link>
   );
 }

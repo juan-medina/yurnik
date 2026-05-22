@@ -43,14 +43,18 @@ describe("Journeys — pending actions", () => {
     );
   });
 
-  it("publishing from the log form removes the session from the pending list", async () => {
+  it("publishing from the log form removes the session from pending and adds it to history", async () => {
     const user = userEvent.setup();
     renderJourneys();
-    const first = MOCK_PENDING_SESSIONS[0];
     const [firstConfirm] = screen.getAllByRole("button", { name: "Confirm" });
     await user.click(firstConfirm);
     await user.click(screen.getByRole("button", { name: "Publish journey" }));
-    expect(screen.queryByText(first.game)).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Confirm" })).toHaveLength(
+      MOCK_PENDING_SESSIONS.length - 1,
+    );
+    expect(screen.getAllByRole("button", { name: "Discard" })).toHaveLength(
+      MOCK_PENDING_SESSIONS.length - 1,
+    );
   });
 
   it("Change link on a pending card opens the game search directly", async () => {
@@ -174,8 +178,7 @@ describe("Journeys — add journey", () => {
     await user.click(screen.getByRole("button", { name: /Celeste/ }));
     expect(screen.getByRole("button", { name: "Log journey" })).toBeDisabled();
 
-    await user.clear(screen.getByRole("spinbutton", { name: "Hours" }));
-    await user.type(screen.getByRole("spinbutton", { name: "Hours" }), "2");
+    await user.type(screen.getByRole("textbox", { name: "Duration" }), "2h");
     expect(screen.getByRole("button", { name: "Log journey" })).toBeEnabled();
   });
 
@@ -189,14 +192,25 @@ describe("Journeys — add journey", () => {
     expect(screen.getByText("Celeste")).toBeInTheDocument();
   });
 
+  it("Log journey is disabled when Pick date is selected but no date is picked", async () => {
+    const user = userEvent.setup();
+    renderJourneys();
+    await user.click(screen.getByRole("button", { name: "Add journey" }));
+    await user.type(screen.getByPlaceholderText("Search for a game…"), "Celeste");
+    await user.click(screen.getByRole("button", { name: /Celeste/ }));
+    await user.type(screen.getByRole("textbox", { name: "Duration" }), "2h");
+
+    await user.click(screen.getByRole("button", { name: /Pick date/ }));
+    expect(screen.getByRole("button", { name: "Log journey" })).toBeDisabled();
+  });
+
   it("adding a journey places it in History", async () => {
     const user = userEvent.setup();
     renderJourneys();
     await user.click(screen.getByRole("button", { name: "Add journey" }));
     await user.type(screen.getByPlaceholderText("Search for a game…"), "Celeste");
     await user.click(screen.getByRole("button", { name: /Celeste/ }));
-    await user.clear(screen.getByRole("spinbutton", { name: "Hours" }));
-    await user.type(screen.getByRole("spinbutton", { name: "Hours" }), "2");
+    await user.type(screen.getByRole("textbox", { name: "Duration" }), "2h");
     await user.click(screen.getByRole("button", { name: "Log journey" }));
     expect(screen.getByText("Celeste")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Search for a game…")).not.toBeInTheDocument();

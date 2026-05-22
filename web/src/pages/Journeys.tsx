@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Check, Clock, Heart, MonitorDown, Plus, Search, Trash2, X } from "lucide-react";
+import { CalendarDays, Check, Clock, Heart, MonitorDown, Plus, Search, Trash2, X } from "lucide-react";
 import {
   GAME_LIBRARY,
   MOCK_PENDING_SESSIONS,
@@ -14,6 +14,11 @@ import {
   type MockPendingSession,
   type MockSession,
 } from "@/lib/mock";
+import { formatCommentAge, formatSessionDate } from "@/lib/time";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
 
 function GameCover({
   coverColor,
@@ -176,6 +181,45 @@ function ClientHint() {
   );
 }
 
+function parseDuration(input: string): { hours: number; minutes: number } | null {
+  const s = input.trim().toLowerCase().replace(/\s+/g, "");
+  if (!s) return null;
+
+  // h:mm or hh:mm
+  const colonMatch = s.match(/^(\d{1,2}):(\d{2})$/);
+  if (colonMatch) {
+    const h = parseInt(colonMatch[1]);
+    const m = parseInt(colonMatch[2]);
+    if (m < 60) return { hours: h, minutes: m };
+  }
+
+  // Xh Ym or XhYm or XhY
+  const hmMatch = s.match(/^(\d+)h(\d+)m?$/);
+  if (hmMatch) {
+    const m = parseInt(hmMatch[2]);
+    if (m < 60) return { hours: parseInt(hmMatch[1]), minutes: m };
+  }
+
+  // Xh only
+  const hMatch = s.match(/^(\d+)h$/);
+  if (hMatch) return { hours: parseInt(hMatch[1]), minutes: 0 };
+
+  // Xm only
+  const mMatch = s.match(/^(\d+)m$/);
+  if (mMatch) {
+    const total = parseInt(mMatch[1]);
+    return { hours: Math.floor(total / 60), minutes: total % 60 };
+  }
+
+  return null;
+}
+
+function formatParsedDuration(d: { hours: number; minutes: number }): string {
+  if (d.hours > 0 && d.minutes > 0) return `${d.hours}h ${d.minutes}m`;
+  if (d.hours > 0) return `${d.hours}h`;
+  return `${d.minutes}m`;
+}
+
 function AddJourneyForm({
   onAdd,
   onCancel,
@@ -184,21 +228,32 @@ function AddJourneyForm({
   onCancel: () => void;
 }) {
   const [selected, setSelected] = useState<MockGameResult | null>(null);
-  const [hours, setHours] = useState(0);
-  const [minutes, setMinutes] = useState(0);
+  const [durationInput, setDurationInput] = useState("");
   const [log, setLog] = useState("");
+  const [whenMode, setWhenMode] = useState<"now" | "pick">("now");
+  const [pickedDate, setPickedDate] = useState<Date | undefined>(undefined);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
-  const durationSet = hours > 0 || minutes > 0;
-  const canSubmit = selected !== null && durationSet;
+  const parsedDuration = parseDuration(durationInput);
+  const durationInvalid = durationInput.trim() !== "" && parsedDuration === null;
+  const durationSet = parsedDuration !== null;
+  const dateReady = whenMode === "now" || pickedDate !== undefined;
+  const canSubmit = selected !== null && durationSet && dateReady;
 
-  function formatDuration(): string {
-    if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
-    if (hours > 0) return `${hours}h`;
-    return `${minutes}m`;
+  function getPlayedAt(): Date {
+    if (whenMode === "pick" && pickedDate) {
+      return new Date(
+        pickedDate.getFullYear(),
+        pickedDate.getMonth(),
+        pickedDate.getDate(),
+        23, 59, 59,
+      );
+    }
+    return new Date();
   }
 
   function handleAdd() {
-    if (!selected) return;
+    if (!selected || !parsedDuration) return;
     const me = PLAYERS.find((p) => p.id === MY_PLAYER_ID)!;
     onAdd({
       id: `m-${Date.now()}`,
@@ -207,17 +262,17 @@ function AddJourneyForm({
       coverColor: selected.coverColor,
       coverAccent: selected.coverAccent,
       genres: selected.genres,
-      duration: formatDuration(),
-      timestamp: "just now",
+      duration: formatParsedDuration(parsedDuration),
+      playedAt: getPlayedAt(),
       log: log.trim() || undefined,
       likes: 0,
     });
   }
 
   return (
-    <div className="mb-6 rounded-lg border border-border bg-card p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Log a journey</h2>
+    <div className="mb-6 rounded-lg border border-border bg-card p-5">
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="font-semibold">Log a journey</h2>
         <button
           onClick={onCancel}
           aria-label="Close"
@@ -227,66 +282,99 @@ function AddJourneyForm({
         </button>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-5">
         <GameSelector value={selected} onChange={setSelected} />
       </div>
 
-      <div className="mb-3">
-        <label className="mb-2 block text-xs font-medium text-muted-foreground">Duration</label>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <input
-              aria-label="Hours"
-              type="number"
-              min={0}
-              max={99}
-              value={hours}
-              onChange={(e) => setHours(Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-14 rounded-md border border-border bg-background px-2 py-2 text-center text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-            <span className="text-sm text-muted-foreground">h</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <input
-              aria-label="Minutes"
-              type="number"
-              min={0}
-              max={59}
-              value={minutes}
-              onChange={(e) =>
-                setMinutes(Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))
-              }
-              className="w-14 rounded-md border border-border bg-background px-2 py-2 text-center text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-            <span className="text-sm text-muted-foreground">m</span>
+      <div className="mb-5 grid grid-cols-2 gap-3">
+        {/* Duration */}
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+            Duration
+          </label>
+          <input
+            aria-label="Duration"
+            type="text"
+            value={durationInput}
+            onChange={(e) => setDurationInput(e.target.value)}
+            placeholder="e.g. 2h 30m, 90m, 1:30"
+            className={`w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary ${
+              durationInvalid ? "border-destructive" : "border-border"
+            }`}
+          />
+          {durationInvalid && (
+            <p className="mt-1 text-xs text-destructive">Try 2h, 90m, or 1:30</p>
+          )}
+        </div>
+
+        {/* When */}
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+            When
+          </label>
+          <div className="flex gap-1.5">
+            <Button
+              type="button"
+              variant={whenMode === "now" ? "default" : "outline"}
+              className="flex-1"
+              onClick={() => { setWhenMode("now"); setPickedDate(undefined); }}
+            >
+              Just now
+            </Button>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant={whenMode === "pick" ? "default" : "outline"}
+                  className="flex flex-1 items-center gap-1.5"
+                  onClick={() => setWhenMode("pick")}
+                >
+                  <CalendarDays size={14} />
+                  {whenMode === "pick" && pickedDate ? format(pickedDate, "MMM d") : "Pick date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto">
+                <Calendar
+                  mode="single"
+                  selected={pickedDate}
+                  onSelect={(date) => {
+                    setPickedDate(date);
+                    setWhenMode("pick");
+                    setCalendarOpen(false);
+                  }}
+                  disabled={{ after: new Date() }}
+                  defaultMonth={pickedDate ?? new Date()}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </div>
 
-      <div className="mb-4">
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">
-          Log <span className="font-normal">(optional)</span>
+      <div className="mb-5">
+        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+          Log <span className="font-normal text-muted-foreground/60">(optional)</span>
         </label>
         <textarea
           value={log}
           onChange={(e) => setLog(e.target.value)}
           placeholder="How did it go?"
           rows={3}
-          className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
         />
       </div>
 
       <div className="flex items-center justify-end gap-2">
         <button
           onClick={onCancel}
-          className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           Cancel
         </button>
         <button
           disabled={!canSubmit}
           onClick={handleAdd}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-40"
+          className="rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity disabled:opacity-40"
         >
           Log journey
         </button>
@@ -308,9 +396,11 @@ function sessionToGameResult(session: MockPendingSession): MockGameResult {
 function PendingCard({
   session,
   onDismiss,
+  onConfirm,
 }: {
   session: MockPendingSession;
   onDismiss: () => void;
+  onConfirm: (s: MockSession) => void;
 }) {
   const [cardState, setCardState] = useState<"collapsed" | "confirming" | "excluding">("collapsed");
   const [game, setGame] = useState<MockGameResult | null>(sessionToGameResult(session));
@@ -327,6 +417,23 @@ function PendingCard({
     setLog("");
   }
 
+  function handlePublish() {
+    if (!game?.game) return;
+    const me = PLAYERS.find((p) => p.id === MY_PLAYER_ID)!;
+    onConfirm({
+      id: `c-${Date.now()}`,
+      player: me,
+      game: game.game,
+      coverColor: game.coverColor,
+      coverAccent: game.coverAccent,
+      genres: game.genres,
+      duration: session.duration,
+      playedAt: session.endedAt,
+      log: log.trim() || undefined,
+      likes: 0,
+    });
+  }
+
   if (cardState === "confirming") {
     return (
       <div className="rounded-lg border border-primary/30 bg-card p-4">
@@ -337,7 +444,7 @@ function PendingCard({
           <Clock size={12} />
           <span>{session.duration}</span>
           <span className="mx-1 opacity-40">·</span>
-          <span>ended {session.timestamp}</span>
+          <span>ended {formatCommentAge(session.endedAt)}</span>
         </div>
         <textarea
           value={log}
@@ -354,8 +461,9 @@ function PendingCard({
             Cancel
           </button>
           <button
-            onClick={onDismiss}
-            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+            onClick={handlePublish}
+            disabled={!game?.game}
+            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
           >
             <Check size={14} />
             Publish journey
@@ -436,7 +544,7 @@ function PendingCard({
             <Clock size={12} />
             <span>{session.duration}</span>
             <span className="mx-1 opacity-40">·</span>
-            <span>ended {session.timestamp}</span>
+            <span>ended {formatCommentAge(session.endedAt)}</span>
           </div>
         </div>
       </div>
@@ -491,7 +599,7 @@ function HistoryCard({ session }: { session: MockSession }) {
       />
       <div className="min-w-0 flex-1">
         <div className="mb-1">
-          <span className="text-xs text-muted-foreground">{session.timestamp}</span>
+          <span className="text-xs text-muted-foreground">{formatSessionDate(session.playedAt)}</span>
         </div>
         <div className="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
           <span className="font-bold">{session.game}</span>
@@ -546,6 +654,11 @@ export default function Journeys() {
     setPending((prev) => prev.filter((s) => s.id !== id));
   }
 
+  function handleConfirm(pendingId: string, session: MockSession) {
+    setHistory((prev) => [session, ...prev]);
+    dismiss(pendingId);
+  }
+
   function handleAdd(session: MockSession) {
     setHistory((prev) => [session, ...prev]);
     setAdding(false);
@@ -582,7 +695,7 @@ export default function Journeys() {
           </div>
           <div className="flex flex-col gap-3">
             {pending.map((s) => (
-              <PendingCard key={s.id} session={s} onDismiss={() => dismiss(s.id)} />
+              <PendingCard key={s.id} session={s} onDismiss={() => dismiss(s.id)} onConfirm={(confirmed) => handleConfirm(s.id, confirmed)} />
             ))}
           </div>
         </section>

@@ -20,6 +20,7 @@ import {
   type JourneyPlayer,
 } from "@/lib/mock";
 import FollowListModal from "@/components/FollowListModal";
+import { formatCommentAge, formatSessionDate } from "@/lib/time";
 
 function PlayerAvatar({ player, size = "md" }: { player: Player; size?: "sm" | "md" | "lg" }) {
   const dims = size === "sm" ? "h-6 w-6" : size === "lg" ? "h-10 w-10" : "h-8 w-8";
@@ -48,7 +49,7 @@ function JourneyPlayerRow({ entry }: { entry: JourneyPlayer }) {
             <Clock size={11} />
             <span>{entry.duration}</span>
             <span className="mx-1 opacity-40">·</span>
-            <span>{entry.timestamp}</span>
+            <span>{formatSessionDate(entry.playedAt)}</span>
           </div>
         </div>
       </Link>
@@ -86,7 +87,7 @@ function CommentRow({ comment }: { comment: MockComment }) {
           <PlayerAvatar player={comment.player} size="sm" />
           <span className="text-sm font-semibold">{comment.player.name}</span>
         </Link>
-        <span className="ml-auto text-xs text-muted-foreground">{comment.timestamp}</span>
+        <span className="ml-auto text-xs text-muted-foreground">{formatCommentAge(comment.commentedAt)}</span>
       </div>
       <p className="pl-8 text-sm text-foreground/80">{comment.text}</p>
     </div>
@@ -160,7 +161,7 @@ export default function JourneyDetail() {
             )}
           </button>
         )}
-        <span className="ml-auto text-xs text-muted-foreground">{session.timestamp}</span>
+        <span className="ml-auto text-xs text-muted-foreground">{formatSessionDate(session.playedAt)}</span>
       </div>
 
       {/* Hero */}

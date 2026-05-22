@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Clock, Search } from "lucide-react";
 import { MOCK_GAME_ACTIVITY, avatarSrc, gameCoverSrc, playerHref, type MockGameActivity, type MockJourneyEntry } from "@/lib/mock";
+import { formatSessionDate } from "@/lib/time";
 
 function GameCover({ coverColor, coverAccent, game }: { coverColor: string; coverAccent: string; game: string }) {
   const cover = gameCoverSrc(game);
@@ -48,7 +49,7 @@ function JourneyRow({ entry }: { entry: MockJourneyEntry }) {
       <div className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
         <Clock size={11} />
         <span>{entry.duration}</span>
-        <span className="ml-1.5">{entry.timestamp}</span>
+        <span className="ml-1.5">{formatSessionDate(entry.playedAt)}</span>
       </div>
     </div>
   );

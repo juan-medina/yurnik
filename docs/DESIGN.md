@@ -128,6 +128,32 @@ Two distinct concepts for text attached to a journey:
 
 **Comments** — text written by any player (including the session owner) after the session is published. Separate AT Proto records (`app.agon.comment`) that reference the session URI. Shown in the session detail only — never in the Realm feed. Comments are flat and chronological — no threading, no hierarchy, no reply-to chains. Comments cannot be liked. A new comment on your session by another player triggers an Echo notification; your own comments on your own session do not.
 
+## Time and timestamps
+
+Full timestamps (start and end in UTC) are stored on every session record — required by the AT Proto schema and needed for feed ordering. The distinction between storage and display is intentional: the time of day a session was played is rarely meaningful to a gamer or their followers. What matters is the date.
+
+**Display rule — journeys** — everywhere a journey's timestamp appears (Realm feed cards, profile journey cards, Journeys history), the label is date-level only:
+
+| Session date | Label |
+|---|---|
+| Today | "Today" |
+| Yesterday | "Yesterday" |
+| Within the last 7 days | Weekday name — "Monday" |
+| Older | Month and day — "May 15" (add year if different from the current year) |
+
+No hours, no minutes, no "3 hours ago" for journeys. The time of day is stored but never shown.
+
+**Display rule — comments** — comments are always recent and live inside a session detail, so relative time ("23 minutes ago", "3 hours ago") is the right signal there. Comments use relative time throughout.
+
+**Manual entry — when** — the confirmation form for a manually logged session asks when the player finished with two options only:
+
+- **Just now** (default, pre-selected, no extra input) — end timestamp is the current time
+- **Choose a date** — opens a date-only calendar picker; end timestamp is set to the end of the selected day
+
+No intermediate options ("earlier today", "yesterday"). Two clear anchors are fast; ambiguous middle options require the user to categorise something that is already fuzzy.
+
+**Ordering** — sessions are ordered by date (`played_at`) descending. Within the same date, sessions are ordered by record ID descending (creation order). A manually backdated session lands in its date bucket without displacing sessions that were already there.
+
 ## Navigation structure
 
 The shell has a fixed sidebar on the left and a top bar across the top.
@@ -173,7 +199,7 @@ The Realm is the home feed. It shows confirmed sessions from people you follow, 
 - Player avatar, display name, Bluesky handle
 - Game cover art (square thumbnail, left-aligned)
 - Game title and genre chips
-- Duration and relative timestamp ("3h 14m · 2 hours ago")
+- Duration and date label ("3h 14m · Today" or "3h 14m · Yesterday")
 - Like button (heart icon + count, inline) — toggleable without leaving the feed
 - Log text if the session has a `log` value
 

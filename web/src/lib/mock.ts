@@ -20,7 +20,7 @@ export type MockSession = {
   coverAccent: string;
   genres: string[];
   duration: string;
-  timestamp: string;
+  playedAt: Date;
   log?: string;
   likes: number;
 };
@@ -29,13 +29,13 @@ export type MockComment = {
   id: string;
   player: Player;
   text: string;
-  timestamp: string;
+  commentedAt: Date;
 };
 
 export type JourneyPlayer = {
   player: Player;
   duration: string;
-  timestamp: string;
+  playedAt: Date;
   isFollowing: boolean;
 };
 
@@ -66,6 +66,16 @@ export const PLAYERS: Player[] = [
   },
 ];
 
+function daysAgo(n: number): Date {
+  return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
+}
+function hoursAgo(n: number): Date {
+  return new Date(Date.now() - n * 60 * 60 * 1000);
+}
+function minsAgo(n: number): Date {
+  return new Date(Date.now() - n * 60 * 1000);
+}
+
 export const SESSIONS: MockSession[] = [
   {
     id: "s1",
@@ -75,7 +85,7 @@ export const SESSIONS: MockSession[] = [
     coverAccent: "#c9a84c",
     genres: ["RPG", "Soulslike", "Open World"],
     duration: "3h 14m",
-    timestamp: "23m ago",
+    playedAt: minsAgo(23),
     log: "Finally took down Malenia after 40 attempts. The muscle memory just clicked.",
     likes: 47,
   },
@@ -87,7 +97,7 @@ export const SESSIONS: MockSession[] = [
     coverAccent: "#818cf8",
     genres: ["RPG", "Strategy", "Co-op"],
     duration: "4h 30m",
-    timestamp: "1h ago",
+    playedAt: hoursAgo(1),
     likes: 12,
   },
   {
@@ -98,7 +108,7 @@ export const SESSIONS: MockSession[] = [
     coverAccent: "#94a3b8",
     genres: ["Metroidvania", "Action", "Indie"],
     duration: "2h 07m",
-    timestamp: "3h ago",
+    playedAt: hoursAgo(3),
     log: "The Abyss section hit different today. Incredible atmosphere.",
     likes: 8,
   },
@@ -110,7 +120,7 @@ export const SESSIONS: MockSession[] = [
     coverAccent: "#eab308",
     genres: ["RPG", "Open World", "Sci-fi"],
     duration: "1h 52m",
-    timestamp: "just now",
+    playedAt: new Date(),
     likes: 0,
   },
   {
@@ -121,7 +131,7 @@ export const SESSIONS: MockSession[] = [
     coverAccent: "#f97316",
     genres: ["Roguelite", "Action", "Indie"],
     duration: "45m",
-    timestamp: "yesterday",
+    playedAt: daysAgo(1),
     log: "New build is insane — Aspect of Melinoë with the moon staff.",
     likes: 23,
   },
@@ -133,7 +143,7 @@ export const SESSIONS: MockSession[] = [
     coverAccent: "#22c55e",
     genres: ["Roguelike", "Action", "Platformer"],
     duration: "1h 18m",
-    timestamp: "2d ago",
+    playedAt: daysAgo(2),
     likes: 5,
   },
   {
@@ -144,7 +154,7 @@ export const SESSIONS: MockSession[] = [
     coverAccent: "#c9a84c",
     genres: ["RPG", "Soulslike", "Open World"],
     duration: "2h 44m",
-    timestamp: "2d ago",
+    playedAt: daysAgo(2),
     log: "Started a fresh Arcane build. Let's see how this goes.",
     likes: 31,
   },
@@ -156,7 +166,7 @@ export const SESSIONS: MockSession[] = [
     coverAccent: "#c9a84c",
     genres: ["RPG", "Soulslike", "Open World"],
     duration: "3h 02m",
-    timestamp: "1d ago",
+    playedAt: daysAgo(1),
     likes: 4,
   },
   {
@@ -167,7 +177,7 @@ export const SESSIONS: MockSession[] = [
     coverAccent: "#eab308",
     genres: ["RPG", "Open World", "Sci-fi"],
     duration: "55m",
-    timestamp: "3d ago",
+    playedAt: daysAgo(3),
     likes: 2,
   },
   {
@@ -178,7 +188,7 @@ export const SESSIONS: MockSession[] = [
     coverAccent: "#94a3b8",
     genres: ["Metroidvania", "Action", "Indie"],
     duration: "2h 11m",
-    timestamp: "1w ago",
+    playedAt: daysAgo(7),
     likes: 7,
   },
   {
@@ -189,7 +199,7 @@ export const SESSIONS: MockSession[] = [
     coverAccent: "#f97316",
     genres: ["Roguelite", "Action", "Indie"],
     duration: "6h 18m",
-    timestamp: "3d ago",
+    playedAt: daysAgo(3),
     likes: 15,
   },
   {
@@ -200,7 +210,7 @@ export const SESSIONS: MockSession[] = [
     coverAccent: "#22c55e",
     genres: ["Roguelike", "Action", "Platformer"],
     duration: "1h 10m",
-    timestamp: "5d ago",
+    playedAt: daysAgo(5),
     likes: 1,
   },
 ];
@@ -218,57 +228,57 @@ export const MOCK_COMMENTS: MockComment[] = [
     id: "c1",
     player: PLAYERS[1],
     text: "40 attempts is wild, respect. I gave up at 20.",
-    timestamp: "18m ago",
+    commentedAt: minsAgo(18),
   },
   {
     id: "c2",
     player: PLAYERS[2],
     text: "Which build were you running? I keep dying in phase 2.",
-    timestamp: "15m ago",
+    commentedAt: minsAgo(15),
   },
   {
     id: "c3",
     player: PLAYERS[0],
     text: "Bleed build, Rivers of Blood. Phase 2 just takes patience — stop panic rolling.",
-    timestamp: "12m ago",
+    commentedAt: minsAgo(12),
   },
   {
     id: "c4",
     player: PLAYERS[3],
     text: "She's the hardest optional boss in the game. Congrats fr",
-    timestamp: "5m ago",
+    commentedAt: minsAgo(5),
   },
 ];
 
 export const MOCK_FRIENDS_ON_JOURNEY: JourneyPlayer[] = [
-  { player: PLAYERS[1], duration: "2h 44m", timestamp: "2d ago", isFollowing: true },
-  { player: PLAYERS[2], duration: "1h 30m", timestamp: "5d ago", isFollowing: true },
-  { player: PLAYERS[3], duration: "4h 10m", timestamp: "1w ago", isFollowing: true },
+  { player: PLAYERS[1], duration: "2h 44m", playedAt: daysAgo(2), isFollowing: true },
+  { player: PLAYERS[2], duration: "1h 30m", playedAt: daysAgo(5), isFollowing: true },
+  { player: PLAYERS[3], duration: "4h 10m", playedAt: daysAgo(7), isFollowing: true },
 ];
 
 export const MOCK_OTHERS_ON_JOURNEY: JourneyPlayer[] = [
   {
     player: { id: "o1", name: "Jordan Park", handle: "jordanp.bsky.social", color: "#0284c7" },
     duration: "3h 02m",
-    timestamp: "1d ago",
+    playedAt: daysAgo(1),
     isFollowing: false,
   },
   {
     player: { id: "o2", name: "Priya Nair", handle: "priyanair.bsky.social", color: "#7c3aed" },
     duration: "55m",
-    timestamp: "3d ago",
+    playedAt: daysAgo(3),
     isFollowing: false,
   },
   {
     player: { id: "o3", name: "Luca Rossi", handle: "lucarossi.bsky.social", color: "#059669" },
     duration: "6h 18m",
-    timestamp: "4d ago",
+    playedAt: daysAgo(4),
     isFollowing: false,
   },
   {
     player: { id: "o4", name: "Fen Wu", handle: "fenwu.bsky.social", color: "#db2777" },
     duration: "2h 11m",
-    timestamp: "1w ago",
+    playedAt: daysAgo(7),
     isFollowing: false,
   },
 ];
@@ -341,7 +351,7 @@ export type MockPendingSession = {
   coverAccent: string;
   genres: string[];
   duration: string;
-  timestamp: string;
+  endedAt: Date;
   exeName?: string;
   windowTitle?: string;
 };
@@ -377,7 +387,7 @@ export const MOCK_PENDING_SESSIONS: MockPendingSession[] = [
     coverAccent: "#eab308",
     genres: ["RPG", "Open World", "Sci-fi"],
     duration: "1h 52m",
-    timestamp: "just now",
+    endedAt: new Date(),
     exeName: "cyberpunk2077.exe",
     windowTitle: "Cyberpunk 2077",
   },
@@ -388,7 +398,7 @@ export const MOCK_PENDING_SESSIONS: MockPendingSession[] = [
     coverAccent: "#22c55e",
     genres: ["Roguelike", "Action", "Platformer"],
     duration: "1h 18m",
-    timestamp: "2h ago",
+    endedAt: hoursAgo(2),
     exeName: "deadcells.exe",
     windowTitle: "Dead Cells",
   },
@@ -399,7 +409,7 @@ export const MOCK_PENDING_SESSIONS: MockPendingSession[] = [
     coverAccent: "#6b7280",
     genres: [],
     duration: "34m",
-    timestamp: "5h ago",
+    endedAt: hoursAgo(5),
     exeName: "svb.exe",
     windowTitle: "SVB!",
   },
@@ -411,7 +421,7 @@ export type MockEcho = {
   id: string;
   kind: EchoKind;
   player: Player;
-  timestamp: string;
+  occurredAt: Date;
   read: boolean;
   sessionId?: string;
   game?: string;
@@ -423,7 +433,7 @@ export const MOCK_ECHOES: MockEcho[] = [
     id: "e1",
     kind: "comment",
     player: PLAYERS[1],
-    timestamp: "18m ago",
+    occurredAt: minsAgo(18),
     read: false,
     sessionId: "s1",
     game: "Elden Ring",
@@ -433,14 +443,14 @@ export const MOCK_ECHOES: MockEcho[] = [
     id: "e2",
     kind: "follower",
     player: { id: "o1", name: "Jordan Park", handle: "jordanp.bsky.social", color: "#0284c7" },
-    timestamp: "45m ago",
+    occurredAt: minsAgo(45),
     read: false,
   },
   {
     id: "e3",
     kind: "comment",
     player: PLAYERS[2],
-    timestamp: "1h ago",
+    occurredAt: hoursAgo(1),
     read: false,
     sessionId: "s1",
     game: "Elden Ring",
@@ -450,14 +460,14 @@ export const MOCK_ECHOES: MockEcho[] = [
     id: "e4",
     kind: "follower",
     player: { id: "o2", name: "Priya Nair", handle: "priyanair.bsky.social", color: "#7c3aed" },
-    timestamp: "3h ago",
+    occurredAt: hoursAgo(3),
     read: true,
   },
   {
     id: "e5",
     kind: "comment",
     player: PLAYERS[3],
-    timestamp: "5h ago",
+    occurredAt: hoursAgo(5),
     read: true,
     sessionId: "s5",
     game: "Hades II",
@@ -467,14 +477,14 @@ export const MOCK_ECHOES: MockEcho[] = [
     id: "e6",
     kind: "follower",
     player: { id: "o3", name: "Luca Rossi", handle: "lucarossi.bsky.social", color: "#059669" },
-    timestamp: "yesterday",
+    occurredAt: daysAgo(1),
     read: true,
   },
   {
     id: "e7",
     kind: "comment",
     player: PLAYERS[1],
-    timestamp: "2d ago",
+    occurredAt: daysAgo(2),
     read: true,
     sessionId: "s7",
     game: "Elden Ring",
@@ -486,7 +496,7 @@ export type MockJourneyEntry = {
   sessionId: string;
   player: Player;
   duration: string;
-  timestamp: string;
+  playedAt: Date;
   log?: string;
 };
 
@@ -507,9 +517,9 @@ export const MOCK_GAME_ACTIVITY: MockGameActivity[] = [
     coverAccent: "#c9a84c",
     genres: ["RPG", "Soulslike", "Open World"],
     entries: [
-      { sessionId: "s1", player: PLAYERS[0], duration: "3h 14m", timestamp: "23m ago", log: "Finally took down Malenia after 40 attempts. The muscle memory just clicked." },
-      { sessionId: "s8", player: { id: "o1", name: "Jordan Park", handle: "jordanp.bsky.social", color: "#0284c7" }, duration: "3h 02m", timestamp: "1d ago" },
-      { sessionId: "s7", player: PLAYERS[2], duration: "2h 44m", timestamp: "2d ago", log: "Started a fresh Arcane build. Let's see how this goes." },
+      { sessionId: "s1", player: PLAYERS[0], duration: "3h 14m", playedAt: minsAgo(23), log: "Finally took down Malenia after 40 attempts. The muscle memory just clicked." },
+      { sessionId: "s8", player: { id: "o1", name: "Jordan Park", handle: "jordanp.bsky.social", color: "#0284c7" }, duration: "3h 02m", playedAt: daysAgo(1) },
+      { sessionId: "s7", player: PLAYERS[2], duration: "2h 44m", playedAt: daysAgo(2), log: "Started a fresh Arcane build. Let's see how this goes." },
     ],
   },
   {
@@ -519,8 +529,8 @@ export const MOCK_GAME_ACTIVITY: MockGameActivity[] = [
     coverAccent: "#eab308",
     genres: ["RPG", "Open World", "Sci-fi"],
     entries: [
-      { sessionId: "s4", player: PLAYERS[3], duration: "1h 52m", timestamp: "just now" },
-      { sessionId: "s9", player: { id: "o2", name: "Priya Nair", handle: "priyanair.bsky.social", color: "#7c3aed" }, duration: "55m", timestamp: "3d ago" },
+      { sessionId: "s4", player: PLAYERS[3], duration: "1h 52m", playedAt: new Date() },
+      { sessionId: "s9", player: { id: "o2", name: "Priya Nair", handle: "priyanair.bsky.social", color: "#7c3aed" }, duration: "55m", playedAt: daysAgo(3) },
     ],
   },
   {
@@ -530,8 +540,8 @@ export const MOCK_GAME_ACTIVITY: MockGameActivity[] = [
     coverAccent: "#94a3b8",
     genres: ["Metroidvania", "Action", "Indie"],
     entries: [
-      { sessionId: "s3", player: PLAYERS[2], duration: "2h 07m", timestamp: "3h ago", log: "The Abyss section hit different today. Incredible atmosphere." },
-      { sessionId: "s10", player: { id: "o4", name: "Fen Wu", handle: "fenwu.bsky.social", color: "#db2777" }, duration: "2h 11m", timestamp: "1w ago" },
+      { sessionId: "s3", player: PLAYERS[2], duration: "2h 07m", playedAt: hoursAgo(3), log: "The Abyss section hit different today. Incredible atmosphere." },
+      { sessionId: "s10", player: { id: "o4", name: "Fen Wu", handle: "fenwu.bsky.social", color: "#db2777" }, duration: "2h 11m", playedAt: daysAgo(7) },
     ],
   },
   {
@@ -541,8 +551,8 @@ export const MOCK_GAME_ACTIVITY: MockGameActivity[] = [
     coverAccent: "#f97316",
     genres: ["Roguelite", "Action", "Indie"],
     entries: [
-      { sessionId: "s5", player: PLAYERS[0], duration: "45m", timestamp: "yesterday", log: "New build is insane — Aspect of Melinoë with the moon staff." },
-      { sessionId: "s11", player: { id: "o3", name: "Luca Rossi", handle: "lucarossi.bsky.social", color: "#059669" }, duration: "6h 18m", timestamp: "3d ago" },
+      { sessionId: "s5", player: PLAYERS[0], duration: "45m", playedAt: daysAgo(1), log: "New build is insane — Aspect of Melinoë with the moon staff." },
+      { sessionId: "s11", player: { id: "o3", name: "Luca Rossi", handle: "lucarossi.bsky.social", color: "#059669" }, duration: "6h 18m", playedAt: daysAgo(3) },
     ],
   },
   {
@@ -552,7 +562,7 @@ export const MOCK_GAME_ACTIVITY: MockGameActivity[] = [
     coverAccent: "#818cf8",
     genres: ["RPG", "Strategy", "Co-op"],
     entries: [
-      { sessionId: "s2", player: PLAYERS[1], duration: "4h 30m", timestamp: "1h ago" },
+      { sessionId: "s2", player: PLAYERS[1], duration: "4h 30m", playedAt: hoursAgo(1) },
     ],
   },
   {
@@ -562,8 +572,8 @@ export const MOCK_GAME_ACTIVITY: MockGameActivity[] = [
     coverAccent: "#22c55e",
     genres: ["Roguelike", "Action", "Platformer"],
     entries: [
-      { sessionId: "s6", player: PLAYERS[1], duration: "1h 18m", timestamp: "2d ago" },
-      { sessionId: "s12", player: { id: "o1", name: "Jordan Park", handle: "jordanp.bsky.social", color: "#0284c7" }, duration: "1h 10m", timestamp: "5d ago" },
+      { sessionId: "s6", player: PLAYERS[1], duration: "1h 18m", playedAt: daysAgo(2) },
+      { sessionId: "s12", player: { id: "o1", name: "Jordan Park", handle: "jordanp.bsky.social", color: "#0284c7" }, duration: "1h 10m", playedAt: daysAgo(5) },
     ],
   },
 ];

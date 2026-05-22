@@ -16,6 +16,7 @@ import {
   type Player,
 } from "@/lib/mock";
 import FollowListModal from "@/components/FollowListModal";
+import { formatSessionDate } from "@/lib/time";
 
 function findPlayer(handle: string): Player | undefined {
   const fromPlayers = PLAYERS.find((p) => p.handle === handle);
@@ -212,7 +213,7 @@ export default function PlayerProfile() {
                   <div className="mb-2 flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock size={12} />
                     <span>{session.duration}</span>
-                    <span className="ml-1.5">{session.timestamp}</span>
+                    <span className="ml-1.5">{formatSessionDate(session.playedAt)}</span>
                   </div>
                   {session.log && (
                     <p className="mb-2 text-sm italic text-muted-foreground">

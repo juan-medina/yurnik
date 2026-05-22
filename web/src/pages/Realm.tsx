@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Clock, Heart } from "lucide-react";
 import { type MockSession, SESSIONS, avatarSrc, gameCoverSrc, playerHref } from "@/lib/mock";
+import { formatSessionDate } from "@/lib/time";
 
 type SessionCardProps = { session: MockSession };
 
@@ -50,7 +51,7 @@ function SessionCard({ session }: SessionCardProps) {
             @{session.player.handle}
           </span>
           <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-            {session.timestamp}
+            {formatSessionDate(session.playedAt)}
           </span>
         </div>
 
