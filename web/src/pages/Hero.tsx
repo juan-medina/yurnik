@@ -4,13 +4,17 @@ import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Camera, Check, Clock, Heart, Pencil } from "lucide-react";
 import {
+  MY_FOLLOWERS,
+  MY_FOLLOWING,
   MY_PLAYER,
   MY_PLAYER_ID,
   SESSIONS,
   avatarSrc,
   initials,
   type MockSession,
+  type Player,
 } from "@/lib/mock";
+import FollowListModal from "@/components/FollowListModal";
 
 const MY_SESSIONS = SESSIONS.filter((s) => s.player.id === MY_PLAYER_ID);
 
@@ -42,6 +46,7 @@ export default function Hero() {
   const [draftBio, setDraftBio] = useState(bio);
 
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+  const [followList, setFollowList] = useState<{ title: string; players: Player[] } | null>(null);
 
   function saveName() {
     setDisplayName(draftName.trim() || displayName);
@@ -208,16 +213,35 @@ export default function Hero() {
       {/* Stats */}
       <div className="mb-6 grid grid-cols-4 divide-x divide-border rounded-lg border border-border bg-card">
         {[
-          { label: "Journeys", value: MY_SESSIONS.length },
-          { label: "Hours", value: totalHours(MY_SESSIONS) },
-          { label: "Followers", value: MY_PLAYER.followers ?? 0 },
-          { label: "Following", value: MY_PLAYER.following ?? 0 },
-        ].map(({ label, value }) => (
-          <div key={label} className="flex flex-col items-center py-4">
-            <span className="text-lg font-bold">{value}</span>
-            <span className="text-xs text-muted-foreground">{label}</span>
-          </div>
-        ))}
+          { label: "Journeys", value: MY_SESSIONS.length, onClick: undefined },
+          { label: "Hours", value: totalHours(MY_SESSIONS), onClick: undefined },
+          {
+            label: "Followers",
+            value: MY_PLAYER.followers ?? 0,
+            onClick: () => setFollowList({ title: "Followers", players: MY_FOLLOWERS }),
+          },
+          {
+            label: "Following",
+            value: MY_PLAYER.following ?? 0,
+            onClick: () => setFollowList({ title: "Following", players: MY_FOLLOWING }),
+          },
+        ].map(({ label, value, onClick }) =>
+          onClick ? (
+            <button
+              key={label}
+              onClick={onClick}
+              className="flex flex-col items-center py-4 transition-colors hover:bg-accent/50"
+            >
+              <span className="text-lg font-bold">{value}</span>
+              <span className="text-xs text-muted-foreground">{label}</span>
+            </button>
+          ) : (
+            <div key={label} className="flex flex-col items-center py-4">
+              <span className="text-lg font-bold">{value}</span>
+              <span className="text-xs text-muted-foreground">{label}</span>
+            </div>
+          ),
+        )}
       </div>
 
       {/* Journeys */}
@@ -309,6 +333,14 @@ export default function Hero() {
       )}
 
       <div className="h-8" />
+
+      {followList && (
+        <FollowListModal
+          title={followList.title}
+          players={followList.players}
+          onClose={() => setFollowList(null)}
+        />
+      )}
     </div>
   );
 }

@@ -276,6 +276,37 @@ export const MOCK_OTHERS_ON_JOURNEY: JourneyPlayer[] = [
 export const MY_PLAYER_ID = "p1"; // Maria Chen is "me" in the mockup
 export const MY_PLAYER = PLAYERS.find((p) => p.id === MY_PLAYER_ID)!;
 
+const _OTHER_PLAYERS: Player[] = [
+  { id: "o1", name: "Jordan Park", handle: "jordanp.bsky.social", color: "#0284c7" },
+  { id: "o2", name: "Priya Nair", handle: "priyanair.bsky.social", color: "#7c3aed" },
+  { id: "o3", name: "Luca Rossi", handle: "lucarossi.bsky.social", color: "#059669" },
+  { id: "o4", name: "Fen Wu", handle: "fenwu.bsky.social", color: "#db2777" },
+];
+
+export const MY_FOLLOWING: Player[] = MOCK_FRIENDS_ON_JOURNEY.map((jp) => jp.player);
+export const MY_FOLLOWERS: Player[] = [
+  PLAYERS[1],
+  PLAYERS[2],
+  _OTHER_PLAYERS[0],
+  _OTHER_PLAYERS[1],
+  _OTHER_PLAYERS[2],
+];
+
+export const MOCK_FOLLOW_LISTS: Record<string, { followers: Player[]; following: Player[] }> = {
+  p2: {
+    followers: [MY_PLAYER, PLAYERS[2], _OTHER_PLAYERS[0], _OTHER_PLAYERS[3]],
+    following: [MY_PLAYER, PLAYERS[3], _OTHER_PLAYERS[1], _OTHER_PLAYERS[2]],
+  },
+  p3: {
+    followers: [MY_PLAYER, PLAYERS[1], _OTHER_PLAYERS[0], _OTHER_PLAYERS[1], _OTHER_PLAYERS[2]],
+    following: [MY_PLAYER, PLAYERS[0], _OTHER_PLAYERS[3]],
+  },
+  p4: {
+    followers: [_OTHER_PLAYERS[0], _OTHER_PLAYERS[2]],
+    following: [MY_PLAYER, PLAYERS[1], PLAYERS[2], _OTHER_PLAYERS[0], _OTHER_PLAYERS[1]],
+  },
+};
+
 export function avatarSrc(player: Player): string {
   return player.avatarUrl ?? `https://i.pravatar.cc/64?u=${encodeURIComponent(player.id)}`;
 }

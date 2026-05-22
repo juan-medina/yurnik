@@ -18,6 +18,7 @@ import {
   type Player,
   type JourneyPlayer,
 } from "@/lib/mock";
+import FollowListModal from "@/components/FollowListModal";
 
 function PlayerAvatar({ player, size = "md" }: { player: Player; size?: "sm" | "md" | "lg" }) {
   const dims = size === "sm" ? "h-6 w-6" : size === "lg" ? "h-10 w-10" : "h-8 w-8";
@@ -97,6 +98,7 @@ export default function JourneyDetail() {
   const session = SESSIONS.find((s) => s.id === id);
 
   const [liked, setLiked] = useState(false);
+  const [showLikers, setShowLikers] = useState(false);
   const [comment, setComment] = useState("");
   const likeCount = (session?.likes ?? 0) + (liked ? 1 : 0);
 
@@ -216,7 +218,11 @@ export default function JourneyDetail() {
               {likeCount}
             </span>
           </button>
-          <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowLikers(true)}
+            className="flex items-center gap-2 transition-opacity hover:opacity-75"
+            aria-label="See who liked this"
+          >
             <div className="flex -space-x-2">
               {MOCK_LIKERS.map((liker) => (
                 <img
@@ -229,7 +235,7 @@ export default function JourneyDetail() {
               ))}
             </div>
             <span className="text-xs text-muted-foreground">+42 more</span>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -296,6 +302,14 @@ export default function JourneyDetail() {
       </div>
 
       <div className="h-8" />
+
+      {showLikers && (
+        <FollowListModal
+          title="Liked by"
+          players={MOCK_LIKERS}
+          onClose={() => setShowLikers(false)}
+        />
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Check, ChevronLeft, Clock, Heart, UserPlus } from "lucide-react";
 import {
+  MOCK_FOLLOW_LISTS,
   MOCK_FRIENDS_ON_JOURNEY,
   MOCK_GAME_ACTIVITY,
   MY_PLAYER_ID,
@@ -13,6 +14,7 @@ import {
   initials,
   type Player,
 } from "@/lib/mock";
+import FollowListModal from "@/components/FollowListModal";
 
 function findPlayer(handle: string): Player | undefined {
   const fromPlayers = PLAYERS.find((p) => p.handle === handle);
@@ -41,6 +43,7 @@ export default function PlayerProfile() {
 
   const [following, setFollowing] = useState(() => (handle ? initFollowing(handle) : false));
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+  const [followList, setFollowList] = useState<{ title: string; players: Player[] } | null>(null);
 
   if (!player) {
     return (
@@ -129,15 +132,40 @@ export default function PlayerProfile() {
       {(player.followers !== undefined || player.following !== undefined) && (
         <div className="mb-6 grid grid-cols-3 divide-x divide-border rounded-lg border border-border bg-card">
           {[
-            { label: "Journeys", value: journeyCount },
-            { label: "Followers", value: player.followers ?? 0 },
-            { label: "Following", value: player.following ?? 0 },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex flex-col items-center py-4">
-              <span className="text-lg font-bold">{value}</span>
-              <span className="text-xs text-muted-foreground">{label}</span>
-            </div>
-          ))}
+            { label: "Journeys", value: journeyCount, onClick: undefined },
+            {
+              label: "Followers",
+              value: player.followers ?? 0,
+              onClick: () => {
+                const lists = MOCK_FOLLOW_LISTS[player.id];
+                setFollowList({ title: "Followers", players: lists?.followers ?? [] });
+              },
+            },
+            {
+              label: "Following",
+              value: player.following ?? 0,
+              onClick: () => {
+                const lists = MOCK_FOLLOW_LISTS[player.id];
+                setFollowList({ title: "Following", players: lists?.following ?? [] });
+              },
+            },
+          ].map(({ label, value, onClick }) =>
+            onClick ? (
+              <button
+                key={label}
+                onClick={onClick}
+                className="flex flex-col items-center py-4 transition-colors hover:bg-accent/50"
+              >
+                <span className="text-lg font-bold">{value}</span>
+                <span className="text-xs text-muted-foreground">{label}</span>
+              </button>
+            ) : (
+              <div key={label} className="flex flex-col items-center py-4">
+                <span className="text-lg font-bold">{value}</span>
+                <span className="text-xs text-muted-foreground">{label}</span>
+              </div>
+            ),
+          )}
         </div>
       )}
 
@@ -228,6 +256,14 @@ export default function PlayerProfile() {
       )}
 
       <div className="h-8" />
+
+      {followList && (
+        <FollowListModal
+          title={followList.title}
+          players={followList.players}
+          onClose={() => setFollowList(null)}
+        />
+      )}
     </div>
   );
 }
