@@ -26,7 +26,7 @@ function EchoIcon({ kind }: { kind: MockEcho["kind"] }) {
 }
 
 function EchoRow({ echo }: { echo: MockEcho }) {
-  const to = echo.kind === "comment" ? `/journey/${echo.sessionId}` : "/players";
+  const to = echo.kind === "comment" ? `/journey/${echo.sessionId}` : `/player/${echo.player.handle}`;
 
   return (
     <Link
