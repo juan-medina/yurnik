@@ -164,7 +164,7 @@ The shell has a fixed sidebar on the left and a top bar across the top.
 |------|-------|---------|
 | Realm | `/` | Social feed — sessions from people you follow |
 | Journeys | `/journeys` | Your own sessions — confirmed, pending, history |
-| Players | `/players` | Social graph — who you follow, who follows you |
+| Players | `/players` | Game-centric discovery — browse who is playing what |
 | Hero | `/hero` | Your profile and stats |
 | Settings | `/settings` | App preferences and account |
 
@@ -204,6 +204,23 @@ The Realm is the home feed. It shows confirmed sessions from people you follow, 
 - Log text if the session has a `log` value
 
 The only action on the card is the like. There are no comments or reply actions on the card. Likes as feed items ("X liked Y's session") are not shown — the feed answers only "what did people I follow play?"
+
+## Players — game-centric discovery
+
+The Players page (`/players`) is not a social graph view. It does not show a followers list or a following list — those live on the Hero and PlayerProfile pages. Players is a discovery surface: a feed of games with the players who recently played them beneath each one.
+
+The design premise is that games are the shared context that makes player discovery meaningful. Showing a raw list of accounts to follow is low-signal. Showing "five people played Hollow Knight this week, here are their sessions" gives the visitor something to act on — they can recognise the game, see the log snippets, and decide whether to follow based on shared taste rather than a blank profile.
+
+Each game card shows:
+- Game cover art, title, and genre chips
+- A row per recent session: player avatar, name, duration, date, and log excerpt (truncated)
+- Journey count for the game
+
+The page is searchable by game title or genre, and filterable by genre chip. Search matches both game name and genre — typing "RPG" narrows to role-playing games across all entries.
+
+Clicking a player row navigates to that player's profile. Clicking a session row navigates to the journey detail. Both paths lead out of the discovery surface into social actions (follow, like, comment).
+
+The data backing this page is the same `game_sessions_index` Postgres table used by the session detail "on this journey" sections. The Players query is broader — all indexed sessions, not just those for a single game — ordered by `played_at` descending, grouped by `igdb_id`.
 
 ## Session detail
 
