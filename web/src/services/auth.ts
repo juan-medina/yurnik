@@ -21,8 +21,18 @@ export async function uploadAvatar(file: File): Promise<void> {
   _profile = { ..._profile, avatarUrl: url };
 }
 
+const AUTH_KEY = "agon_authed";
+
+export function isAuthenticated(): boolean {
+  return localStorage.getItem(AUTH_KEY) === "1";
+}
+
+export async function signIn(): Promise<void> {
+  localStorage.setItem(AUTH_KEY, "1");
+}
+
 export async function signOut(): Promise<void> {
-  // Real implementation: revoke OAuth token, clear session
+  localStorage.removeItem(AUTH_KEY);
 }
 
 export function _reset(): void {

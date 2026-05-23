@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
 import { Search } from "lucide-react";
+import { useNavigate } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCurrentPlayer, signOut } from "@/services/auth";
 import { getExclusions, removeExclusion, getGameHints, removeGameHint, updateGameHint } from "@/services/settings";
@@ -9,6 +10,7 @@ import { getGameLibrary } from "@/services/games";
 import { avatarSrc, initials } from "@/lib/display";
 
 export default function Settings() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data: player } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
@@ -47,7 +49,10 @@ export default function Settings() {
     },
   });
 
-  const signOutMutation = useMutation({ mutationFn: signOut });
+  const signOutMutation = useMutation({
+    mutationFn: signOut,
+    onSuccess: () => navigate("/login", { replace: true }),
+  });
 
   const editGameResults =
     editingHintExe !== null && editQuery.length >= 2

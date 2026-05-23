@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 import { RouterProvider, createBrowserRouter } from "react-router";
 import Shell from "@/components/layout/Shell";
+import Login from "@/pages/Login";
 import Realm from "@/pages/Realm";
 import Journeys from "@/pages/Journeys";
 import Players from "@/pages/Players";
@@ -12,6 +13,7 @@ import PlayerProfile from "@/pages/PlayerProfile";
 import Settings from "@/pages/Settings";
 
 const router = createBrowserRouter([
+  { path: "/login", element: <Login /> },
   {
     path: "/",
     element: <Shell />,
