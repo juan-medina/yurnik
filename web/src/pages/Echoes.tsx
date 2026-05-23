@@ -3,8 +3,11 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { MessageSquare, UserPlus } from "lucide-react";
-import { MOCK_ECHOES, avatarSrc, type MockEcho, type Player } from "@/lib/mock";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getEchoes, markAllRead } from "@/services/echoes";
+import { avatarSrc } from "@/lib/display";
 import { formatCommentAge } from "@/lib/time";
+import type { Echo, Player } from "@/models";
 
 type Filter = "all" | "comments" | "followers";
 
@@ -18,7 +21,7 @@ function PlayerAvatar({ player }: { player: Player }) {
   );
 }
 
-function EchoIcon({ kind }: { kind: MockEcho["kind"] }) {
+function EchoIcon({ kind }: { kind: Echo["kind"] }) {
   return (
     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
       {kind === "comment" ? <MessageSquare size={13} /> : <UserPlus size={13} />}
@@ -26,7 +29,7 @@ function EchoIcon({ kind }: { kind: MockEcho["kind"] }) {
   );
 }
 
-function EchoRow({ echo }: { echo: MockEcho }) {
+function EchoRow({ echo }: { echo: Echo }) {
   const to = echo.kind === "comment" ? `/journey/${echo.sessionId}` : `/player/${echo.player.handle}`;
 
   return (
@@ -69,14 +72,17 @@ const FILTER_LABELS: { value: Filter; label: string }[] = [
 ];
 
 export default function Echoes() {
-  const [echoes, setEchoes] = useState<MockEcho[]>(MOCK_ECHOES);
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<Filter>("all");
 
-  const allRead = echoes.every((e) => e.read);
+  const { data: echoes = [] } = useQuery({ queryKey: ["echoes"], queryFn: getEchoes });
 
-  function markAllRead() {
-    setEchoes((prev) => prev.map((e) => ({ ...e, read: true })));
-  }
+  const markAllReadMutation = useMutation({
+    mutationFn: markAllRead,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["echoes"] }),
+  });
+
+  const allRead = echoes.every((e) => e.read);
 
   const visible = echoes.filter((e) => {
     if (filter === "comments") return e.kind === "comment";
@@ -90,7 +96,7 @@ export default function Echoes() {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Echoes</h1>
         <button
-          onClick={markAllRead}
+          onClick={() => markAllReadMutation.mutate()}
           disabled={allRead}
           className="text-sm text-primary transition-opacity hover:underline disabled:pointer-events-none disabled:opacity-40"
         >

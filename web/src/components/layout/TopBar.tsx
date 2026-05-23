@@ -2,13 +2,16 @@
 // SPDX-License-Identifier: MIT
 import { Bell, Moon, Sun } from "lucide-react";
 import { NavLink } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
-import { MOCK_ECHOES, MY_PLAYER, avatarSrc } from "@/lib/mock";
-
-const MOCK_UNREAD = MOCK_ECHOES.some((e) => !e.read);
+import { MY_PLAYER } from "@/lib/mock";
+import { avatarSrc } from "@/lib/display";
+import { getEchoes } from "@/services/echoes";
 
 export default function TopBar() {
   const { theme, toggleTheme } = useTheme();
+  const { data: echoes = [] } = useQuery({ queryKey: ["echoes"], queryFn: getEchoes });
+  const hasUnread = echoes.some((e) => !e.read);
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-end gap-3 border-b border-border px-6">
@@ -24,7 +27,7 @@ export default function TopBar() {
         aria-label="Echoes"
       >
         <Bell size={16} />
-        {MOCK_UNREAD && (
+        {hasUnread && (
           <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-destructive ring-2 ring-background" />
         )}
       </NavLink>

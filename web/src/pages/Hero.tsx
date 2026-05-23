@@ -3,24 +3,17 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Camera, Check, Clock, Heart, Pencil } from "lucide-react";
-import {
-  MY_FOLLOWERS,
-  MY_FOLLOWING,
-  MY_PLAYER,
-  MY_PLAYER_ID,
-  SESSIONS,
-  avatarSrc,
-  gameCoverSrc,
-  initials,
-  type MockSession,
-  type Player,
-} from "@/lib/mock";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getCurrentPlayer, updateProfile, uploadAvatar } from "@/services/auth";
+import { getUserSessions, toggleLike } from "@/services/sessions";
+import { getFollowers, getFollowing } from "@/services/players";
+import { MY_PLAYER_ID } from "@/services/auth";
+import { avatarSrc, initials } from "@/lib/display";
 import FollowListModal from "@/components/FollowListModal";
 import { formatSessionDate } from "@/lib/time";
+import type { Session, Player } from "@/models";
 
-const MY_SESSIONS = SESSIONS.filter((s) => s.player.id === MY_PLAYER_ID);
-
-function totalHours(sessions: MockSession[]): string {
+function totalHours(sessions: Session[]): string {
   const mins = sessions.reduce((acc, s) => {
     const h = parseInt(s.duration.match(/(\d+)h/)?.[1] ?? "0");
     const m = parseInt(s.duration.match(/(\d+)m/)?.[1] ?? "0");
@@ -35,47 +28,62 @@ function totalHours(sessions: MockSession[]): string {
 
 export default function Hero() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [avatarUrl, setAvatarUrl] = useState(() => avatarSrc(MY_PLAYER));
+  const { data: player } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
+  const { data: sessions = [] } = useQuery({ queryKey: ["sessions", "user"], queryFn: getUserSessions });
+  const { data: followers = [] } = useQuery({
+    queryKey: ["follow-list", MY_PLAYER_ID, "followers"],
+    queryFn: () => getFollowers(MY_PLAYER_ID),
+  });
+  const { data: following = [] } = useQuery({
+    queryKey: ["follow-list", MY_PLAYER_ID, "following"],
+    queryFn: () => getFollowing(MY_PLAYER_ID),
+  });
 
-  const [displayName, setDisplayName] = useState(MY_PLAYER.name);
   const [editingName, setEditingName] = useState(false);
-  const [draftName, setDraftName] = useState(displayName);
-
-  const [bio, setBio] = useState(MY_PLAYER.bio ?? "");
+  const [draftName, setDraftName] = useState("");
   const [editingBio, setEditingBio] = useState(false);
-  const [draftBio, setDraftBio] = useState(bio);
-
-  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+  const [draftBio, setDraftBio] = useState("");
   const [followList, setFollowList] = useState<{ title: string; players: Player[] } | null>(null);
 
+  const updateProfileMutation = useMutation({
+    mutationFn: updateProfile,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auth", "me"] }),
+  });
+
+  const uploadAvatarMutation = useMutation({
+    mutationFn: uploadAvatar,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auth", "me"] }),
+  });
+
+  const likeMutation = useMutation({
+    mutationFn: toggleLike,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sessions", "user"] }),
+  });
+
+  if (!player) return null;
+
+  const displayName = player.name;
+  const bio = player.bio ?? "";
+
   function saveName() {
-    setDisplayName(draftName.trim() || displayName);
+    updateProfileMutation.mutate({ name: draftName.trim() || displayName });
     setEditingName(false);
   }
 
   function cancelName() {
-    setDraftName(displayName);
     setEditingName(false);
   }
 
   function saveBio() {
-    setBio(draftBio.trim() || bio);
+    updateProfileMutation.mutate({ bio: draftBio.trim() });
     setEditingBio(false);
   }
 
   function cancelBio() {
-    setDraftBio(bio);
     setEditingBio(false);
-  }
-
-  function toggleLike(id: string) {
-    setLikedIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
   }
 
   return (
@@ -86,7 +94,7 @@ export default function Hero() {
           {/* Avatar */}
           <div className="group relative h-16 w-16 shrink-0">
             <img
-              src={avatarUrl}
+              src={avatarSrc(player)}
               alt={displayName}
               className="h-full w-full rounded-full object-cover"
               onError={(e) => {
@@ -98,7 +106,7 @@ export default function Hero() {
             <div
               hidden
               className="flex h-full w-full items-center justify-center rounded-full text-xl font-bold text-white"
-              style={{ backgroundColor: MY_PLAYER.color }}
+              style={{ backgroundColor: player.color }}
             >
               {initials(displayName)}
             </div>
@@ -118,7 +126,7 @@ export default function Hero() {
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) setAvatarUrl(URL.createObjectURL(file));
+                if (file) uploadAvatarMutation.mutate(file);
               }}
             />
           </div>
@@ -166,7 +174,7 @@ export default function Hero() {
               </div>
             )}
 
-            <p className="mb-3 text-sm text-muted-foreground">@{MY_PLAYER.handle}</p>
+            <p className="mb-3 text-sm text-muted-foreground">@{player.handle}</p>
 
             {editingBio ? (
               <div>
@@ -215,17 +223,17 @@ export default function Hero() {
       {/* Stats */}
       <div className="mb-6 grid grid-cols-4 divide-x divide-border rounded-lg border border-border bg-card">
         {[
-          { label: "Journeys", value: MY_SESSIONS.length, onClick: undefined },
-          { label: "Hours", value: totalHours(MY_SESSIONS), onClick: undefined },
+          { label: "Journeys", value: sessions.length, onClick: undefined },
+          { label: "Hours", value: totalHours(sessions), onClick: undefined },
           {
             label: "Followers",
-            value: MY_PLAYER.followers ?? 0,
-            onClick: () => setFollowList({ title: "Followers", players: MY_FOLLOWERS }),
+            value: player.followers ?? followers.length,
+            onClick: () => setFollowList({ title: "Followers", players: followers }),
           },
           {
             label: "Following",
-            value: MY_PLAYER.following ?? 0,
-            onClick: () => setFollowList({ title: "Following", players: MY_FOLLOWING }),
+            value: player.following ?? following.length,
+            onClick: () => setFollowList({ title: "Following", players: following }),
           },
         ].map(({ label, value, onClick }) =>
           onClick ? (
@@ -251,11 +259,10 @@ export default function Hero() {
         Your journeys
       </h2>
 
-      {MY_SESSIONS.length > 0 ? (
+      {sessions.length > 0 ? (
         <div className="flex flex-col gap-3">
-          {MY_SESSIONS.map((session) => {
-            const liked = likedIds.has(session.id);
-            const count = session.likes + (liked ? 1 : 0);
+          {sessions.map((session) => {
+            const likeCount = session.likes + (session.liked ? 1 : 0);
             return (
               <article
                 key={session.id}
@@ -266,8 +273,8 @@ export default function Hero() {
                   className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md"
                   style={{ backgroundColor: session.coverColor }}
                 >
-                  {gameCoverSrc(session.game)
-                    ? <img src={gameCoverSrc(session.game)} alt={session.game} className="absolute inset-0 h-full w-full object-cover" />
+                  {session.coverUrl
+                    ? <img src={session.coverUrl} alt={session.game} className="absolute inset-0 h-full w-full object-cover" />
                     : <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold" style={{ color: session.coverAccent }}>{session.game[0]}</span>
                   }
                 </div>
@@ -298,26 +305,23 @@ export default function Hero() {
                     </p>
                   )}
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleLike(session.id);
-                    }}
-                    aria-label={liked ? "Unlike" : "Like"}
+                    onClick={(e) => { e.stopPropagation(); likeMutation.mutate(session.id); }}
+                    aria-label={session.liked ? "Unlike" : "Like"}
                     className="flex items-center gap-1.5 transition-colors"
                   >
                     <Heart
                       size={15}
                       className={
-                        liked
+                        session.liked
                           ? "fill-rose-500 text-rose-500"
                           : "text-muted-foreground hover:text-rose-400"
                       }
                     />
-                    {count > 0 && (
+                    {likeCount > 0 && (
                       <span
-                        className={`text-xs ${liked ? "text-rose-500" : "text-muted-foreground"}`}
+                        className={`text-xs ${session.liked ? "text-rose-500" : "text-muted-foreground"}`}
                       >
-                        {count}
+                        {likeCount}
                       </span>
                     )}
                   </button>

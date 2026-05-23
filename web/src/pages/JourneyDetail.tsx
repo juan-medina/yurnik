@@ -3,24 +3,15 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Check, ChevronLeft, Clock, Heart, UserPlus } from "lucide-react";
-import {
-  MOCK_COMMENTS,
-  MOCK_FRIENDS_ON_JOURNEY,
-  MOCK_LIKERS,
-  MOCK_OTHERS_ON_JOURNEY,
-  MY_PLAYER_ID,
-  PLAYERS,
-  SESSIONS,
-  avatarSrc,
-  gameCoverSrc,
-  initials,
-  playerHref,
-  type MockComment,
-  type Player,
-  type JourneyPlayer,
-} from "@/lib/mock";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getJourney, getComments, getLikers, getJourneyPlayers, postComment } from "@/services/journeys";
+import { toggleLike } from "@/services/sessions";
+import { toggleFollow, isFollowingHandle } from "@/services/players";
+import { MY_PLAYER_ID } from "@/services/auth";
+import { avatarSrc, initials, playerHref } from "@/lib/display";
 import FollowListModal from "@/components/FollowListModal";
 import { formatCommentAge, formatSessionDate } from "@/lib/time";
+import type { Comment, JourneyPlayer, Player } from "@/models";
 
 function PlayerAvatar({ player, size = "md" }: { player: Player; size?: "sm" | "md" | "lg" }) {
   const dims = size === "sm" ? "h-6 w-6" : size === "lg" ? "h-10 w-10" : "h-8 w-8";
@@ -33,12 +24,17 @@ function PlayerAvatar({ player, size = "md" }: { player: Player; size?: "sm" | "
   );
 }
 
-function JourneyPlayerRow({ entry }: { entry: JourneyPlayer }) {
-  const [following, setFollowing] = useState(false);
+function JourneyPlayerRow({ entry, sessionId }: { entry: JourneyPlayer; sessionId: string }) {
+  const queryClient = useQueryClient();
+  const followMutation = useMutation({
+    mutationFn: () => toggleFollow(entry.player.handle),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["journey", sessionId, "players"] }),
+  });
+  const following = entry.isFollowing;
 
   return (
     <div className="flex items-center gap-3 py-2">
-      <Link to={playerHref(entry.player)} className="flex items-center gap-3 min-w-0 flex-1">
+      <Link to={playerHref(entry.player, MY_PLAYER_ID)} className="flex items-center gap-3 min-w-0 flex-1">
         <PlayerAvatar player={entry.player} size="md" />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-1.5">
@@ -55,7 +51,7 @@ function JourneyPlayerRow({ entry }: { entry: JourneyPlayer }) {
       </Link>
       {!entry.isFollowing && (
         <button
-          onClick={() => setFollowing((f) => !f)}
+          onClick={() => followMutation.mutate()}
           className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
             following
               ? "border-border bg-muted text-muted-foreground"
@@ -79,11 +75,11 @@ function JourneyPlayerRow({ entry }: { entry: JourneyPlayer }) {
   );
 }
 
-function CommentRow({ comment }: { comment: MockComment }) {
+function CommentRow({ comment }: { comment: Comment }) {
   return (
     <div className="py-3">
       <div className="mb-1 flex items-center gap-2">
-        <Link to={playerHref(comment.player)} className="flex items-center gap-2">
+        <Link to={playerHref(comment.player, MY_PLAYER_ID)} className="flex items-center gap-2">
           <PlayerAvatar player={comment.player} size="sm" />
           <span className="text-sm font-semibold">{comment.player.name}</span>
         </Link>
@@ -97,19 +93,59 @@ function CommentRow({ comment }: { comment: MockComment }) {
 export default function JourneyDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const session = SESSIONS.find((s) => s.id === id);
-
-  const [liked, setLiked] = useState(false);
+  const queryClient = useQueryClient();
+  const [commentText, setCommentText] = useState("");
   const [showLikers, setShowLikers] = useState(false);
-  const [comment, setComment] = useState("");
-  const likeCount = (session?.likes ?? 0) + (liked ? 1 : 0);
 
-  const initOwnerFollowing = MOCK_FRIENDS_ON_JOURNEY.some(
-    (jp) => jp.player.handle === session?.player.handle,
-  );
-  const [ownerFollowing, setOwnerFollowing] = useState(initOwnerFollowing);
-  const myHandle = PLAYERS.find((p) => p.id === MY_PLAYER_ID)?.handle;
-  const showOwnerFollow = session && session.player.handle !== myHandle;
+  const { data: session } = useQuery({
+    queryKey: ["journey", id],
+    queryFn: () => getJourney(id!),
+    enabled: !!id,
+  });
+
+  const { data: comments = [] } = useQuery({
+    queryKey: ["journey", id, "comments"],
+    queryFn: () => getComments(id!),
+    enabled: !!id,
+  });
+
+  const { data: likers = [] } = useQuery({
+    queryKey: ["journey", id, "likers"],
+    queryFn: () => getLikers(id!),
+    enabled: !!id,
+  });
+
+  const { data: journeyPlayers } = useQuery({
+    queryKey: ["journey", id, "players"],
+    queryFn: () => getJourneyPlayers(id!),
+    enabled: !!id,
+  });
+
+  const isOwner = session?.player.id === MY_PLAYER_ID;
+
+  const { data: ownerIsFollowed = false } = useQuery({
+    queryKey: ["following", session?.player.handle],
+    queryFn: () => isFollowingHandle(session!.player.handle),
+    enabled: !!session && !isOwner,
+  });
+
+  const likeMutation = useMutation({
+    mutationFn: toggleLike,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["journey", id] }),
+  });
+
+  const followOwnerMutation = useMutation({
+    mutationFn: () => toggleFollow(session!.player.handle),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["following", session?.player.handle] }),
+  });
+
+  const postCommentMutation = useMutation({
+    mutationFn: (text: string) => postComment(id!, text),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["journey", id, "comments"] });
+      setCommentText("");
+    },
+  });
 
   if (!session) {
     return (
@@ -118,6 +154,8 @@ export default function JourneyDetail() {
       </div>
     );
   }
+
+  const likeCount = session.likes + (session.liked ? 1 : 0);
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -131,24 +169,24 @@ export default function JourneyDetail() {
           <ChevronLeft size={20} />
         </button>
         <Link
-          to={playerHref(session.player)}
+          to={playerHref(session.player, MY_PLAYER_ID)}
           className="flex items-center gap-2"
         >
           <PlayerAvatar player={session.player} size="sm" />
           <span className="text-sm font-semibold">{session.player.name}</span>
         </Link>
         <span className="text-xs text-muted-foreground">@{session.player.handle}</span>
-        {showOwnerFollow && (
+        {!isOwner && (
           <button
-            onClick={() => setOwnerFollowing((f) => !f)}
-            aria-label={ownerFollowing ? "Unfollow" : "Follow"}
+            onClick={() => followOwnerMutation.mutate()}
+            aria-label={ownerIsFollowed ? "Unfollow" : "Follow"}
             className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              ownerFollowing
+              ownerIsFollowed
                 ? "border-border bg-muted text-muted-foreground"
                 : "border-primary text-primary hover:bg-primary hover:text-primary-foreground"
             }`}
           >
-            {ownerFollowing ? (
+            {ownerIsFollowed ? (
               <>
                 <Check size={12} />
                 Unfollow
@@ -171,8 +209,8 @@ export default function JourneyDetail() {
             className="relative h-24 w-24 shrink-0 overflow-hidden rounded-md"
             style={{ backgroundColor: session.coverColor }}
           >
-            {gameCoverSrc(session.game)
-              ? <img src={gameCoverSrc(session.game)} alt={session.game} className="absolute inset-0 h-full w-full object-cover" />
+            {session.coverUrl
+              ? <img src={session.coverUrl} alt={session.game} className="absolute inset-0 h-full w-full object-cover" />
               : <span className="absolute inset-0 flex items-center justify-center text-4xl font-bold" style={{ color: session.coverAccent }}>{session.game[0]}</span>
             }
           </div>
@@ -206,15 +244,15 @@ export default function JourneyDetail() {
       <div className="mt-4 rounded-lg border border-border bg-card p-4">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => setLiked((l) => !l)}
+            onClick={() => likeMutation.mutate(session.id)}
             className="flex items-center gap-2 transition-colors"
-            aria-label={liked ? "Unlike" : "Like"}
+            aria-label={session.liked ? "Unlike" : "Like"}
           >
             <Heart
               size={22}
-              className={liked ? "fill-rose-500 text-rose-500" : "text-muted-foreground hover:text-rose-400"}
+              className={session.liked ? "fill-rose-500 text-rose-500" : "text-muted-foreground hover:text-rose-400"}
             />
-            <span className={`text-sm font-medium ${liked ? "text-rose-500" : "text-muted-foreground"}`}>
+            <span className={`text-sm font-medium ${session.liked ? "text-rose-500" : "text-muted-foreground"}`}>
               {likeCount}
             </span>
           </button>
@@ -224,7 +262,7 @@ export default function JourneyDetail() {
             aria-label="See who liked this"
           >
             <div className="flex -space-x-2">
-              {MOCK_LIKERS.map((liker) => (
+              {likers.map((liker) => (
                 <img
                   key={liker.id}
                   src={avatarSrc(liker)}
@@ -245,21 +283,22 @@ export default function JourneyDetail() {
           <h2 className="text-sm font-semibold">Comments</h2>
         </div>
         <div className="divide-y divide-border px-4">
-          {MOCK_COMMENTS.map((c) => (
+          {comments.map((c) => (
             <CommentRow key={c.id} comment={c} />
           ))}
         </div>
         <div className="border-t border-border p-4">
           <div className="flex gap-3">
             <textarea
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
               placeholder="Add a comment…"
               rows={2}
               className="flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             />
             <button
-              disabled={!comment.trim()}
+              disabled={!commentText.trim()}
+              onClick={() => postCommentMutation.mutate(commentText)}
               className="self-end rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-40"
             >
               Post
@@ -274,27 +313,27 @@ export default function JourneyDetail() {
           <h2 className="text-sm font-semibold">On this journey</h2>
         </div>
 
-        {MOCK_FRIENDS_ON_JOURNEY.length > 0 && (
+        {(journeyPlayers?.friends ?? []).length > 0 && (
           <div className="px-4">
             <p className="pt-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Friends
             </p>
             <div className="divide-y divide-border">
-              {MOCK_FRIENDS_ON_JOURNEY.map((entry) => (
-                <JourneyPlayerRow key={entry.player.id} entry={entry} />
+              {(journeyPlayers?.friends ?? []).map((entry) => (
+                <JourneyPlayerRow key={entry.player.id} entry={entry} sessionId={id!} />
               ))}
             </div>
           </div>
         )}
 
-        {MOCK_OTHERS_ON_JOURNEY.length > 0 && (
+        {(journeyPlayers?.others ?? []).length > 0 && (
           <div className="px-4 pb-2">
             <p className="pt-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Others
             </p>
             <div className="divide-y divide-border">
-              {MOCK_OTHERS_ON_JOURNEY.map((entry) => (
-                <JourneyPlayerRow key={entry.player.id} entry={entry} />
+              {(journeyPlayers?.others ?? []).map((entry) => (
+                <JourneyPlayerRow key={entry.player.id} entry={entry} sessionId={id!} />
               ))}
             </div>
           </div>
@@ -306,7 +345,7 @@ export default function JourneyDetail() {
       {showLikers && (
         <FollowListModal
           title="Liked by"
-          players={MOCK_LIKERS}
+          players={likers}
           onClose={() => setShowLikers(false)}
         />
       )}

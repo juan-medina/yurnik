@@ -1,22 +1,23 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Clock, Heart } from "lucide-react";
-import { type MockSession, SESSIONS, avatarSrc, gameCoverSrc, playerHref } from "@/lib/mock";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getFeedSessions } from "@/services/feed";
+import { toggleLike } from "@/services/sessions";
+import { avatarSrc, playerHref } from "@/lib/display";
+import { MY_PLAYER_ID } from "@/services/auth";
 import { formatSessionDate } from "@/lib/time";
+import type { Session } from "@/models";
 
-type SessionCardProps = { session: MockSession };
-
-function SessionCard({ session }: SessionCardProps) {
+function SessionCard({ session }: { session: Session }) {
   const navigate = useNavigate();
-  const [liked, setLiked] = useState(false);
-  const likeCount = session.likes + (liked ? 1 : 0);
+  const queryClient = useQueryClient();
 
-  function toggleLike(e: React.MouseEvent) {
-    e.stopPropagation();
-    setLiked((prev) => !prev);
-  }
+  const likeMutation = useMutation({
+    mutationFn: toggleLike,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["feed"] }),
+  });
 
   return (
     <article
@@ -27,8 +28,8 @@ function SessionCard({ session }: SessionCardProps) {
         className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md"
         style={{ backgroundColor: session.coverColor }}
       >
-        {gameCoverSrc(session.game)
-          ? <img src={gameCoverSrc(session.game)} alt={session.game} className="absolute inset-0 h-full w-full object-cover" />
+        {session.coverUrl
+          ? <img src={session.coverUrl} alt={session.game} className="absolute inset-0 h-full w-full object-cover" />
           : <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold" style={{ color: session.coverAccent }}>{session.game[0]}</span>
         }
       </div>
@@ -36,7 +37,7 @@ function SessionCard({ session }: SessionCardProps) {
       <div className="min-w-0 flex-1">
         <div className="mb-1.5 flex items-center gap-2">
           <Link
-            to={playerHref(session.player)}
+            to={playerHref(session.player, MY_PLAYER_ID)}
             onClick={(e) => e.stopPropagation()}
             className="flex items-center gap-2"
           >
@@ -79,19 +80,19 @@ function SessionCard({ session }: SessionCardProps) {
         )}
 
         <button
-          onClick={toggleLike}
+          onClick={(e) => { e.stopPropagation(); likeMutation.mutate(session.id); }}
           className="flex items-center gap-1.5 transition-colors"
-          aria-label={liked ? "Unlike" : "Like"}
+          aria-label={session.liked ? "Unlike" : "Like"}
         >
           <Heart
             size={15}
             className={
-              liked ? "fill-rose-500 text-rose-500" : "text-muted-foreground hover:text-rose-400"
+              session.liked ? "fill-rose-500 text-rose-500" : "text-muted-foreground hover:text-rose-400"
             }
           />
-          {likeCount > 0 && (
-            <span className={`text-xs ${liked ? "text-rose-500" : "text-muted-foreground"}`}>
-              {likeCount}
+          {(session.likes + (session.liked ? 1 : 0)) > 0 && (
+            <span className={`text-xs ${session.liked ? "text-rose-500" : "text-muted-foreground"}`}>
+              {session.likes + (session.liked ? 1 : 0)}
             </span>
           )}
         </button>
@@ -101,10 +102,12 @@ function SessionCard({ session }: SessionCardProps) {
 }
 
 export default function Realm() {
+  const { data: sessions = [] } = useQuery({ queryKey: ["feed"], queryFn: getFeedSessions });
+
   return (
     <div className="mx-auto max-w-2xl">
       <div className="flex flex-col gap-3">
-        {SESSIONS.map((session) => (
+        {sessions.map((session) => (
           <SessionCard key={session.id} session={session} />
         ))}
       </div>

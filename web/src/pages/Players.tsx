@@ -1,27 +1,30 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Clock, Search } from "lucide-react";
-import { MOCK_GAME_ACTIVITY, avatarSrc, gameCoverSrc, playerHref, type MockGameActivity, type MockJourneyEntry } from "@/lib/mock";
+import { useQuery } from "@tanstack/react-query";
+import { getGameActivity } from "@/services/games";
+import { avatarSrc, playerHref } from "@/lib/display";
+import { MY_PLAYER_ID } from "@/services/auth";
 import { formatSessionDate } from "@/lib/time";
+import type { GameActivity, JourneyEntry } from "@/models";
 
-function GameCover({ coverColor, coverAccent, game }: { coverColor: string; coverAccent: string; game: string }) {
-  const cover = gameCoverSrc(game);
+function GameCover({ coverColor, coverAccent, game, coverUrl }: { coverColor: string; coverAccent: string; game: string; coverUrl?: string }) {
   return (
     <div
       className="relative h-14 w-12 shrink-0 overflow-hidden rounded-md"
       style={{ backgroundColor: coverColor }}
     >
-      {cover
-        ? <img src={cover} alt={game} className="absolute inset-0 h-full w-full object-cover" />
+      {coverUrl
+        ? <img src={coverUrl} alt={game} className="absolute inset-0 h-full w-full object-cover" />
         : <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold" style={{ color: coverAccent }}>{game[0]}</span>
       }
     </div>
   );
 }
 
-function JourneyRow({ entry }: { entry: MockJourneyEntry }) {
+function JourneyRow({ entry }: { entry: JourneyEntry }) {
   const navigate = useNavigate();
   return (
     <div
@@ -29,7 +32,7 @@ function JourneyRow({ entry }: { entry: MockJourneyEntry }) {
       onClick={() => navigate(`/journey/${entry.sessionId}`)}
     >
       <Link
-        to={playerHref(entry.player)}
+        to={playerHref(entry.player, MY_PLAYER_ID)}
         onClick={(e) => e.stopPropagation()}
         className="flex items-center gap-3 min-w-0"
       >
@@ -55,7 +58,7 @@ function JourneyRow({ entry }: { entry: MockJourneyEntry }) {
   );
 }
 
-function GameCard({ activity }: { activity: MockGameActivity }) {
+function GameCard({ activity }: { activity: GameActivity }) {
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card">
       <div className="flex items-center gap-3 p-4">
@@ -63,6 +66,7 @@ function GameCard({ activity }: { activity: MockGameActivity }) {
           coverColor={activity.coverColor}
           coverAccent={activity.coverAccent}
           game={activity.game}
+          coverUrl={activity.coverUrl}
         />
         <div className="min-w-0 flex-1">
           <p className="font-semibold">{activity.game}</p>
@@ -90,16 +94,19 @@ function GameCard({ activity }: { activity: MockGameActivity }) {
   );
 }
 
-const ALL_GENRES = Array.from(
-  new Set(MOCK_GAME_ACTIVITY.flatMap((g) => g.genres)),
-).sort();
-
 export default function Players() {
   const [search, setSearch] = useState("");
   const [activeGenre, setActiveGenre] = useState<string | null>(null);
 
+  const { data: activities = [] } = useQuery({ queryKey: ["game-activity"], queryFn: getGameActivity });
+
+  const allGenres = useMemo(
+    () => Array.from(new Set(activities.flatMap((g) => g.genres))).sort(),
+    [activities],
+  );
+
   const q = search.toLowerCase().trim();
-  const visible = MOCK_GAME_ACTIVITY.filter((g) => {
+  const visible = activities.filter((g) => {
     if (activeGenre && !g.genres.includes(activeGenre)) return false;
     if (q) {
       const matchesGame = g.game.toLowerCase().includes(q);
@@ -137,7 +144,7 @@ export default function Players() {
         >
           All
         </button>
-        {ALL_GENRES.map((genre) => (
+        {allGenres.map((genre) => (
           <button
             key={genre}
             onClick={() => setActiveGenre(activeGenre === genre ? null : genre)}

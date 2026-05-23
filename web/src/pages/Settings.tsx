@@ -2,52 +2,59 @@
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
 import { Search } from "lucide-react";
-import {
-  GAME_LIBRARY,
-  MOCK_EXCLUSIONS,
-  MOCK_GAME_HINTS,
-  MY_PLAYER,
-  avatarSrc,
-  initials,
-  type MockExclusion,
-  type MockGameHint,
-} from "@/lib/mock";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getCurrentPlayer, signOut } from "@/services/auth";
+import { getExclusions, removeExclusion, getGameHints, removeGameHint, updateGameHint } from "@/services/settings";
+import { getGameLibrary } from "@/services/games";
+import { avatarSrc, initials } from "@/lib/display";
 
 export default function Settings() {
-  const [exclusions, setExclusions] = useState<MockExclusion[]>([...MOCK_EXCLUSIONS]);
-  const [hints, setHints] = useState<MockGameHint[]>([...MOCK_GAME_HINTS]);
+  const queryClient = useQueryClient();
+
+  const { data: player } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
+  const { data: exclusions = [] } = useQuery({ queryKey: ["settings", "exclusions"], queryFn: getExclusions });
+  const { data: hints = [] } = useQuery({ queryKey: ["settings", "hints"], queryFn: getGameHints });
+  const { data: games = [] } = useQuery({ queryKey: ["games"], queryFn: getGameLibrary });
+
   const [confirmingExe, setConfirmingExe] = useState<string | null>(null);
   const [confirmingHintExe, setConfirmingHintExe] = useState<string | null>(null);
   const [editingHintExe, setEditingHintExe] = useState<string | null>(null);
   const [editQuery, setEditQuery] = useState("");
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
 
+  const removeExclusionMutation = useMutation({
+    mutationFn: removeExclusion,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings", "exclusions"] });
+      setConfirmingExe(null);
+    },
+  });
+
+  const removeHintMutation = useMutation({
+    mutationFn: removeGameHint,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings", "hints"] });
+      setConfirmingHintExe(null);
+    },
+  });
+
+  const updateHintMutation = useMutation({
+    mutationFn: ({ exeName, game }: { exeName: string; game: string }) => updateGameHint(exeName, game),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings", "hints"] });
+      setEditingHintExe(null);
+      setEditQuery("");
+    },
+  });
+
+  const signOutMutation = useMutation({ mutationFn: signOut });
+
   const editGameResults =
     editingHintExe !== null && editQuery.length >= 2
-      ? GAME_LIBRARY.filter((g) => g.game.toLowerCase().includes(editQuery.toLowerCase())).slice(0, 5)
+      ? games.filter((g) => g.game.toLowerCase().includes(editQuery.toLowerCase())).slice(0, 5)
       : [];
 
-  function removeExclusion(exeName: string) {
-    setExclusions((prev) => prev.filter((e) => e.exeName !== exeName));
-    setConfirmingExe(null);
-  }
-
-  function removeHint(exeName: string) {
-    setHints((prev) => prev.filter((h) => h.exeName !== exeName));
-    setConfirmingHintExe(null);
-  }
-
-  function updateHintGame(exeName: string, newGame: string) {
-    setHints((prev) => prev.map((h) => (h.exeName === exeName ? { ...h, game: newGame } : h)));
-    setEditingHintExe(null);
-    setEditQuery("");
-  }
-
-  function startEditingHint(exeName: string) {
-    setConfirmingHintExe(null);
-    setEditingHintExe(exeName);
-    setEditQuery("");
-  }
+  if (!player) return null;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -62,8 +69,8 @@ export default function Settings() {
           <div className="flex items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3">
               <img
-                src={avatarSrc(MY_PLAYER)}
-                alt={MY_PLAYER.name}
+                src={avatarSrc(player)}
+                alt={player.name}
                 className="h-10 w-10 shrink-0 rounded-full object-cover"
                 onError={(e) => {
                   const target = e.currentTarget;
@@ -74,13 +81,13 @@ export default function Settings() {
               <div
                 hidden
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                style={{ backgroundColor: MY_PLAYER.color }}
+                style={{ backgroundColor: player.color }}
               >
-                {initials(MY_PLAYER.name)}
+                {initials(player.name)}
               </div>
               <div className="min-w-0">
-                <div className="truncate font-semibold">{MY_PLAYER.name}</div>
-                <div className="truncate text-sm text-muted-foreground">@{MY_PLAYER.handle}</div>
+                <div className="truncate font-semibold">{player.name}</div>
+                <div className="truncate text-sm text-muted-foreground">@{player.handle}</div>
               </div>
             </div>
             {confirmingSignOut ? (
@@ -93,7 +100,7 @@ export default function Settings() {
                   Cancel
                 </button>
                 <button
-                  onClick={() => setConfirmingSignOut(false)}
+                  onClick={() => { signOutMutation.mutate(); setConfirmingSignOut(false); }}
                   className="rounded-md bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
                 >
                   Sign out
@@ -145,7 +152,7 @@ export default function Settings() {
                           Cancel
                         </button>
                         <button
-                          onClick={() => removeExclusion(exc.exeName)}
+                          onClick={() => removeExclusionMutation.mutate(exc.exeName)}
                           className="rounded-md bg-destructive px-3 py-1 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
                         >
                           Remove
@@ -195,10 +202,7 @@ export default function Settings() {
                         <span className="truncate text-muted-foreground">{hint.game}</span>
                       </div>
                       <div className="relative mb-1">
-                        <Search
-                          size={13}
-                          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-                        />
+                        <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <input
                           type="text"
                           value={editQuery}
@@ -214,7 +218,7 @@ export default function Settings() {
                             <button
                               key={g.id}
                               type="button"
-                              onClick={() => updateHintGame(hint.exeName, g.game)}
+                              onClick={() => updateHintMutation.mutate({ exeName: hint.exeName, game: g.game })}
                               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent/10"
                             >
                               {g.game}
@@ -252,7 +256,7 @@ export default function Settings() {
                           Cancel
                         </button>
                         <button
-                          onClick={() => removeHint(hint.exeName)}
+                          onClick={() => removeHintMutation.mutate(hint.exeName)}
                           className="rounded-md bg-destructive px-3 py-1 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
                         >
                           Remove
@@ -271,7 +275,7 @@ export default function Settings() {
                       </div>
                       <div className="ml-2 flex shrink-0 items-center gap-1">
                         <button
-                          onClick={() => startEditingHint(hint.exeName)}
+                          onClick={() => { setConfirmingHintExe(null); setEditingHintExe(hint.exeName); setEditQuery(""); }}
                           aria-label={`Edit hint for ${hint.exeName}`}
                           className="rounded-md px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                         >

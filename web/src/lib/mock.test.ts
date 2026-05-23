@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { initials } from "./mock";
+import { initials } from "./display";
 
 describe("initials", () => {
   it("returns uppercase initials for a two-word name", () => {

@@ -3,43 +3,30 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { CalendarDays, Check, Clock, Heart, MonitorDown, Plus, Search, Trash2, X } from "lucide-react";
-import {
-  GAME_LIBRARY,
-  MOCK_PENDING_SESSIONS,
-  MY_PLAYER_ID,
-  PLAYERS,
-  SESSIONS,
-  gameCoverSrc,
-  type MockGameResult,
-  type MockPendingSession,
-  type MockSession,
-} from "@/lib/mock";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getUserSessions, getPendingSessions, addSession, confirmPendingSession, dismissPendingSession, toggleLike } from "@/services/sessions";
+import { getGameLibrary } from "@/services/games";
 import { formatCommentAge, formatSessionDate } from "@/lib/time";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import type { Session, PendingSession, NewSession } from "@/models/session";
+import type { Game } from "@/models/game";
 
 function GameCover({
-  coverColor,
-  coverAccent,
-  game,
-  size,
+  coverColor, coverAccent, game, coverUrl, size,
 }: {
-  coverColor: string;
-  coverAccent: string;
-  game: string;
-  size: "sm" | "md";
+  coverColor: string; coverAccent: string; game: string; coverUrl?: string; size: "sm" | "md";
 }) {
   const dims = size === "sm" ? "h-10 w-10 text-lg" : "h-16 w-16 text-2xl";
-  const cover = gameCoverSrc(game);
   return (
     <div
       className={`relative ${dims} shrink-0 overflow-hidden rounded-md`}
       style={{ backgroundColor: coverColor }}
     >
-      {cover
-        ? <img src={cover} alt={game} className="absolute inset-0 h-full w-full object-cover" />
+      {coverUrl
+        ? <img src={coverUrl} alt={game} className="absolute inset-0 h-full w-full object-cover" />
         : <span className="absolute inset-0 flex items-center justify-center font-bold" style={{ color: coverAccent }}>{game[0]}</span>
       }
     </div>
@@ -50,44 +37,32 @@ function GameSelector({
   value,
   onChange,
 }: {
-  value: MockGameResult | null;
-  onChange: (game: MockGameResult) => void;
+  value: Game | null;
+  onChange: (game: Game) => void;
 }) {
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(value === null);
+  const { data: allGames = [] } = useQuery({ queryKey: ["games"], queryFn: getGameLibrary });
 
   const results =
     searching && query.length >= 2
-      ? GAME_LIBRARY.filter((g) => g.game.toLowerCase().includes(query.toLowerCase())).slice(0, 6)
+      ? allGames.filter((g) => g.game.toLowerCase().includes(query.toLowerCase())).slice(0, 6)
       : [];
 
   if (!searching && value) {
     return (
       <div className="flex items-center gap-3 rounded-md border border-primary/30 bg-primary/5 p-3">
-        <GameCover
-          coverColor={value.coverColor}
-          coverAccent={value.coverAccent}
-          game={value.game}
-          size="sm"
-        />
+        <GameCover coverColor={value.coverColor} coverAccent={value.coverAccent} game={value.game} coverUrl={value.coverUrl} size="sm" />
         <div className="min-w-0 flex-1">
           <div className="font-medium">{value.game}</div>
           <div className="mt-1 flex flex-wrap gap-1">
             {value.genres.map((g) => (
-              <span
-                key={g}
-                className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
-              >
-                {g}
-              </span>
+              <span key={g} className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{g}</span>
             ))}
           </div>
         </div>
         <button
-          onClick={() => {
-            setSearching(true);
-            setQuery("");
-          }}
+          onClick={() => { setSearching(true); setQuery(""); }}
           className="shrink-0 text-xs text-primary underline-offset-2 hover:underline"
         >
           Change
@@ -99,10 +74,7 @@ function GameSelector({
   return (
     <div>
       <div className="relative">
-        <Search
-          size={14}
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-        />
+        <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
           value={query}
@@ -118,29 +90,15 @@ function GameSelector({
             <button
               key={g.id}
               type="button"
-              onClick={() => {
-                onChange(g);
-                setSearching(false);
-                setQuery("");
-              }}
+              onClick={() => { onChange(g); setSearching(false); setQuery(""); }}
               className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-accent/10"
             >
-              <GameCover
-                coverColor={g.coverColor}
-                coverAccent={g.coverAccent}
-                game={g.game}
-                size="sm"
-              />
+              <GameCover coverColor={g.coverColor} coverAccent={g.coverAccent} game={g.game} coverUrl={g.coverUrl} size="sm" />
               <div className="min-w-0">
                 <div className="text-sm font-medium">{g.game}</div>
                 <div className="mt-0.5 flex flex-wrap gap-1">
                   {g.genres.map((genre) => (
-                    <span
-                      key={genre}
-                      className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
-                    >
-                      {genre}
-                    </span>
+                    <span key={genre} className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{genre}</span>
                   ))}
                 </div>
               </div>
@@ -149,9 +107,7 @@ function GameSelector({
         </div>
       )}
       {query.length >= 2 && results.length === 0 && (
-        <p className="mt-2 text-xs text-muted-foreground">
-          No games found for &ldquo;{query}&rdquo;
-        </p>
+        <p className="mt-2 text-xs text-muted-foreground">No games found for &ldquo;{query}&rdquo;</p>
       )}
     </div>
   );
@@ -184,33 +140,24 @@ function ClientHint() {
 function parseDuration(input: string): { hours: number; minutes: number } | null {
   const s = input.trim().toLowerCase().replace(/\s+/g, "");
   if (!s) return null;
-
-  // h:mm or hh:mm
   const colonMatch = s.match(/^(\d{1,2}):(\d{2})$/);
   if (colonMatch) {
     const h = parseInt(colonMatch[1]);
     const m = parseInt(colonMatch[2]);
     if (m < 60) return { hours: h, minutes: m };
   }
-
-  // Xh Ym or XhYm or XhY
   const hmMatch = s.match(/^(\d+)h(\d+)m?$/);
   if (hmMatch) {
     const m = parseInt(hmMatch[2]);
     if (m < 60) return { hours: parseInt(hmMatch[1]), minutes: m };
   }
-
-  // Xh only
   const hMatch = s.match(/^(\d+)h$/);
   if (hMatch) return { hours: parseInt(hMatch[1]), minutes: 0 };
-
-  // Xm only
   const mMatch = s.match(/^(\d+)m$/);
   if (mMatch) {
     const total = parseInt(mMatch[1]);
     return { hours: Math.floor(total / 60), minutes: total % 60 };
   }
-
   return null;
 }
 
@@ -220,44 +167,37 @@ function formatParsedDuration(d: { hours: number; minutes: number }): string {
   return `${d.minutes}m`;
 }
 
-function AddJourneyForm({
-  onAdd,
-  onCancel,
-}: {
-  onAdd: (s: MockSession) => void;
-  onCancel: () => void;
-}) {
-  const [selected, setSelected] = useState<MockGameResult | null>(null);
+function AddJourneyForm({ onAdd, onCancel }: { onAdd: () => void; onCancel: () => void }) {
+  const queryClient = useQueryClient();
+  const [selected, setSelected] = useState<Game | null>(null);
   const [durationInput, setDurationInput] = useState("");
   const [log, setLog] = useState("");
   const [whenMode, setWhenMode] = useState<"now" | "pick">("now");
   const [pickedDate, setPickedDate] = useState<Date | undefined>(undefined);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
+  const addMutation = useMutation({
+    mutationFn: addSession,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sessions", "user"] });
+      onAdd();
+    },
+  });
+
   const parsedDuration = parseDuration(durationInput);
   const durationInvalid = durationInput.trim() !== "" && parsedDuration === null;
-  const durationSet = parsedDuration !== null;
-  const dateReady = whenMode === "now" || pickedDate !== undefined;
-  const canSubmit = selected !== null && durationSet && dateReady;
+  const canSubmit = selected !== null && parsedDuration !== null && (whenMode === "now" || pickedDate !== undefined);
 
   function getPlayedAt(): Date {
     if (whenMode === "pick" && pickedDate) {
-      return new Date(
-        pickedDate.getFullYear(),
-        pickedDate.getMonth(),
-        pickedDate.getDate(),
-        23, 59, 59,
-      );
+      return new Date(pickedDate.getFullYear(), pickedDate.getMonth(), pickedDate.getDate(), 23, 59, 59);
     }
     return new Date();
   }
 
   function handleAdd() {
     if (!selected || !parsedDuration) return;
-    const me = PLAYERS.find((p) => p.id === MY_PLAYER_ID)!;
-    onAdd({
-      id: `m-${Date.now()}`,
-      player: me,
+    const input: NewSession = {
       game: selected.game,
       coverColor: selected.coverColor,
       coverAccent: selected.coverAccent,
@@ -265,19 +205,15 @@ function AddJourneyForm({
       duration: formatParsedDuration(parsedDuration),
       playedAt: getPlayedAt(),
       log: log.trim() || undefined,
-      likes: 0,
-    });
+    };
+    addMutation.mutate(input);
   }
 
   return (
     <div className="mb-6 rounded-lg border border-border bg-card p-5">
       <div className="mb-5 flex items-center justify-between">
         <h2 className="font-semibold">Log a journey</h2>
-        <button
-          onClick={onCancel}
-          aria-label="Close"
-          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        >
+        <button onClick={onCancel} aria-label="Close" className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
           <X size={15} />
         </button>
       </div>
@@ -287,31 +223,20 @@ function AddJourneyForm({
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-3">
-        {/* Duration */}
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-            Duration
-          </label>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Duration</label>
           <input
             aria-label="Duration"
             type="text"
             value={durationInput}
             onChange={(e) => setDurationInput(e.target.value)}
             placeholder="e.g. 2h 30m, 90m, 1:30"
-            className={`w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary ${
-              durationInvalid ? "border-destructive" : "border-border"
-            }`}
+            className={`w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary ${durationInvalid ? "border-destructive" : "border-border"}`}
           />
-          {durationInvalid && (
-            <p className="mt-1 text-xs text-destructive">Try 2h, 90m, or 1:30</p>
-          )}
+          {durationInvalid && <p className="mt-1 text-xs text-destructive">Try 2h, 90m, or 1:30</p>}
         </div>
-
-        {/* When */}
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-            When
-          </label>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">When</label>
           <div className="flex gap-1.5">
             <Button
               type="button"
@@ -365,10 +290,7 @@ function AddJourneyForm({
       </div>
 
       <div className="flex items-center justify-end gap-2">
-        <button
-          onClick={onCancel}
-          className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        >
+        <button onClick={onCancel} className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
           Cancel
         </button>
         <button
@@ -383,7 +305,7 @@ function AddJourneyForm({
   );
 }
 
-function sessionToGameResult(session: MockPendingSession): MockGameResult {
+function gameToGame(session: PendingSession): Game {
   return {
     id: session.game,
     game: session.game,
@@ -393,44 +315,45 @@ function sessionToGameResult(session: MockPendingSession): MockGameResult {
   };
 }
 
-function PendingCard({
-  session,
-  onDismiss,
-  onConfirm,
-}: {
-  session: MockPendingSession;
-  onDismiss: () => void;
-  onConfirm: (s: MockSession) => void;
-}) {
+function PendingCard({ session }: { session: PendingSession }) {
+  const queryClient = useQueryClient();
   const [cardState, setCardState] = useState<"collapsed" | "confirming" | "excluding">("collapsed");
-  const [game, setGame] = useState<MockGameResult | null>(sessionToGameResult(session));
+  const [game, setGame] = useState<Game | null>(gameToGame(session));
   const [log, setLog] = useState("");
 
+  const dismissMutation = useMutation({
+    mutationFn: () => dismissPendingSession(session.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sessions", "pending"] }),
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: (input: { game: string; coverColor: string; coverAccent: string; genres: string[]; log?: string }) =>
+      confirmPendingSession(session.id, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sessions", "pending"] });
+      queryClient.invalidateQueries({ queryKey: ["sessions", "user"] });
+    },
+  });
+
   function openConfirm(searchMode = false) {
-    setGame(searchMode ? null : sessionToGameResult(session));
+    setGame(searchMode ? null : gameToGame(session));
     setCardState("confirming");
   }
 
   function cancelConfirm() {
     setCardState("collapsed");
-    setGame(sessionToGameResult(session));
+    setGame(gameToGame(session));
     setLog("");
   }
 
   function handlePublish() {
     if (!game?.game) return;
-    const me = PLAYERS.find((p) => p.id === MY_PLAYER_ID)!;
-    onConfirm({
-      id: `c-${Date.now()}`,
-      player: me,
+    confirmMutation.mutate({
       game: game.game,
       coverColor: game.coverColor,
       coverAccent: game.coverAccent,
       genres: game.genres,
-      duration: session.duration,
-      playedAt: session.endedAt,
       log: log.trim() || undefined,
-      likes: 0,
     });
   }
 
@@ -454,10 +377,7 @@ function PendingCard({
           className="mt-3 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
         />
         <div className="mt-3 flex items-center justify-end gap-2">
-          <button
-            onClick={cancelConfirm}
-            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
+          <button onClick={cancelConfirm} className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
             Cancel
           </button>
           <button
@@ -477,18 +397,13 @@ function PendingCard({
     return (
       <div className="rounded-lg border border-border bg-card p-4">
         <p className="text-sm font-medium">Exclude {session.exeName} from detection?</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Future sessions from this executable will be ignored.
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">Future sessions from this executable will be ignored.</p>
         <div className="mt-4 flex items-center justify-end gap-2">
-          <button
-            onClick={() => setCardState("collapsed")}
-            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
+          <button onClick={() => setCardState("collapsed")} className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
             Cancel
           </button>
           <button
-            onClick={onDismiss}
+            onClick={() => dismissMutation.mutate()}
             className="flex items-center gap-1.5 rounded-md bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
           >
             Exclude
@@ -501,12 +416,7 @@ function PendingCard({
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <div className="flex gap-4">
-        <GameCover
-          coverColor={session.coverColor}
-          coverAccent={session.coverAccent}
-          game={session.game}
-          size="md"
-        />
+        <GameCover coverColor={session.coverColor} coverAccent={session.coverAccent} game={session.game} coverUrl={session.coverUrl} size="md" />
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
             {session.game ? (
@@ -514,21 +424,13 @@ function PendingCard({
             ) : (
               <span className="italic text-muted-foreground">Unknown Game</span>
             )}
-            <button
-              onClick={() => openConfirm(true)}
-              className="text-xs text-primary underline-offset-2 hover:underline"
-            >
+            <button onClick={() => openConfirm(true)} className="text-xs text-primary underline-offset-2 hover:underline">
               Change
             </button>
             {session.game && (
               <div className="flex flex-wrap gap-1">
                 {session.genres.map((g) => (
-                  <span
-                    key={g}
-                    className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
-                  >
-                    {g}
-                  </span>
+                  <span key={g} className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{g}</span>
                 ))}
               </div>
             )}
@@ -550,24 +452,15 @@ function PendingCard({
       </div>
       <div className="mt-3 flex items-center justify-end gap-2 border-t border-border pt-3">
         {session.exeName && (
-          <button
-            onClick={() => setCardState("excluding")}
-            className="rounded-md px-2 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:text-muted-foreground"
-          >
+          <button onClick={() => setCardState("excluding")} className="rounded-md px-2 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:text-muted-foreground">
             Never detect this
           </button>
         )}
-        <button
-          onClick={onDismiss}
-          className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        >
+        <button onClick={() => dismissMutation.mutate()} className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
           <Trash2 size={14} />
           Discard
         </button>
-        <button
-          onClick={() => openConfirm(false)}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-        >
+        <button onClick={() => openConfirm(false)} className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
           <Check size={14} />
           Confirm
         </button>
@@ -576,27 +469,23 @@ function PendingCard({
   );
 }
 
-function HistoryCard({ session }: { session: MockSession }) {
+function HistoryCard({ session }: { session: Session }) {
   const navigate = useNavigate();
-  const [liked, setLiked] = useState(false);
-  const likeCount = session.likes + (liked ? 1 : 0);
+  const queryClient = useQueryClient();
 
-  function toggleLike(e: React.MouseEvent) {
-    e.stopPropagation();
-    setLiked((prev) => !prev);
-  }
+  const likeMutation = useMutation({
+    mutationFn: toggleLike,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sessions", "user"] }),
+  });
+
+  const likeCount = session.likes + (session.liked ? 1 : 0);
 
   return (
     <article
       className="flex cursor-pointer gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent/5"
       onClick={() => navigate(`/journey/${session.id}`)}
     >
-      <GameCover
-        coverColor={session.coverColor}
-        coverAccent={session.coverAccent}
-        game={session.game}
-        size="md"
-      />
+      <GameCover coverColor={session.coverColor} coverAccent={session.coverAccent} game={session.game} coverUrl={session.coverUrl} size="md" />
       <div className="min-w-0 flex-1">
         <div className="mb-1">
           <span className="text-xs text-muted-foreground">{formatSessionDate(session.playedAt)}</span>
@@ -605,12 +494,7 @@ function HistoryCard({ session }: { session: MockSession }) {
           <span className="font-bold">{session.game}</span>
           <div className="flex flex-wrap gap-1">
             {session.genres.map((g) => (
-              <span
-                key={g}
-                className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
-              >
-                {g}
-              </span>
+              <span key={g} className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{g}</span>
             ))}
           </div>
         </div>
@@ -622,20 +506,16 @@ function HistoryCard({ session }: { session: MockSession }) {
           <p className="mb-2 text-sm italic text-muted-foreground">&ldquo;{session.log}&rdquo;</p>
         )}
         <button
-          onClick={toggleLike}
+          onClick={(e) => { e.stopPropagation(); likeMutation.mutate(session.id); }}
           className="flex items-center gap-1.5 transition-colors"
-          aria-label={liked ? "Unlike" : "Like"}
+          aria-label={session.liked ? "Unlike" : "Like"}
         >
           <Heart
             size={15}
-            className={
-              liked ? "fill-rose-500 text-rose-500" : "text-muted-foreground hover:text-rose-400"
-            }
+            className={session.liked ? "fill-rose-500 text-rose-500" : "text-muted-foreground hover:text-rose-400"}
           />
           {likeCount > 0 && (
-            <span className={`text-xs ${liked ? "text-rose-500" : "text-muted-foreground"}`}>
-              {likeCount}
-            </span>
+            <span className={`text-xs ${session.liked ? "text-rose-500" : "text-muted-foreground"}`}>{likeCount}</span>
           )}
         </button>
       </div>
@@ -644,25 +524,10 @@ function HistoryCard({ session }: { session: MockSession }) {
 }
 
 export default function Journeys() {
-  const [pending, setPending] = useState(MOCK_PENDING_SESSIONS);
-  const [history, setHistory] = useState<MockSession[]>(
-    SESSIONS.filter((s) => s.player.id === MY_PLAYER_ID),
-  );
   const [adding, setAdding] = useState(false);
 
-  function dismiss(id: string) {
-    setPending((prev) => prev.filter((s) => s.id !== id));
-  }
-
-  function handleConfirm(pendingId: string, session: MockSession) {
-    setHistory((prev) => [session, ...prev]);
-    dismiss(pendingId);
-  }
-
-  function handleAdd(session: MockSession) {
-    setHistory((prev) => [session, ...prev]);
-    setAdding(false);
-  }
+  const { data: pending = [] } = useQuery({ queryKey: ["sessions", "pending"], queryFn: getPendingSessions });
+  const { data: history = [] } = useQuery({ queryKey: ["sessions", "user"], queryFn: getUserSessions });
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -681,35 +546,29 @@ export default function Journeys() {
 
       <ClientHint />
 
-      {adding && <AddJourneyForm onAdd={handleAdd} onCancel={() => setAdding(false)} />}
+      {adding && <AddJourneyForm onAdd={() => setAdding(false)} onCancel={() => setAdding(false)} />}
 
       {pending.length > 0 && (
         <section className="mb-6">
           <div className="mb-3 flex items-center gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Pending
-            </h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Pending</h2>
             <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
               {pending.length}
             </span>
           </div>
           <div className="flex flex-col gap-3">
             {pending.map((s) => (
-              <PendingCard key={s.id} session={s} onDismiss={() => dismiss(s.id)} onConfirm={(confirmed) => handleConfirm(s.id, confirmed)} />
+              <PendingCard key={s.id} session={s} />
             ))}
           </div>
         </section>
       )}
 
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          History
-        </h2>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">History</h2>
         {history.length > 0 ? (
           <div className="flex flex-col gap-3">
-            {history.map((s) => (
-              <HistoryCard key={s.id} session={s} />
-            ))}
+            {history.map((s) => <HistoryCard key={s.id} session={s} />)}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">No confirmed journeys yet.</p>
