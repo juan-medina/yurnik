@@ -16,28 +16,26 @@ import (
 )
 
 func main() {
-	dpopKeyFile := envOr("DPOP_KEY_FILE", "../keys/dpop.pem")
-	sessionKeyFile := envOr("SESSION_KEY_FILE", "../keys/session.pem")
-	addr := envOr("SERVER_ADDR", ":8080")
-	allowedOrigin := envOr("ALLOWED_ORIGIN", "http://127.0.0.1:5173")
-
-	dpopPriv, err := loadECDSAKey(dpopKeyFile)
+	dpopPriv, err := loadECDSAKey(mustEnv("DPOP_KEY_FILE"))
 	if err != nil {
 		log.Fatalf("load DPoP key: %v\nRun `make gen-keys` first.", err)
 	}
-	jwtPriv, err := loadEd25519Key(sessionKeyFile)
+	jwtPriv, err := loadEd25519Key(mustEnv("SESSION_KEY_FILE"))
 	if err != nil {
 		log.Fatalf("load session key: %v\nRun `make gen-keys` first.", err)
 	}
 
 	cfg := auth.Config{
-		ClientID:      envOr("BLUESKY_CLIENT_ID", "http://localhost"),
-		RedirectURI:   envOr("BLUESKY_REDIRECT_URI", "http://127.0.0.1:8080/auth/callback"),
-		FrontendURL:   envOr("FRONTEND_URL", "http://127.0.0.1:5173"),
-		AuthEndpoint:  envOr("BLUESKY_AUTH_ENDPOINT", "https://bsky.social/oauth/authorize"),
-		PAREndpoint:   envOr("BLUESKY_PAR_ENDPOINT", "https://bsky.social/oauth/par"),
-		TokenEndpoint: envOr("BLUESKY_TOKEN_ENDPOINT", "https://bsky.social/oauth/token"),
+		ClientID:      mustEnv("BLUESKY_CLIENT_ID"),
+		RedirectURI:   mustEnv("BLUESKY_REDIRECT_URI"),
+		FrontendURL:   mustEnv("FRONTEND_URL"),
+		AuthEndpoint:  mustEnv("BLUESKY_AUTH_ENDPOINT"),
+		PAREndpoint:   mustEnv("BLUESKY_PAR_ENDPOINT"),
+		TokenEndpoint: mustEnv("BLUESKY_TOKEN_ENDPOINT"),
 	}
+
+	addr := envOr("SERVER_ADDR", ":8080")
+	allowedOrigin := mustEnv("ALLOWED_ORIGIN")
 
 	mux := http.NewServeMux()
 	auth.NewHandler(dpopPriv, jwtPriv, cfg).Register(mux)
@@ -103,6 +101,14 @@ func loadPKCS8Key(path string) (interface{}, error) {
 		return nil, fmt.Errorf("parse key in %s: %w", path, err)
 	}
 	return key, nil
+}
+
+func mustEnv(key string) string {
+	v := os.Getenv(key)
+	if v == "" {
+		log.Fatalf("required environment variable %s is not set", key)
+	}
+	return v
 }
 
 func envOr(key, def string) string {
