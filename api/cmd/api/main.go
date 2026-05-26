@@ -49,7 +49,7 @@ func main() {
 	mux := http.NewServeMux()
 	authHandler := auth.NewHandler(dpopPriv, jwtPriv, pool, cfg)
 	authHandler.Register(mux)
-	profile.NewHandler(pool, authHandler.JWTPub()).Register(mux)
+	profile.NewHandler(pool, jwtPriv).Register(mux)
 
 	log.Printf("listening on %s (frontend: %s)", addr, cfg.FrontendURL)
 	if err := http.ListenAndServe(addr, cors(allowedOrigin, mux)); err != nil {

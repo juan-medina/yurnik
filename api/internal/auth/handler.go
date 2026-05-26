@@ -49,11 +49,6 @@ func NewHandler(dpopPriv *ecdsa.PrivateKey, jwtPriv ed25519.PrivateKey, pool *pg
 	}
 }
 
-// JWTPub returns the public key used to verify session JWTs.
-func (h *Handler) JWTPub() ed25519.PublicKey {
-	return h.jwtPub
-}
-
 // effectiveClientID returns the client_id to send to Bluesky.
 //
 // For the AT Proto loopback exception (client_id=http://localhost), the

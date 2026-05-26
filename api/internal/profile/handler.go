@@ -16,12 +16,12 @@ import (
 )
 
 type Handler struct {
-	pool   *pgxpool.Pool
-	jwtPub ed25519.PublicKey
+	pool    *pgxpool.Pool
+	jwtPriv ed25519.PrivateKey
 }
 
-func NewHandler(pool *pgxpool.Pool, jwtPub ed25519.PublicKey) *Handler {
-	return &Handler{pool: pool, jwtPub: jwtPub}
+func NewHandler(pool *pgxpool.Pool, jwtPriv ed25519.PrivateKey) *Handler {
+	return &Handler{pool: pool, jwtPriv: jwtPriv}
 }
 
 func (h *Handler) Register(mux *http.ServeMux) {
@@ -29,12 +29,12 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /api/me", h.patchMe)
 }
 
-func (h *Handler) did(r *http.Request) (string, bool) {
+func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
 	cookie, err := r.Cookie("agon_session")
 	if err != nil {
 		return "", false
 	}
-	did, err := auth.ParseSessionJWT(cookie.Value, h.jwtPub)
+	did, err := auth.ParseAndRenewSession(w, cookie.Value, h.jwtPriv)
 	if err != nil {
 		return "", false
 	}
@@ -73,7 +73,7 @@ type meResponse struct {
 }
 
 func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
-	did, ok := h.did(r)
+	did, ok := h.authenticate(w, r)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -110,7 +110,7 @@ func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) patchMe(w http.ResponseWriter, r *http.Request) {
-	did, ok := h.did(r)
+	did, ok := h.authenticate(w, r)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
