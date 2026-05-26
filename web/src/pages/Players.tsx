@@ -10,15 +10,12 @@ import { MY_PLAYER_ID } from "@/services/auth";
 import { formatSessionDate } from "@/lib/time";
 import type { GameActivity, JourneyEntry } from "@/models";
 
-function GameCover({ coverColor, coverAccent, game, coverUrl }: { coverColor: string; coverAccent: string; game: string; coverUrl?: string }) {
+function GameCover({ game, coverUrl }: { game: string; coverUrl?: string }) {
   return (
-    <div
-      className="relative h-14 w-12 shrink-0 overflow-hidden rounded-md"
-      style={{ backgroundColor: coverColor }}
-    >
+    <div className="relative h-14 w-12 shrink-0 overflow-hidden rounded-md bg-slate-800">
       {coverUrl
         ? <img src={coverUrl} alt={game} className="absolute inset-0 h-full w-full object-cover" />
-        : <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold" style={{ color: coverAccent }}>{game[0]}</span>
+        : <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-slate-300">{game[0]}</span>
       }
     </div>
   );
@@ -62,12 +59,7 @@ function GameCard({ activity }: { activity: GameActivity }) {
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card">
       <div className="flex items-center gap-3 p-4">
-        <GameCover
-          coverColor={activity.coverColor}
-          coverAccent={activity.coverAccent}
-          game={activity.game}
-          coverUrl={activity.coverUrl}
-        />
+        <GameCover game={activity.game} coverUrl={activity.coverUrl} />
         <div className="min-w-0 flex-1">
           <p className="font-semibold">{activity.game}</p>
           <div className="mt-1 flex flex-wrap gap-1">

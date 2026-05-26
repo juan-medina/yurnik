@@ -205,13 +205,10 @@ export default function JourneyDetail() {
       {/* Hero */}
       <div className="rounded-lg border border-border bg-card p-4">
         <div className="flex gap-4">
-          <div
-            className="relative h-24 w-24 shrink-0 overflow-hidden rounded-md"
-            style={{ backgroundColor: session.coverColor }}
-          >
+          <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-md bg-slate-800">
             {session.coverUrl
               ? <img src={session.coverUrl} alt={session.game} className="absolute inset-0 h-full w-full object-cover" />
-              : <span className="absolute inset-0 flex items-center justify-center text-4xl font-bold" style={{ color: session.coverAccent }}>{session.game[0]}</span>
+              : <span className="absolute inset-0 flex items-center justify-center text-4xl font-bold text-slate-300">{session.game[0]}</span>
             }
           </div>
           <div className="min-w-0 flex-1">

@@ -45,6 +45,7 @@ SET ROLE agon_admin;
 
 DROP TABLE IF EXISTS user_tokens;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS igdb_games;
 
 -- Agōn-specific user data only. Bluesky profile fields (handle, display_name,
 -- avatar) are never stored here — they are fetched live from the Bluesky AppView
@@ -66,6 +67,16 @@ CREATE TABLE user_tokens (
     access_token_expires_at timestamptz NOT NULL,
     dpop_key_id             text        NOT NULL DEFAULT 'default',
     updated_at              timestamptz NOT NULL DEFAULT now()
+);
+
+-- IGDB response cache. Keyed by IGDB game ID. Refreshed when cached_at is older
+-- than the TTL checked at query time — a cache hit never triggers an IGDB call.
+CREATE TABLE igdb_games (
+    igdb_id   integer     PRIMARY KEY,
+    name      text        NOT NULL,
+    cover_url text,
+    genres    text[]      NOT NULL DEFAULT '{}',
+    cached_at timestamptz NOT NULL DEFAULT now()
 );
 
 RESET ROLE;

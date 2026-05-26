@@ -15,6 +15,7 @@ import (
 
 	"github.com/juan-medina/agon/internal/auth"
 	"github.com/juan-medina/agon/internal/db"
+	"github.com/juan-medina/agon/internal/games"
 	"github.com/juan-medina/agon/internal/profile"
 )
 
@@ -46,10 +47,13 @@ func main() {
 	}
 	defer pool.Close()
 
+	igdbClient := games.NewClient(mustEnv("IGDB_CLIENT_ID"), mustEnv("IGDB_CLIENT_SECRET"))
+
 	mux := http.NewServeMux()
 	authHandler := auth.NewHandler(dpopPriv, jwtPriv, pool, cfg)
 	authHandler.Register(mux)
 	profile.NewHandler(pool, jwtPriv).Register(mux)
+	games.NewHandler(igdbClient, pool).Register(mux)
 
 	log.Printf("listening on %s (frontend: %s)", addr, cfg.FrontendURL)
 	if err := http.ListenAndServe(addr, cors(allowedOrigin, mux)); err != nil {

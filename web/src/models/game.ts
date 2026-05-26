@@ -6,8 +6,6 @@ import type { Player } from "./player";
 export type Game = {
   id: string;
   game: string;
-  coverColor: string;
-  coverAccent: string;
   coverUrl?: string;
   genres: string[];
 };
@@ -23,8 +21,6 @@ export type JourneyEntry = {
 export type GameActivity = {
   id: string;
   game: string;
-  coverColor: string;
-  coverAccent: string;
   coverUrl?: string;
   genres: string[];
   entries: JourneyEntry[];

@@ -7,8 +7,6 @@ export type Session = {
   id: string;
   player: Player;
   game: string;
-  coverColor: string;
-  coverAccent: string;
   coverUrl?: string;
   genres: string[];
   duration: string;
@@ -21,8 +19,6 @@ export type Session = {
 export type PendingSession = {
   id: string;
   game: string;
-  coverColor: string;
-  coverAccent: string;
   coverUrl?: string;
   genres: string[];
   duration: string;
@@ -33,8 +29,6 @@ export type PendingSession = {
 
 export type NewSession = {
   game: string;
-  coverColor: string;
-  coverAccent: string;
   coverUrl?: string;
   genres: string[];
   duration: string;

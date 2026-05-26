@@ -9,6 +9,7 @@ export const likedIds = new Set<string>();
 let _history: Session[] = SESSIONS.filter((s) => s.player.id === MY_PLAYER.id);
 let _pending: PendingSession[] = [...MOCK_PENDING_SESSIONS];
 
+
 export async function getUserSessions(): Promise<Session[]> {
   return _history.map((s) => ({ ...s, liked: likedIds.has(s.id) }));
 }
@@ -35,7 +36,7 @@ export async function addSession(input: NewSession): Promise<void> {
 
 export async function confirmPendingSession(
   pendingId: string,
-  input: { game: string; coverColor: string; coverAccent: string; genres: string[]; log?: string },
+  input: { game: string; coverUrl?: string; genres: string[]; log?: string },
 ): Promise<void> {
   const pending = _pending.find((p) => p.id === pendingId);
   if (!pending) return;
@@ -43,8 +44,7 @@ export async function confirmPendingSession(
     id: `c-${Date.now()}`,
     player: MY_PLAYER,
     game: input.game,
-    coverColor: input.coverColor,
-    coverAccent: input.coverAccent,
+    coverUrl: input.coverUrl,
     genres: input.genres,
     duration: pending.duration,
     playedAt: pending.endedAt,

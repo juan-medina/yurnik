@@ -5,7 +5,7 @@ import { useNavigate } from "react-router";
 import { CalendarDays, Check, Clock, Heart, MonitorDown, Plus, Search, Trash2, X } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getUserSessions, getPendingSessions, addSession, confirmPendingSession, dismissPendingSession, toggleLike } from "@/services/sessions";
-import { getGameLibrary } from "@/services/games";
+import { searchGames } from "@/services/games";
 import { formatCommentAge, formatSessionDate } from "@/lib/time";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -14,20 +14,13 @@ import { format } from "date-fns";
 import type { Session, PendingSession, NewSession } from "@/models/session";
 import type { Game } from "@/models/game";
 
-function GameCover({
-  coverColor, coverAccent, game, coverUrl, size,
-}: {
-  coverColor: string; coverAccent: string; game: string; coverUrl?: string; size: "sm" | "md";
-}) {
+function GameCover({ game, coverUrl, size }: { game: string; coverUrl?: string; size: "sm" | "md" }) {
   const dims = size === "sm" ? "h-10 w-10 text-lg" : "h-16 w-16 text-2xl";
   return (
-    <div
-      className={`relative ${dims} shrink-0 overflow-hidden rounded-md`}
-      style={{ backgroundColor: coverColor }}
-    >
+    <div className={`relative ${dims} shrink-0 overflow-hidden rounded-md bg-slate-800`}>
       {coverUrl
         ? <img src={coverUrl} alt={game} className="absolute inset-0 h-full w-full object-cover" />
-        : <span className="absolute inset-0 flex items-center justify-center font-bold" style={{ color: coverAccent }}>{game[0]}</span>
+        : <span className="absolute inset-0 flex items-center justify-center font-bold text-slate-300">{game[0]}</span>
       }
     </div>
   );
@@ -42,17 +35,16 @@ function GameSelector({
 }) {
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(value === null);
-  const { data: allGames = [] } = useQuery({ queryKey: ["games"], queryFn: getGameLibrary });
-
-  const results =
-    searching && query.length >= 2
-      ? allGames.filter((g) => g.game.toLowerCase().includes(query.toLowerCase())).slice(0, 6)
-      : [];
+  const { data: results = [] } = useQuery({
+    queryKey: ["games", "search", query],
+    queryFn: () => searchGames(query),
+    enabled: searching && query.length >= 2,
+  });
 
   if (!searching && value) {
     return (
       <div className="flex items-center gap-3 rounded-md border border-primary/30 bg-primary/5 p-3">
-        <GameCover coverColor={value.coverColor} coverAccent={value.coverAccent} game={value.game} coverUrl={value.coverUrl} size="sm" />
+        <GameCover game={value.game} coverUrl={value.coverUrl} size="sm" />
         <div className="min-w-0 flex-1">
           <div className="font-medium">{value.game}</div>
           <div className="mt-1 flex flex-wrap gap-1">
@@ -93,7 +85,7 @@ function GameSelector({
               onClick={() => { onChange(g); setSearching(false); setQuery(""); }}
               className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-accent/10"
             >
-              <GameCover coverColor={g.coverColor} coverAccent={g.coverAccent} game={g.game} coverUrl={g.coverUrl} size="sm" />
+              <GameCover game={g.game} coverUrl={g.coverUrl} size="sm" />
               <div className="min-w-0">
                 <div className="text-sm font-medium">{g.game}</div>
                 <div className="mt-0.5 flex flex-wrap gap-1">
@@ -199,8 +191,7 @@ function AddJourneyForm({ onAdd, onCancel }: { onAdd: () => void; onCancel: () =
     if (!selected || !parsedDuration) return;
     const input: NewSession = {
       game: selected.game,
-      coverColor: selected.coverColor,
-      coverAccent: selected.coverAccent,
+      coverUrl: selected.coverUrl,
       genres: selected.genres,
       duration: formatParsedDuration(parsedDuration),
       playedAt: getPlayedAt(),
@@ -309,8 +300,7 @@ function gameToGame(session: PendingSession): Game {
   return {
     id: session.game,
     game: session.game,
-    coverColor: session.coverColor,
-    coverAccent: session.coverAccent,
+    coverUrl: session.coverUrl,
     genres: session.genres,
   };
 }
@@ -327,7 +317,7 @@ function PendingCard({ session }: { session: PendingSession }) {
   });
 
   const confirmMutation = useMutation({
-    mutationFn: (input: { game: string; coverColor: string; coverAccent: string; genres: string[]; log?: string }) =>
+    mutationFn: (input: { game: string; coverUrl?: string; genres: string[]; log?: string }) =>
       confirmPendingSession(session.id, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sessions", "pending"] });
@@ -350,8 +340,7 @@ function PendingCard({ session }: { session: PendingSession }) {
     if (!game?.game) return;
     confirmMutation.mutate({
       game: game.game,
-      coverColor: game.coverColor,
-      coverAccent: game.coverAccent,
+      coverUrl: game.coverUrl,
       genres: game.genres,
       log: log.trim() || undefined,
     });
@@ -416,7 +405,7 @@ function PendingCard({ session }: { session: PendingSession }) {
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <div className="flex gap-4">
-        <GameCover coverColor={session.coverColor} coverAccent={session.coverAccent} game={session.game} coverUrl={session.coverUrl} size="md" />
+        <GameCover game={session.game} coverUrl={session.coverUrl} size="md" />
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
             {session.game ? (
@@ -485,7 +474,7 @@ function HistoryCard({ session }: { session: Session }) {
       className="flex cursor-pointer gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent/5"
       onClick={() => navigate(`/journey/${session.id}`)}
     >
-      <GameCover coverColor={session.coverColor} coverAccent={session.coverAccent} game={session.game} coverUrl={session.coverUrl} size="md" />
+      <GameCover game={session.game} coverUrl={session.coverUrl} size="md" />
       <div className="min-w-0 flex-1">
         <div className="mb-1">
           <span className="text-xs text-muted-foreground">{formatSessionDate(session.playedAt)}</span>

@@ -206,13 +206,10 @@ export default function Hero() {
                 className="flex cursor-pointer gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent/5"
                 onClick={() => navigate(`/journey/${session.id}`)}
               >
-                <div
-                  className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md"
-                  style={{ backgroundColor: session.coverColor }}
-                >
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-slate-800">
                   {session.coverUrl
                     ? <img src={session.coverUrl} alt={session.game} className="absolute inset-0 h-full w-full object-cover" />
-                    : <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold" style={{ color: session.coverAccent }}>{session.game[0]}</span>
+                    : <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-slate-300">{session.game[0]}</span>
                   }
                 </div>
                 <div className="min-w-0 flex-1">
