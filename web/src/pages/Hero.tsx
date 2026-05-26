@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Camera, Check, Clock, Heart, Pencil } from "lucide-react";
+import { Check, Clock, ExternalLink, Heart, Pencil } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCurrentPlayer, updateProfile, uploadAvatar } from "@/services/auth";
+import { getCurrentPlayer, updateProfile } from "@/services/auth";
 import { getUserSessions, toggleLike } from "@/services/sessions";
 import { getFollowers, getFollowing } from "@/services/players";
 import { MY_PLAYER_ID } from "@/services/auth";
@@ -29,7 +29,6 @@ function totalHours(sessions: Session[]): string {
 export default function Hero() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: player } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
   const { data: sessions = [] } = useQuery({ queryKey: ["sessions", "user"], queryFn: getUserSessions });
@@ -42,19 +41,12 @@ export default function Hero() {
     queryFn: () => getFollowing(MY_PLAYER_ID),
   });
 
-  const [editingName, setEditingName] = useState(false);
-  const [draftName, setDraftName] = useState("");
   const [editingBio, setEditingBio] = useState(false);
   const [draftBio, setDraftBio] = useState("");
   const [followList, setFollowList] = useState<{ title: string; players: Player[] } | null>(null);
 
   const updateProfileMutation = useMutation({
     mutationFn: updateProfile,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auth", "me"] }),
-  });
-
-  const uploadAvatarMutation = useMutation({
-    mutationFn: uploadAvatar,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auth", "me"] }),
   });
 
@@ -67,15 +59,6 @@ export default function Hero() {
 
   const displayName = player.name;
   const bio = player.bio ?? "";
-
-  function saveName() {
-    updateProfileMutation.mutate({ name: draftName.trim() || displayName });
-    setEditingName(false);
-  }
-
-  function cancelName() {
-    setEditingName(false);
-  }
 
   function saveBio() {
     updateProfileMutation.mutate({ bio: draftBio.trim() });
@@ -92,7 +75,7 @@ export default function Hero() {
       <div className="mb-4 rounded-lg border border-border bg-card p-5">
         <div className="flex items-start gap-5">
           {/* Avatar */}
-          <div className="group relative h-16 w-16 shrink-0">
+          <div className="h-16 w-16 shrink-0">
             <img
               src={avatarSrc(player)}
               alt={displayName}
@@ -110,71 +93,25 @@ export default function Hero() {
             >
               {initials(displayName)}
             </div>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              aria-label="Edit avatar"
-              className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
-            >
-              <Camera size={18} className="text-white" />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              aria-label="Upload avatar"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) uploadAvatarMutation.mutate(file);
-              }}
-            />
           </div>
 
           {/* Name, handle, bio */}
           <div className="min-w-0 flex-1">
-            {editingName ? (
-              <div className="mb-3">
-                <input
-                  type="text"
-                  value={draftName}
-                  onChange={(e) => setDraftName(e.target.value)}
-                  aria-label="Display name"
-                  className="w-full rounded-md border border-border bg-background px-2 py-1 text-lg font-bold focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-                <div className="mt-2 flex items-center gap-2">
-                  <button
-                    onClick={saveName}
-                    className="flex items-center gap-1 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground"
-                  >
-                    <Check size={12} />
-                    Save
-                  </button>
-                  <button
-                    onClick={cancelName}
-                    className="rounded-md px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="mb-1 flex items-center gap-2">
-                <p className="text-xl font-bold leading-tight">{displayName}</p>
-                <button
-                  onClick={() => {
-                    setDraftName(displayName);
-                    setEditingName(true);
-                  }}
-                  aria-label="Edit name"
-                  className="shrink-0 rounded-md p-0.5 text-muted-foreground/50 transition-colors hover:bg-accent hover:text-foreground"
-                >
-                  <Pencil size={13} />
-                </button>
-              </div>
-            )}
+            <p className="mb-1 text-xl font-bold leading-tight">{displayName}</p>
 
-            <p className="mb-3 text-sm text-muted-foreground">@{player.handle}</p>
+            <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+              <span>@{player.handle}</span>
+              <a
+                href={`https://bsky.app/profile/${player.handle}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-0.5 transition-colors hover:text-foreground"
+                aria-label="Edit profile on Bluesky"
+              >
+                <ExternalLink size={11} />
+                <span className="text-xs">Edit on Bluesky</span>
+              </a>
+            </div>
 
             {editingBio ? (
               <div>

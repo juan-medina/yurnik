@@ -26,66 +26,11 @@ beforeEach(() => {
   resetPlayers();
 });
 
-describe("Hero — display name", () => {
-  it("clicking Edit name shows an input with the current name", async () => {
-    const user = userEvent.setup();
+describe("Hero — Bluesky link", () => {
+  it("links to the player's Bluesky profile for editing", async () => {
     renderHero();
-    await user.click(await screen.findByRole("button", { name: "Edit name" }));
-    expect(screen.getByRole("textbox", { name: "Display name" })).toHaveValue(MY_PLAYER.name);
-  });
-
-  it("saving an edited name updates the displayed name", async () => {
-    const user = userEvent.setup();
-    renderHero();
-    await user.click(await screen.findByRole("button", { name: "Edit name" }));
-    const input = screen.getByRole("textbox", { name: "Display name" });
-    await user.clear(input);
-    await user.type(input, "Aria Nova");
-    await user.click(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("Aria Nova")).toBeInTheDocument();
-    expect(screen.queryByRole("textbox", { name: "Display name" })).not.toBeInTheDocument();
-  });
-
-  it("canceling name edit restores the original name", async () => {
-    const user = userEvent.setup();
-    renderHero();
-    await user.click(await screen.findByRole("button", { name: "Edit name" }));
-    const input = screen.getByRole("textbox", { name: "Display name" });
-    await user.clear(input);
-    await user.type(input, "Changed");
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.getByText(MY_PLAYER.name)).toBeInTheDocument();
-    expect(screen.queryByRole("textbox", { name: "Display name" })).not.toBeInTheDocument();
-  });
-
-  it("saving a new name updates the avatar alt text", async () => {
-    const user = userEvent.setup();
-    renderHero();
-    await user.click(await screen.findByRole("button", { name: "Edit name" }));
-    const input = screen.getByRole("textbox", { name: "Display name" });
-    await user.clear(input);
-    await user.type(input, "Rex Vance");
-    await user.click(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByRole("img", { name: "Rex Vance" })).toBeInTheDocument();
-  });
-});
-
-describe("Hero — avatar", () => {
-  beforeEach(() => {
-    global.URL.createObjectURL = vi.fn(() => "blob:http://localhost/mock-avatar");
-  });
-
-  it("uploading a new photo updates the avatar image src", async () => {
-    const user = userEvent.setup();
-    renderHero();
-    await screen.findByRole("button", { name: "Edit name" });
-    const input = screen.getByLabelText("Upload avatar");
-    const file = new File(["image-data"], "photo.jpg", { type: "image/jpeg" });
-    await user.upload(input, file);
-    expect(screen.getByRole("img", { name: MY_PLAYER.name })).toHaveAttribute(
-      "src",
-      "blob:http://localhost/mock-avatar",
-    );
+    const link = await screen.findByRole("link", { name: "Edit profile on Bluesky" });
+    expect(link).toHaveAttribute("href", `https://bsky.app/profile/${MY_PLAYER.handle}`);
   });
 });
 
