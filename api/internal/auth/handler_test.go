@@ -24,7 +24,7 @@ func newTestHandler(t *testing.T) *Handler {
 	if err != nil {
 		t.Fatalf("generate jwt key: %v", err)
 	}
-	return NewHandler(dpopPriv, jwtPriv, Config{FrontendURL: "http://localhost"})
+	return NewHandler(dpopPriv, jwtPriv, nil, Config{FrontendURL: "http://localhost"})
 }
 
 func TestSession_missingCookie(t *testing.T) {

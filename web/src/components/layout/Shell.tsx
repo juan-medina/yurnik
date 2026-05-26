@@ -1,13 +1,21 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { Navigate, Outlet } from "react-router";
-import { isAuthenticated } from "@/services/auth";
+import { useQuery } from "@tanstack/react-query";
+import { getCurrentPlayer } from "@/services/auth";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 
 export default function Shell() {
-  if (!isAuthenticated()) return <Navigate to="/login" replace />;
+  const { data: player, isLoading } = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: getCurrentPlayer,
+    retry: false,
+  });
+
+  if (isLoading) return null;
+  if (!player) return <Navigate to="/login" replace />;
 
   return (
     <div className="flex h-screen bg-background text-foreground">

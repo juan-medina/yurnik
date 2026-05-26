@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/x509"
@@ -13,6 +14,8 @@ import (
 	"os"
 
 	"github.com/juan-medina/agon/internal/auth"
+	"github.com/juan-medina/agon/internal/db"
+	"github.com/juan-medina/agon/internal/profile"
 )
 
 func main() {
@@ -37,8 +40,16 @@ func main() {
 	addr := envOr("SERVER_ADDR", ":8080")
 	allowedOrigin := mustEnv("ALLOWED_ORIGIN")
 
+	pool, err := db.Connect(context.Background(), mustEnv("DATABASE_URL"))
+	if err != nil {
+		log.Fatalf("connect db: %v", err)
+	}
+	defer pool.Close()
+
 	mux := http.NewServeMux()
-	auth.NewHandler(dpopPriv, jwtPriv, cfg).Register(mux)
+	authHandler := auth.NewHandler(dpopPriv, jwtPriv, pool, cfg)
+	authHandler.Register(mux)
+	profile.NewHandler(pool, authHandler.JWTPub()).Register(mux)
 
 	log.Printf("listening on %s (frontend: %s)", addr, cfg.FrontendURL)
 	if err := http.ListenAndServe(addr, cors(allowedOrigin, mux)); err != nil {
@@ -52,7 +63,7 @@ func cors(allowedOrigin string, next http.Handler) http.Handler {
 		if origin := r.Header.Get("Origin"); origin == allowedOrigin {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		}
 		if r.Method == http.MethodOptions {

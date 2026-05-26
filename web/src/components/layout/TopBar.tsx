@@ -4,13 +4,14 @@ import { Bell, Moon, Sun } from "lucide-react";
 import { NavLink } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/hooks/useTheme";
-import { MY_PLAYER } from "@/lib/mock";
-import { avatarSrc } from "@/lib/display";
+import { avatarSrc, initials } from "@/lib/display";
+import { getCurrentPlayer } from "@/services/auth";
 import { getEchoes } from "@/services/echoes";
 
 export default function TopBar() {
   const { theme, toggleTheme } = useTheme();
   const { data: echoes = [] } = useQuery({ queryKey: ["echoes"], queryFn: getEchoes });
+  const { data: player } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
   const hasUnread = echoes.some((e) => !e.read);
 
   return (
@@ -45,11 +46,28 @@ export default function TopBar() {
           `block rounded-full transition-opacity ${isActive ? "opacity-100" : "opacity-70 hover:opacity-100"}`
         }
       >
-        <img
-          src={avatarSrc(MY_PLAYER)}
-          alt={MY_PLAYER.name}
-          className="h-8 w-8 rounded-full object-cover"
-        />
+        {player ? (
+          <div className="relative h-8 w-8">
+            <img
+              src={avatarSrc(player)}
+              alt={player.name}
+              className="h-full w-full rounded-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+                e.currentTarget.nextElementSibling?.removeAttribute("hidden");
+              }}
+            />
+            <div
+              hidden
+              className="absolute inset-0 flex items-center justify-center rounded-full text-[10px] font-bold text-white"
+              style={{ backgroundColor: player.color }}
+            >
+              {initials(player.name)}
+            </div>
+          </div>
+        ) : (
+          <div className="h-8 w-8 rounded-full bg-muted" />
+        )}
       </NavLink>
     </header>
   );

@@ -3,6 +3,16 @@
 
 import type { Player } from "@/models/player";
 
+// Deterministic color derived from a DID — stable across sessions for the same user.
+export function deriveColor(did: string): string {
+  let hash = 0;
+  for (let i = 0; i < did.length; i++) {
+    hash = (Math.imul(hash, 31) + did.charCodeAt(i)) | 0;
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 65%, 45%)`;
+}
+
 export function avatarSrc(player: Player): string {
   return player.avatarUrl ?? `https://i.pravatar.cc/64?u=${encodeURIComponent(player.id)}`;
 }

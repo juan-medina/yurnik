@@ -4,7 +4,6 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { GAME_LIBRARY, MOCK_EXCLUSIONS, MOCK_GAME_HINTS } from "@/lib/mock";
-import { _reset as resetAuth } from "@/services/auth";
 import { _reset as resetSettings } from "@/services/settings";
 import { renderWithProviders } from "@/test/utils";
 import Settings from "./Settings";
@@ -18,7 +17,6 @@ function renderSettings() {
 }
 
 beforeEach(() => {
-  resetAuth();
   resetSettings();
 });
 

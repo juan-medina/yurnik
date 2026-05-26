@@ -1,5 +1,6 @@
--- Idempotent dev database initialisation.
--- Safe to run multiple times -- creates what is missing, skips what already exists.
+-- Dev database initialisation. Drops and recreates all tables on every run.
+-- Dev data is always throwaway -- re-run freely after schema changes.
+-- Switch to numbered migration files (goose/golang-migrate) before shipping.
 -- Passwords are set by db-init.ps1 after this file runs.
 -- Do not run this file directly; use: scripts/db-init.ps1
 
@@ -36,3 +37,35 @@ ALTER DEFAULT PRIVILEGES FOR ROLE agon_admin IN SCHEMA public
 
 ALTER DEFAULT PRIVILEGES FOR ROLE agon_admin IN SCHEMA public
     GRANT USAGE, SELECT ON SEQUENCES TO agon_api;
+
+-- Tables
+-- Drop in reverse FK order so the script is re-runnable after schema changes.
+-- Created as agon_admin so the default privileges above apply automatically.
+SET ROLE agon_admin;
+
+DROP TABLE IF EXISTS user_tokens;
+DROP TABLE IF EXISTS users;
+
+-- Agōn-specific user data only. Bluesky profile fields (handle, display_name,
+-- avatar) are never stored here — they are fetched live from the Bluesky AppView
+-- on every request so they are always current.
+CREATE TABLE users (
+    did          text        PRIMARY KEY,
+    bio          text,
+    created_at   timestamptz NOT NULL DEFAULT now(),
+    updated_at   timestamptz NOT NULL DEFAULT now()
+);
+
+-- Bluesky OAuth tokens. Refreshed ~hourly; kept separate to avoid churn on users.
+-- dpop_key_id maps to the server DPoP keypair used during the auth flow.
+-- Currently always 'default' (keys/dpop.pem); the column is ready for key rotation.
+CREATE TABLE user_tokens (
+    did                     text        PRIMARY KEY REFERENCES users(did) ON DELETE CASCADE,
+    access_token            text        NOT NULL,
+    refresh_token           text        NOT NULL,
+    access_token_expires_at timestamptz NOT NULL,
+    dpop_key_id             text        NOT NULL DEFAULT 'default',
+    updated_at              timestamptz NOT NULL DEFAULT now()
+);
+
+RESET ROLE;

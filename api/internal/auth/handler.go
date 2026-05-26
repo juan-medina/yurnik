@@ -13,6 +13,9 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/juan-medina/agon/internal/db"
 )
 
 // Config holds OAuth endpoints and application URLs.
@@ -30,18 +33,25 @@ type Handler struct {
 	dpopPriv *ecdsa.PrivateKey
 	jwtPriv  ed25519.PrivateKey
 	jwtPub   ed25519.PublicKey
+	pool     *pgxpool.Pool
 	store    *stateStore
 	cfg      Config
 }
 
-func NewHandler(dpopPriv *ecdsa.PrivateKey, jwtPriv ed25519.PrivateKey, cfg Config) *Handler {
+func NewHandler(dpopPriv *ecdsa.PrivateKey, jwtPriv ed25519.PrivateKey, pool *pgxpool.Pool, cfg Config) *Handler {
 	return &Handler{
 		dpopPriv: dpopPriv,
 		jwtPriv:  jwtPriv,
 		jwtPub:   jwtPriv.Public().(ed25519.PublicKey),
+		pool:     pool,
 		store:    newStateStore(),
 		cfg:      cfg,
 	}
+}
+
+// JWTPub returns the public key used to verify session JWTs.
+func (h *Handler) JWTPub() ed25519.PublicKey {
+	return h.jwtPub
 }
 
 // effectiveClientID returns the client_id to send to Bluesky.
@@ -244,14 +254,30 @@ func (h *Handler) callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	did, err := h.exchangeCode(code, entry.serverVerifier)
+	tokens, err := h.exchangeCode(code, entry.serverVerifier)
 	if err != nil {
 		log.Printf("auth/callback: %v", err)
 		http.Error(w, "token exchange failed", http.StatusBadGateway)
 		return
 	}
 
-	if !h.store.setDID(challenge, did) {
+	if err := db.UpsertUser(r.Context(), h.pool, tokens.did); err != nil {
+		log.Printf("auth/callback: upsert user: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if err := db.UpsertTokens(r.Context(), h.pool, tokens.did, db.Tokens{
+		AccessToken:  tokens.accessToken,
+		RefreshToken: tokens.refreshToken,
+		ExpiresAt:    time.Now().Add(time.Duration(tokens.expiresIn) * time.Second),
+		DPoPKeyID:    "default",
+	}); err != nil {
+		log.Printf("auth/callback: upsert tokens: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	if !h.store.setDID(challenge, tokens.did) {
 		http.Error(w, "state expired during exchange", http.StatusBadRequest)
 		return
 	}
@@ -299,54 +325,49 @@ func (h *Handler) session(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   int(sessionDuration.Seconds()),
 	})
-	// Non-HttpOnly flag cookie so the frontend can check auth state synchronously.
-	http.SetCookie(w, &http.Cookie{
-		Name:     "agon_authed",
-		Value:    "1",
-		Path:     "/",
-		HttpOnly: false,
-		SameSite: http.SameSiteStrictMode,
-		MaxAge:   int(sessionDuration.Seconds()),
-	})
-
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{"did": entry.did})
 }
 
-// logout clears both session cookies.
+// logout clears the session cookie.
 func (h *Handler) logout(w http.ResponseWriter, _ *http.Request) {
-	for _, name := range []string{"agon_session", "agon_authed"} {
-		http.SetCookie(w, &http.Cookie{
-			Name:   name,
-			Value:  "",
-			Path:   "/",
-			MaxAge: -1,
-		})
-	}
+	http.SetCookie(w, &http.Cookie{
+		Name:   "agon_session",
+		Value:  "",
+		Path:   "/",
+		MaxAge: -1,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
+type tokenResult struct {
+	did          string
+	accessToken  string
+	refreshToken string
+	expiresIn    int
+}
+
 type exchangeResult struct {
-	did        string
+	tokenResult
 	retryNonce string
 }
 
-// exchangeCode swaps an authorization code for a DID using the Bluesky token
+// exchangeCode swaps an authorization code for tokens using the Bluesky token
 // endpoint. It retries once if the server demands a DPoP nonce.
-func (h *Handler) exchangeCode(code, serverVerifier string) (string, error) {
+func (h *Handler) exchangeCode(code, serverVerifier string) (tokenResult, error) {
 	nonce := ""
 	for attempt := 0; attempt < 2; attempt++ {
 		result, err := h.doTokenExchange(code, serverVerifier, nonce)
 		if err != nil {
-			return "", err
+			return tokenResult{}, err
 		}
 		if result.retryNonce != "" {
 			nonce = result.retryNonce
 			continue
 		}
-		return result.did, nil
+		return result.tokenResult, nil
 	}
-	return "", fmt.Errorf("exhausted DPoP nonce retries")
+	return tokenResult{}, fmt.Errorf("exhausted DPoP nonce retries")
 }
 
 func (h *Handler) doTokenExchange(code, serverVerifier, nonce string) (exchangeResult, error) {
@@ -388,13 +409,26 @@ func (h *Handler) doTokenExchange(code, serverVerifier, nonce string) (exchangeR
 	}
 
 	var tr struct {
-		Sub string `json:"sub"`
+		Sub          string `json:"sub"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresIn    int    `json:"expires_in"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
 		return exchangeResult{}, fmt.Errorf("decode response: %w", err)
 	}
-	if tr.Sub == "" {
-		return exchangeResult{}, fmt.Errorf("missing sub in token response")
+	if tr.Sub == "" || tr.AccessToken == "" || tr.RefreshToken == "" {
+		return exchangeResult{}, fmt.Errorf("missing required fields in token response")
 	}
-	return exchangeResult{did: tr.Sub}, nil
+	expiresIn := tr.ExpiresIn
+	if expiresIn <= 0 {
+		expiresIn = 3600 // Bluesky default
+	}
+	return exchangeResult{tokenResult: tokenResult{
+		did:          tr.Sub,
+		accessToken:  tr.AccessToken,
+		refreshToken: tr.RefreshToken,
+		expiresIn:    expiresIn,
+	}}, nil
 }
+

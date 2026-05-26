@@ -2,15 +2,40 @@
 // SPDX-License-Identifier: MIT
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { vi, afterEach } from "vitest";
 import { MemoryRouter } from "react-router";
 import { MY_FOLLOWERS, MY_FOLLOWING, MY_PLAYER, MY_PLAYER_ID, SESSIONS } from "@/lib/mock";
-import { _reset as resetAuth } from "@/services/auth";
 import { _reset as resetSessions } from "@/services/sessions";
 import { _reset as resetPlayers } from "@/services/players";
 import { renderWithProviders } from "@/test/utils";
 import Hero from "./Hero";
 
 const MY_SESSIONS = SESSIONS.filter((s) => s.player.id === MY_PLAYER_ID);
+
+function mockApime(overrides?: { bio?: string }) {
+  let currentBio: string | null = overrides?.bio !== undefined ? overrides.bio : MY_PLAYER.bio ?? null;
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = input.toString();
+    if (url.includes("/api/me") && (!init?.method || init.method === "GET")) {
+      return new Response(
+        JSON.stringify({
+          did: "did:plc:test",
+          handle: MY_PLAYER.handle,
+          display_name: MY_PLAYER.name,
+          avatar_url: MY_PLAYER.avatarUrl ?? null,
+          bio: currentBio,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    if (url.includes("/api/me") && init?.method === "PATCH") {
+      const body = JSON.parse(init.body as string);
+      if (body.bio !== undefined) currentBio = body.bio;
+      return new Response(null, { status: 204 });
+    }
+    return new Response("not found", { status: 404 });
+  });
+}
 
 function renderHero() {
   return renderWithProviders(
@@ -21,9 +46,13 @@ function renderHero() {
 }
 
 beforeEach(() => {
-  resetAuth();
+  mockApime();
   resetSessions();
   resetPlayers();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe("Hero — Bluesky link", () => {
