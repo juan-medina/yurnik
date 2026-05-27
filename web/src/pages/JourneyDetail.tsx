@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { Check, ChevronLeft, Clock, Heart, UserPlus } from "lucide-react";
+import { Check, ChevronLeft, Clock, Heart, Trash2, UserPlus } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getJourney, getComments, getLikers, getJourneyPlayers, postComment } from "@/services/journeys";
+import { getJourney, getComments, getLikers, getJourneyPlayers, postComment, deleteJourney, deleteComment } from "@/services/journeys";
 import { toggleLike } from "@/services/sessions";
 import { toggleFollow, isFollowingHandle } from "@/services/players";
 import { MY_PLAYER_ID } from "@/services/auth";
@@ -75,7 +75,14 @@ function JourneyPlayerRow({ entry, sessionId }: { entry: JourneyPlayer; sessionI
   );
 }
 
-function CommentRow({ comment }: { comment: Comment }) {
+function CommentRow({ comment, sessionId }: { comment: Comment; sessionId: string }) {
+  const queryClient = useQueryClient();
+  const [confirming, setConfirming] = useState(false);
+  const deleteCommentMutation = useMutation({
+    mutationFn: () => deleteComment(sessionId, comment.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["journey", sessionId, "comments"] }),
+  });
+
   return (
     <div className="py-3">
       <div className="mb-1 flex items-center gap-2">
@@ -83,7 +90,36 @@ function CommentRow({ comment }: { comment: Comment }) {
           <PlayerAvatar player={comment.player} size="sm" />
           <span className="text-sm font-semibold">{comment.player.name}</span>
         </Link>
-        <span className="ml-auto text-xs text-muted-foreground">{formatCommentAge(comment.commentedAt)}</span>
+        {confirming ? (
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <span className="text-xs text-muted-foreground">Delete comment?</span>
+            <button
+              onClick={() => setConfirming(false)}
+              className="rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => { setConfirming(false); deleteCommentMutation.mutate(); }}
+              className="rounded-md bg-destructive px-2 py-1 text-xs font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
+            >
+              Delete
+            </button>
+          </div>
+        ) : (
+          <>
+            <span className="ml-auto text-xs text-muted-foreground">{formatCommentAge(comment.commentedAt)}</span>
+            {comment.player.id === MY_PLAYER_ID && (
+              <button
+                onClick={() => setConfirming(true)}
+                aria-label="Delete comment"
+                className="text-muted-foreground transition-colors hover:text-destructive"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </>
+        )}
       </div>
       <p className="pl-8 text-sm text-foreground/80">{comment.text}</p>
     </div>
@@ -96,6 +132,7 @@ export default function JourneyDetail() {
   const queryClient = useQueryClient();
   const [commentText, setCommentText] = useState("");
   const [showLikers, setShowLikers] = useState(false);
+  const [confirmDeleteJourney, setConfirmDeleteJourney] = useState(false);
 
   const { data: session } = useQuery({
     queryKey: ["journey", id],
@@ -145,6 +182,11 @@ export default function JourneyDetail() {
       queryClient.invalidateQueries({ queryKey: ["journey", id, "comments"] });
       setCommentText("");
     },
+  });
+
+  const deleteJourneyMutation = useMutation({
+    mutationFn: () => deleteJourney(id!),
+    onSuccess: () => navigate("/journeys"),
   });
 
   if (!session) {
@@ -199,7 +241,36 @@ export default function JourneyDetail() {
             )}
           </button>
         )}
-        <span className="ml-auto text-xs text-muted-foreground">{formatSessionDate(session.playedAt)}</span>
+        {confirmDeleteJourney ? (
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <span className="text-sm text-muted-foreground">Delete journey?</span>
+            <button
+              onClick={() => setConfirmDeleteJourney(false)}
+              className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => { setConfirmDeleteJourney(false); deleteJourneyMutation.mutate(); }}
+              className="rounded-md bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
+            >
+              Delete
+            </button>
+          </div>
+        ) : (
+          <>
+            <span className="ml-auto text-xs text-muted-foreground">{formatSessionDate(session.playedAt)}</span>
+            {isOwner && (
+              <button
+                onClick={() => setConfirmDeleteJourney(true)}
+                aria-label="Delete journey"
+                className="text-muted-foreground transition-colors hover:text-destructive"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+          </>
+        )}
       </div>
 
       {/* Hero */}
@@ -281,7 +352,7 @@ export default function JourneyDetail() {
         </div>
         <div className="divide-y divide-border px-4">
           {comments.map((c) => (
-            <CommentRow key={c.id} comment={c} />
+            <CommentRow key={c.id} comment={c} sessionId={id!} />
           ))}
         </div>
         <div className="border-t border-border p-4">
@@ -346,6 +417,7 @@ export default function JourneyDetail() {
           onClose={() => setShowLikers(false)}
         />
       )}
+
     </div>
   );
 }

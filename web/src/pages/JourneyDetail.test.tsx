@@ -3,9 +3,10 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { MOCK_OTHERS_ON_JOURNEY, SESSIONS } from "@/lib/mock";
+import { MOCK_COMMENTS, MOCK_OTHERS_ON_JOURNEY, MY_PLAYER_ID, SESSIONS } from "@/lib/mock";
 import { _reset as resetSessions } from "@/services/sessions";
 import { _reset as resetPlayers } from "@/services/players";
+import { _reset as resetJourneys } from "@/services/journeys";
 import { renderWithProviders } from "@/test/utils";
 import JourneyDetail from "./JourneyDetail";
 
@@ -20,6 +21,7 @@ function renderJourney(id: string) {
 }
 
 beforeEach(() => {
+  resetJourneys();
   resetSessions();
   resetPlayers();
 });
@@ -106,6 +108,42 @@ describe("JourneyDetail", () => {
     await user.click(await screen.findByRole("button", { name: "Unfollow" }));
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Unfollow" })).not.toBeInTheDocument(),
+    );
+  });
+
+  it("delete journey button is visible only for owned sessions", async () => {
+    renderJourney("s1");
+    expect(await screen.findByRole("button", { name: "Delete journey" })).toBeInTheDocument();
+  });
+
+  it("delete journey button is not shown on another player's session", async () => {
+    renderJourney("s2");
+    await screen.findByRole("heading", { name: "Baldur's Gate 3" });
+    expect(screen.queryByRole("button", { name: "Delete journey" })).not.toBeInTheDocument();
+  });
+
+  it("deleting a journey navigates away", async () => {
+    const user = userEvent.setup();
+    renderJourney("s1");
+    await user.click(await screen.findByRole("button", { name: "Delete journey" }));
+    await user.click(await screen.findByRole("button", { name: "Delete" }));
+    await waitFor(() => expect(SESSIONS.find((s) => s.id === "s1")).toBeUndefined());
+  });
+
+  it("delete comment button appears only on own comments", async () => {
+    renderJourney("s1");
+    const deleteButtons = await screen.findAllByRole("button", { name: "Delete comment" });
+    expect(deleteButtons).toHaveLength(MOCK_COMMENTS.filter((c) => c.player.id === MY_PLAYER_ID).length);
+  });
+
+  it("deleting a comment removes it from the list", async () => {
+    const user = userEvent.setup();
+    renderJourney("s1");
+    const before = await screen.findAllByRole("button", { name: "Delete comment" });
+    await user.click(before[0]);
+    await user.click(await screen.findByRole("button", { name: "Delete" }));
+    await waitFor(() =>
+      expect(screen.queryAllByRole("button", { name: "Delete comment" })).toHaveLength(before.length - 1),
     );
   });
 });

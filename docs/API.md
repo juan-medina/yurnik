@@ -438,6 +438,34 @@ Posts a comment on a session. Creates an AT Proto comment record. Does not notif
 
 ---
 
+#### `DELETE /sessions/:id`
+
+Owner only. Deletes the AT Proto session record, cascades to echoes (Postgres), and removes the `game_sessions_index` row. Likes and comments in other users' repos are not deleted — they reference a URI that will no longer resolve.
+
+**Auth** required.
+
+**Response `204`** No body.
+
+**Response `403`** — `forbidden` — authenticated DID is not the session owner.
+
+**Response `404`** — `not_found` — session does not exist.
+
+---
+
+#### `DELETE /sessions/:id/comments/:comment_id`
+
+Comment author only. Deletes the AT Proto comment record.
+
+**Auth** required.
+
+**Response `204`** No body.
+
+**Response `403`** — `forbidden` — authenticated DID is not the comment author.
+
+**Response `404`** — `not_found` — comment does not exist.
+
+---
+
 #### `GET /sessions/:id/journey-players`
 
 Returns players who have also played this game, split into friends (followed by the authenticated user) and others. Backed by `game_sessions_index`. Each list is capped at 20 entries, ordered by `played_at` descending.
@@ -997,6 +1025,8 @@ Returns the full exclusion list for the authenticated user. The agent fetches th
 | GET | `/sessions/:id/likers` | ✓ | Who liked a session |
 | GET | `/sessions/:id/comments` | ✓ | Session comments |
 | POST | `/sessions/:id/comments` | ✓ | Post a comment |
+| DELETE | `/sessions/:id/comments/:comment_id` | ✓ | Delete a comment |
+| DELETE | `/sessions/:id` | ✓ | Delete a session |
 | GET | `/sessions/:id/journey-players` | ✓ | Friends and others on the same game |
 | GET | `/pending-sessions` | ✓ | Pending (unconfirmed) sessions |
 | POST | `/pending-sessions/:id/confirm` | ✓ | Confirm — publish to AT Proto |

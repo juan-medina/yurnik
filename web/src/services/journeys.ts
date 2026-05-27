@@ -9,6 +9,8 @@ import { likedIds } from "./sessions";
 import { isFollowingHandle } from "./players";
 
 const extraComments = new Map<string, Comment[]>();
+const initialComments = [...MOCK_COMMENTS];
+const initialSessions = [...SESSIONS];
 
 export async function getJourney(id: string): Promise<Session | undefined> {
   const session = SESSIONS.find((s) => s.id === id);
@@ -49,4 +51,25 @@ export async function postComment(sessionId: string, text: string): Promise<void
     commentedAt: new Date(),
   };
   extraComments.set(sessionId, [...(extraComments.get(sessionId) ?? []), comment]);
+}
+
+export async function deleteJourney(sessionId: string): Promise<void> {
+  const idx = SESSIONS.findIndex((s) => s.id === sessionId);
+  if (idx !== -1) SESSIONS.splice(idx, 1);
+}
+
+export async function deleteComment(sessionId: string, commentId: string): Promise<void> {
+  const extra = extraComments.get(sessionId);
+  if (extra?.some((c) => c.id === commentId)) {
+    extraComments.set(sessionId, extra.filter((c) => c.id !== commentId));
+    return;
+  }
+  const idx = MOCK_COMMENTS.findIndex((c) => c.id === commentId);
+  if (idx !== -1) MOCK_COMMENTS.splice(idx, 1);
+}
+
+export function _reset(): void {
+  extraComments.clear();
+  MOCK_COMMENTS.splice(0, MOCK_COMMENTS.length, ...initialComments);
+  SESSIONS.splice(0, SESSIONS.length, ...initialSessions);
 }
