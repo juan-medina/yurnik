@@ -9,7 +9,7 @@ Agōn Go API server — endpoint reference. All routes are served from the same 
 - **Timestamps** — RFC 3339 UTC in all requests and responses (`"2026-05-23T14:30:00Z"`).
 - **Durations** — integer seconds in requests and responses. Clients format for display (`11640` → `"3h 14m"`).
 - **Player identity** — players are identified by their AT Proto DID (`did:plc:…`). Handles (`maria.bsky.social`) are sourced from the Bluesky PDS and treated as display names, not stable identifiers.
-- **Session IDs** — confirmed sessions use their AT Proto rkey. Pending sessions use server-generated UUIDs.
+- **Journey IDs** — confirmed journeys use their AT Proto rkey. Pending sessions use server-generated UUIDs.
 - **Pagination** — cursor-based. Responses include `"next_cursor"` when a further page exists. Pass `cursor=<value>` to advance. `limit` defaults to 20, max 50.
 
 ## Authentication
@@ -45,8 +45,8 @@ All errors return a JSON body:
 
 ```json
 {
-  "error": "session_not_found",
-  "message": "Session 'abc' does not exist or does not belong to you."
+  "error": "journey_not_found",
+  "message": "Journey 'abc' does not exist or does not belong to you."
 }
 ```
 
@@ -96,12 +96,12 @@ All errors return a JSON body:
 
 `cover_url` is optional — IGDB does not guarantee a cover for every game.
 
-### Session (confirmed)
+### Journey (confirmed)
 
 ```json
 {
   "id": "3jzfszdy",
-  "at_uri": "at://did:plc:abc123/app.agon.session/3jzfszdy",
+  "at_uri": "at://did:plc:abc123/app.agon.journey/3jzfszdy",
   "player": { },
   "game": { },
   "duration_seconds": 11640,
@@ -113,7 +113,7 @@ All errors return a JSON body:
 }
 ```
 
-`log`, `started_at` are optional. `liked_by_me` reflects the authenticated user's like state.
+`log` and `started_at` are optional. `liked_by_me` reflects the authenticated user's like state.
 
 ### PendingSession
 
@@ -137,6 +137,7 @@ All errors return a JSON body:
 ```json
 {
   "id": "cm_xyz",
+  "at_uri": "at://did:plc:abc123/app.agon.comment/cm_xyz",
   "player": { },
   "text": "40 attempts is wild, respect.",
   "commented_at": "2026-05-23T14:12:00Z"
@@ -152,13 +153,13 @@ All errors return a JSON body:
   "player": { },
   "occurred_at": "2026-05-23T13:52:00Z",
   "read": false,
-  "session_id": "3jzfszdy",
+  "journey_id": "3jzfszdy",
   "game_title": "Elden Ring",
   "comment_preview": "40 attempts is wild, respect. I gave up at 20."
 }
 ```
 
-`kind`: `"comment"` | `"follower"`. For `kind: "follower"`, `session_id`, `game_title`, and `comment_preview` are absent.
+`kind`: `"comment"` | `"follower"`. For `kind: "follower"`, `journey_id`, `game_title`, and `comment_preview` are absent.
 
 ---
 
@@ -272,7 +273,7 @@ Uploads a new avatar. Stores on the Bluesky PDS blob store.
 
 #### `GET /feed`
 
-Returns confirmed sessions from players the authenticated user follows, reverse chronological. This is the Realm feed.
+Returns confirmed journeys from players the authenticated user follows on Agōn, reverse chronological. Backed by `journeys_index` joined against `players_index` — a single SQL query with no per-user AT Proto calls.
 
 **Auth** required.
 
@@ -280,14 +281,14 @@ Returns confirmed sessions from players the authenticated user follows, reverse 
 
 | Param | Default | Description |
 |---|---|---|
-| `limit` | `20` | Max sessions (max 50) |
+| `limit` | `20` | Max journeys (max 50) |
 | `cursor` | — | Pagination cursor from previous response |
 
 **Response `200`**
 
 ```json
 {
-  "sessions": [ ],
+  "journeys": [ ],
   "next_cursor": "eyJ..."
 }
 ```
@@ -296,11 +297,11 @@ Returns confirmed sessions from players the authenticated user follows, reverse 
 
 ---
 
-### Sessions
+### Journeys
 
-#### `GET /sessions/:id`
+#### `GET /journeys/:id`
 
-Returns a single confirmed session.
+Returns a single confirmed journey.
 
 **Auth** required.
 
@@ -308,17 +309,17 @@ Returns a single confirmed session.
 
 | Param | Description |
 |---|---|
-| `id` | AT Proto rkey for the session record |
+| `id` | AT Proto rkey for the journey record |
 
-**Response `200`** — Session object.
+**Response `200`** — Journey object.
 
 **Response `404`** — `not_found`
 
 ---
 
-#### `POST /sessions`
+#### `POST /journeys`
 
-Manually logs a new confirmed session, publishing it to AT Proto immediately. Used by the web app when no agent is installed.
+Manually logs a new confirmed journey, publishing it to AT Proto immediately and writing a row to `journeys_index`. Used by the web app when no agent is installed.
 
 **Auth** required.
 
@@ -336,17 +337,31 @@ Manually logs a new confirmed session, publishing it to AT Proto immediately. Us
 | Field | Required | Description |
 |---|---|---|
 | `igdb_id` | yes | IGDB game ID |
-| `duration_seconds` | yes | Session length in seconds, min 60 |
+| `duration_seconds` | yes | Journey length in seconds, min 60 |
 | `played_at` | yes | End timestamp — when the user finished playing |
-| `log` | no | Session note, max 300 chars |
+| `log` | no | Journey note, max 300 chars |
 
-**Response `201`** — Session object.
+**Response `201`** — Journey object.
 
 ---
 
-#### `POST /sessions/:id/like`
+#### `DELETE /journeys/:id`
 
-Likes a session. Creates an AT Proto like record in the authenticated user's repo.
+Owner only. Deletes the `app.agon.journey` AT Proto record and removes the corresponding rows from `journeys_index`, `likes_index`, and `comments_index`. Likes and comments in other players' AT Proto storage are not deleted — they reference a URI that will no longer resolve.
+
+**Auth** required.
+
+**Response `204`** No body.
+
+**Response `403`** — `forbidden` — authenticated DID is not the journey owner.
+
+**Response `404`** — `not_found` — journey does not exist.
+
+---
+
+#### `POST /journeys/:id/like`
+
+Likes a journey. Creates an `app.agon.like` AT Proto record in the authenticated user's storage and writes a row to `likes_index`.
 
 **Auth** required.
 
@@ -360,9 +375,9 @@ Likes a session. Creates an AT Proto like record in the authenticated user's rep
 
 ---
 
-#### `DELETE /sessions/:id/like`
+#### `DELETE /journeys/:id/like`
 
-Removes a like from a session. Deletes the AT Proto like record.
+Removes a like from a journey. Deletes the `app.agon.like` AT Proto record and removes the row from `likes_index`.
 
 **Auth** required.
 
@@ -376,9 +391,9 @@ Removes a like from a session. Deletes the AT Proto like record.
 
 ---
 
-#### `GET /sessions/:id/likers`
+#### `GET /journeys/:id/likers`
 
-Returns the players who liked a session.
+Returns the players who liked a journey. Backed by `likes_index`.
 
 **Auth** required.
 
@@ -400,9 +415,9 @@ Returns the players who liked a session.
 
 ---
 
-#### `GET /sessions/:id/comments`
+#### `GET /journeys/:id/comments`
 
-Returns comments for a session in chronological order.
+Returns comments for a journey in chronological order. Backed by `comments_index`.
 
 **Auth** required.
 
@@ -418,9 +433,9 @@ Comments are not paginated — expected volume is low.
 
 ---
 
-#### `POST /sessions/:id/comments`
+#### `POST /journeys/:id/comments`
 
-Posts a comment on a session. Creates an AT Proto comment record. Does not notify the session owner if the commenter is the owner.
+Posts a comment on a journey. Creates an `app.agon.comment` AT Proto record in the authenticated user's storage and writes a row to `comments_index`. Does not create an echo if the commenter is the journey owner.
 
 **Auth** required.
 
@@ -438,23 +453,9 @@ Posts a comment on a session. Creates an AT Proto comment record. Does not notif
 
 ---
 
-#### `DELETE /sessions/:id`
+#### `DELETE /journeys/:id/comments/:comment_id`
 
-Owner only. Deletes the AT Proto session record, cascades to echoes (Postgres), and removes the `game_sessions_index` row. Likes and comments in other users' repos are not deleted — they reference a URI that will no longer resolve.
-
-**Auth** required.
-
-**Response `204`** No body.
-
-**Response `403`** — `forbidden` — authenticated DID is not the session owner.
-
-**Response `404`** — `not_found` — session does not exist.
-
----
-
-#### `DELETE /sessions/:id/comments/:comment_id`
-
-Comment author only. Deletes the AT Proto comment record.
+Comment author only. Deletes the `app.agon.comment` AT Proto record and removes the row from `comments_index`.
 
 **Auth** required.
 
@@ -466,9 +467,9 @@ Comment author only. Deletes the AT Proto comment record.
 
 ---
 
-#### `GET /sessions/:id/journey-players`
+#### `GET /journeys/:id/journey-players`
 
-Returns players who have also played this game, split into friends (followed by the authenticated user) and others. Backed by `game_sessions_index`. Each list is capped at 20 entries, ordered by `played_at` descending.
+Returns players who have also played this game, split into friends (followed by the authenticated user on Agōn) and others. Backed by `journeys_index` joined against `players_index`. Each list is capped at 20 entries, ordered by `played_at` descending.
 
 **Auth** required.
 
@@ -481,7 +482,7 @@ Returns players who have also played this game, split into friends (followed by 
       "player": { },
       "duration_seconds": 9840,
       "played_at": "2026-05-21T00:00:00Z",
-      "session_id": "abc123",
+      "journey_id": "abc123",
       "is_following": true
     }
   ],
@@ -493,7 +494,7 @@ Returns players who have also played this game, split into friends (followed by 
 
 ### Pending Sessions
 
-These are unconfirmed sessions — either detected by the agent or in the process of being confirmed manually. Stored in Postgres; evicted after 7 days.
+Unconfirmed sessions — either detected by the agent or in the process of being confirmed manually. Stored in Postgres; evicted after 7 days.
 
 #### `GET /pending-sessions`
 
@@ -513,7 +514,7 @@ Returns pending sessions for the authenticated user with status `active` or `end
 
 #### `POST /pending-sessions/:id/confirm`
 
-Confirms a pending session. Publishes it to AT Proto, writes a row to `game_sessions_index`, and deletes the pending record.
+Confirms a pending session. Publishes an `app.agon.journey` record to AT Proto, writes a row to `journeys_index`, and deletes the pending record from Postgres.
 
 **Auth** required.
 
@@ -529,11 +530,11 @@ Confirms a pending session. Publishes it to AT Proto, writes a row to `game_sess
 | Field | Required | Description |
 |---|---|---|
 | `igdb_id` | yes | IGDB game ID — may differ from the detected suggestion if the user corrects it |
-| `log` | no | Session note, max 300 chars |
+| `log` | no | Journey note, max 300 chars |
 
 If `igdb_id` differs from the detected suggestion and the session has an `exe_name`, the server writes an `exe_game_hints` row for this user so future sessions from the same exe skip fuzzy matching.
 
-**Response `201`** — Session object (the newly confirmed session).
+**Response `201`** — Journey object (the newly confirmed journey).
 
 ---
 
@@ -624,9 +625,9 @@ Returns a player's public profile.
 
 ---
 
-#### `GET /players/:handle/sessions`
+#### `GET /players/:handle/journeys`
 
-Returns confirmed sessions for a player, reverse chronological.
+Returns confirmed journeys for a player, reverse chronological. Backed by `journeys_index`.
 
 **Auth** required.
 
@@ -634,14 +635,14 @@ Returns confirmed sessions for a player, reverse chronological.
 
 | Param | Default | Description |
 |---|---|---|
-| `limit` | `20` | Max sessions (max 50) |
+| `limit` | `20` | Max journeys (max 50) |
 | `cursor` | — | Pagination cursor |
 
 **Response `200`**
 
 ```json
 {
-  "sessions": [ ],
+  "journeys": [ ],
   "next_cursor": "eyJ..."
 }
 ```
@@ -650,7 +651,7 @@ Returns confirmed sessions for a player, reverse chronological.
 
 #### `GET /players/:handle/followers`
 
-Returns the player's followers list.
+Returns the player's Agōn followers. Backed by `players_index`.
 
 **Auth** required.
 
@@ -674,7 +675,7 @@ Returns the player's followers list.
 
 #### `GET /players/:handle/following`
 
-Returns the list of players this player follows.
+Returns the list of players this player follows on Agōn. Backed by `players_index`.
 
 **Auth** required.
 
@@ -698,7 +699,7 @@ Returns the list of players this player follows.
 
 #### `POST /players/:handle/follow`
 
-Follows a player. Creates an AT Proto follow record in the authenticated user's repo.
+Follows a player on Agōn. Creates an `app.agon.player` AT Proto record in the authenticated user's storage, writes a row to `players_index`, and creates a follower echo for the followed player.
 
 **Auth** required.
 
@@ -714,7 +715,7 @@ Follows a player. Creates an AT Proto follow record in the authenticated user's 
 
 #### `DELETE /players/:handle/follow`
 
-Unfollows a player. Deletes the AT Proto follow record.
+Unfollows a player on Agōn. Deletes the `app.agon.player` AT Proto record and removes the row from `players_index`.
 
 **Auth** required.
 
@@ -728,7 +729,7 @@ Unfollows a player. Deletes the AT Proto follow record.
 
 ### Discovery
 
-Game-centric discovery feed powering the Players page. Returns recent sessions grouped by game, ordered by the most recent session per group descending. Backed by `game_sessions_index`.
+Game-centric discovery feed powering the Players page. Returns recent journeys grouped by game, ordered by the most recent journey per group descending. Backed by `journeys_index`.
 
 #### `GET /discovery`
 
@@ -753,7 +754,7 @@ Game-centric discovery feed powering the Players page. Returns recent sessions g
       "journey_count": 12,
       "entries": [
         {
-          "session_id": "s1",
+          "journey_id": "s1",
           "player": { },
           "duration_seconds": 11640,
           "played_at": "2026-05-23T13:14:00Z",
@@ -766,7 +767,7 @@ Game-centric discovery feed powering the Players page. Returns recent sessions g
 }
 ```
 
-Each game group includes up to 5 most recent sessions. The full session is at `GET /sessions/:id`.
+Each game group includes up to 5 most recent journeys. The full journey is at `GET /journeys/:id`.
 
 ---
 
@@ -929,7 +930,7 @@ Routes used exclusively by the Windows tray agent. The agent authenticates with 
 
 #### `POST /agent/sessions`
 
-Creates an active session when a game process is detected. The server checks the exclusion list and `exe_game_hints` before attempting IGDB fuzzy matching on `window_title`.
+Creates an active pending session when a game process is detected. The server checks the exclusion list and `exe_game_hints` before attempting IGDB fuzzy matching on `window_title`.
 
 **Auth** required.
 
@@ -942,7 +943,7 @@ Creates an active session when a game process is detected. The server checks the
 }
 ```
 
-**Response `201`** — session created.
+**Response `201`** — pending session created.
 
 ```json
 {
@@ -1017,17 +1018,17 @@ Returns the full exclusion list for the authenticated user. The agent fetches th
 | GET | `/me` | ✓ | Current player profile |
 | PATCH | `/me` | ✓ | Update name / bio |
 | PUT | `/me/avatar` | ✓ | Upload avatar |
-| GET | `/feed` | ✓ | Realm feed — sessions from following |
-| GET | `/sessions/:id` | ✓ | Session detail |
-| POST | `/sessions` | ✓ | Manually log a session |
-| POST | `/sessions/:id/like` | ✓ | Like a session |
-| DELETE | `/sessions/:id/like` | ✓ | Unlike a session |
-| GET | `/sessions/:id/likers` | ✓ | Who liked a session |
-| GET | `/sessions/:id/comments` | ✓ | Session comments |
-| POST | `/sessions/:id/comments` | ✓ | Post a comment |
-| DELETE | `/sessions/:id/comments/:comment_id` | ✓ | Delete a comment |
-| DELETE | `/sessions/:id` | ✓ | Delete a session |
-| GET | `/sessions/:id/journey-players` | ✓ | Friends and others on the same game |
+| GET | `/feed` | ✓ | Realm feed — journeys from Agōn following |
+| GET | `/journeys/:id` | ✓ | Journey detail |
+| POST | `/journeys` | ✓ | Manually log a journey |
+| DELETE | `/journeys/:id` | ✓ | Delete a journey |
+| POST | `/journeys/:id/like` | ✓ | Like a journey |
+| DELETE | `/journeys/:id/like` | ✓ | Unlike a journey |
+| GET | `/journeys/:id/likers` | ✓ | Who liked a journey |
+| GET | `/journeys/:id/comments` | ✓ | Journey comments |
+| POST | `/journeys/:id/comments` | ✓ | Post a comment |
+| DELETE | `/journeys/:id/comments/:comment_id` | ✓ | Delete a comment |
+| GET | `/journeys/:id/journey-players` | ✓ | Friends and others on the same game |
 | GET | `/pending-sessions` | ✓ | Pending (unconfirmed) sessions |
 | POST | `/pending-sessions/:id/confirm` | ✓ | Confirm — publish to AT Proto |
 | POST | `/pending-sessions/:id/discard` | ✓ | Discard pending session |
@@ -1035,11 +1036,11 @@ Returns the full exclusion list for the authenticated user. The agent fetches th
 | GET | `/games/search` | ✓ | IGDB game search |
 | GET | `/games/:igdb_id` | ✓ | Game metadata by IGDB ID |
 | GET | `/players/:handle` | ✓ | Player profile |
-| GET | `/players/:handle/sessions` | ✓ | Player's confirmed session history |
-| GET | `/players/:handle/followers` | ✓ | Player's followers |
-| GET | `/players/:handle/following` | ✓ | Player's following list |
-| POST | `/players/:handle/follow` | ✓ | Follow a player |
-| DELETE | `/players/:handle/follow` | ✓ | Unfollow a player |
+| GET | `/players/:handle/journeys` | ✓ | Player's confirmed journey history |
+| GET | `/players/:handle/followers` | ✓ | Player's Agōn followers |
+| GET | `/players/:handle/following` | ✓ | Player's Agōn following list |
+| POST | `/players/:handle/follow` | ✓ | Follow a player on Agōn |
+| DELETE | `/players/:handle/follow` | ✓ | Unfollow a player on Agōn |
 | GET | `/discovery` | ✓ | Game-centric discovery feed (Players page) |
 | GET | `/echoes` | ✓ | Notification list |
 | POST | `/echoes/read` | ✓ | Mark all echoes read |

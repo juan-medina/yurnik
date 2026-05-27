@@ -60,11 +60,11 @@ Bluesky OAuth is the only authentication method. Agōn is an AT Proto applicatio
 
 ### AT Proto / Bluesky PDS
 
-Bluesky's hosted PDS is used rather than a self-hosted one. User identity and confirmed session record storage are Bluesky's infrastructure cost, not ours.
+Bluesky's hosted PDS is used rather than a self-hosted one. User identity and confirmed journey record storage are Bluesky's infrastructure cost, not ours.
 
 ## Why AT Proto
 
-Sessions are the user's data, not ours. AT Proto gives users a portable identity and portable records — if Agōn shuts down, the data does not disappear. It also reduces our cold start problem: users can bootstrap their social graph from existing Bluesky follows rather than finding each other from scratch.
+Journeys are the user's data, not ours. AT Proto gives users a portable identity and portable records — if Agōn shuts down, the data does not disappear.
 
 ## Why the frontend and backend are separate deployments
 
@@ -87,7 +87,7 @@ We do not maintain an executable-to-game database. The window title approach wor
 ```
 active      game is running, client is sending heartbeats every 10 minutes
 ended       game process closed (or user manually ended), IGDB match attempted, notification fired
-confirmed   user reviewed and approved, published to AT Proto feed
+confirmed   user reviewed and approved, published to AT Proto as app.agon.journey
 discarded   user dismissed
 ```
 
@@ -99,38 +99,84 @@ When a session reaches ended, the pending card shown to the user includes the ra
 
 When the user corrects a game match during confirmation, the confirmed exe → IGDB ID pairing is stored in exe_game_hints. On the next session from the same executable, the server checks this table before attempting fuzzy match, so the suggestion is correct immediately.
 
+## AT Proto lexicon
+
+All record types Agōn defines, in one place. These are the only things written to the user's AT Proto storage.
+
+### `app.agon.journey`
+
+A confirmed game session. Written when the user confirms a pending session or manually logs one. Never written without explicit user action.
+
+Fields:
+- `igdbId` — IGDB game ID
+- `gameTitle` — game title, baked in at publish time
+- `coverUrl` — cover art URL, baked in at publish time
+- `genres` — genre list, baked in at publish time
+- `durationSeconds` — session length
+- `startedAt` — UTC timestamp
+- `endedAt` — UTC timestamp
+- `log` — optional owner narrative, written once at confirmation, immutable after publish
+
+All game metadata is baked in at publish time. A friend's feed never needs to call IGDB or the API to render a journey card — the record is self-contained and portable. The `log` field is defined in the lexicon from the start; records published without a log will permanently lack one — there is no retrofit path once a record is on the PDS.
+
+### `app.agon.player`
+
+An Agōn follow. Written when a user follows another player on Agōn. Deleted when they unfollow. This is Agōn's own follow record — it is separate from Bluesky follows and does not affect the user's Bluesky feed or follower counts.
+
+Fields:
+- `subject` — DID of the player being followed
+- `createdAt` — UTC timestamp
+
+### `app.agon.like`
+
+A like on a journey. Written into the liker's own AT Proto storage, referencing the journey by AT URI. The original journey record is never modified.
+
+Fields:
+- `subject` — AT URI of the journey being liked
+- `createdAt` — UTC timestamp
+
+### `app.agon.comment`
+
+A comment on a journey. Written into the commenter's own AT Proto storage.
+
+Fields:
+- `subject` — AT URI of the journey being commented on
+- `text` — comment body, 1–500 chars
+- `createdAt` — UTC timestamp
+
 ## AT Proto records are fully denormalised
 
-When a session is confirmed, the AT Proto record contains all game metadata — title, cover art URL, genres, IGDB ID — baked in at publish time. A friend's feed never needs to query the API or IGDB to render a session card. The record is self-contained and portable.
+When a journey is confirmed, the AT Proto record contains all game metadata baked in at publish time. A friend's feed never needs to query the API or IGDB to render a journey card. The record is self-contained and portable.
 
-## Session record schema
+## Social graph
 
-The AT Proto session record (`app.agon.session`) contains:
+Agōn maintains its own follow graph using `app.agon.player` records. Following someone on Agōn does not follow them on Bluesky and has no effect on either user's Bluesky feed or follower counts. The two graphs are independent.
 
-- Game title, cover art URL, genres, IGDB ID — baked in at publish time
-- Duration in seconds
-- Start and end timestamps
-- Optional `log` — the owner's narrative note, written at confirmation time
+This was a deliberate decision. Using Bluesky follows would mean that following a gamer on Agōn pollutes the user's Bluesky feed with gaming content they did not ask for there. Agōn follows are Agōn-scoped.
 
-The `log` field is defined in the lexicon from the start. Records published without a log will permanently lack one — there is no retrofit path once a record is on the PDS. The log is immutable after publish; it is not a comment and cannot be edited post-confirmation.
+All follow and unfollow actions go through the Agōn API, which writes or deletes the `app.agon.player` record on the PDS and updates the local `players_index` table in Postgres simultaneously. Because every follow action is mediated by the API, the Postgres index is always current — no polling or firehose subscription is needed to keep it in sync.
+
+The `players_index` table is the fast query path. It is a local mirror of what is on the PDS — if it were lost it could be rebuilt by replaying the PDS records. The source of truth is always AT Proto.
+
+New follower echoes work because follows go through the API: when a `app.agon.player` record is written, the API creates the echo row for the followed player immediately.
 
 ## Likes
 
-Likes are AT Proto records that reference the session's AT URI. They are separate records in the liker's repo — the original session record is never modified. Sessions published today are already likeable when the like feature ships; no migration is needed.
+Likes are AT Proto records that reference the journey's AT URI. They are separate records in the liker's storage — the original journey record is never modified. Journeys published today are already likeable when the like feature ships; no migration is needed.
 
-Likes are **not surfaced as feed items** in the Realm and do **not** trigger an Echo notification — they are too frequent and low-signal for a focused gaming audience. The like button appears inline on each Realm feed card (heart icon + count) so users can like without navigating away. The full liked-by list (avatars, expandable) lives in the session detail only.
+Likes are **not surfaced as feed items** in the Realm and do **not** trigger an Echo notification — they are too frequent and low-signal for a focused gaming audience. The like button appears inline on each Realm feed card (heart icon + count) so users can like without navigating away. The full liked-by list (avatars, expandable) lives in the journey detail only.
 
 ## Log and comments
 
 Two distinct concepts for text attached to a journey:
 
-**Log** — the session owner's narrative, written once at confirmation time. It is a field on the session record (`app.agon.session.log`). Shown in the Realm feed card and in the session detail. Only the owner has a log; it cannot be edited after publish.
+**Log** — the journey owner's narrative, written once at confirmation time. It is a field on the journey record (`app.agon.journey.log`). Shown in the Realm feed card and in the journey detail. Only the owner has a log; it cannot be edited after publish.
 
-**Comments** — text written by any player (including the session owner) after the session is published. Separate AT Proto records (`app.agon.comment`) that reference the session URI. Shown in the session detail only — never in the Realm feed. Comments are flat and chronological — no threading, no hierarchy, no reply-to chains. Comments cannot be liked. A new comment on your session by another player triggers an Echo notification; your own comments on your own session do not.
+**Comments** — text written by any player (including the journey owner) after the journey is published. Separate AT Proto records (`app.agon.comment`) that reference the journey URI. Shown in the journey detail only — never in the Realm feed. Comments are flat and chronological — no threading, no hierarchy, no reply-to chains. Comments cannot be liked. A new comment on your journey by another player triggers an Echo notification; your own comments on your own journey do not.
 
 ## Time and timestamps
 
-Full timestamps (start and end in UTC) are stored on every session record — required by the AT Proto schema and needed for feed ordering. The distinction between storage and display is intentional: the time of day a session was played is rarely meaningful to a gamer or their followers. What matters is the date.
+Full timestamps (start and end in UTC) are stored on every journey record — required by the AT Proto schema and needed for feed ordering. The distinction between storage and display is intentional: the time of day a session was played is rarely meaningful to a gamer or their followers. What matters is the date.
 
 **Display rule — journeys** — everywhere a journey's timestamp appears (Realm feed cards, profile journey cards, Journeys history), the label is date-level only:
 
@@ -143,7 +189,7 @@ Full timestamps (start and end in UTC) are stored on every session record — re
 
 No hours, no minutes, no "3 hours ago" for journeys. The time of day is stored but never shown.
 
-**Display rule — comments** — comments are always recent and live inside a session detail, so relative time ("23 minutes ago", "3 hours ago") is the right signal there. Comments use relative time throughout.
+**Display rule — comments** — comments are always recent and live inside a journey detail, so relative time ("23 minutes ago", "3 hours ago") is the right signal there. Comments use relative time throughout.
 
 **Manual entry — when** — the confirmation form for a manually logged session asks when the player finished with two options only:
 
@@ -152,7 +198,7 @@ No hours, no minutes, no "3 hours ago" for journeys. The time of day is stored b
 
 No intermediate options ("earlier today", "yesterday"). Two clear anchors are fast; ambiguous middle options require the user to categorise something that is already fuzzy.
 
-**Ordering** — sessions are ordered by date (`played_at`) descending. Within the same date, sessions are ordered by record ID descending (creation order). A manually backdated session lands in its date bucket without displacing sessions that were already there.
+**Ordering** — journeys are ordered by date (`played_at`) descending. Within the same date, journeys are ordered by record ID descending (creation order). A manually backdated journey lands in its date bucket without displacing journeys that were already there.
 
 ## Navigation structure
 
@@ -162,7 +208,7 @@ The shell has a fixed sidebar on the left and a top bar across the top.
 
 | Item | Route | Purpose |
 |------|-------|---------|
-| Realm | `/` | Social feed — sessions from people you follow |
+| Realm | `/` | Social feed — journeys from people you follow |
 | Journeys | `/journeys` | Your own sessions — confirmed, pending, history |
 | Players | `/players` | Game-centric discovery — browse who is playing what |
 | Hero | `/hero` | Your profile and stats |
@@ -183,27 +229,29 @@ The Echoes bell is always present in the TopBar regardless of route. It navigate
 Echoes are in-app notifications. They surface in the TopBar bell icon, which shows a badge when there are unread items. Clicking the bell opens a panel listing recent Echoes without navigating away from the current page.
 
 Events that produce an Echo:
-- A new comment on one of your sessions by another player
-- A new follower
+- A new comment on one of your journeys by another player
+- A new follower on Agōn
 
 Events that do **not** produce an Echo:
 - Likes — too frequent and low-signal for a focused gaming audience
-- Your own comments on your own session
+- Your own comments on your own journey
 
 Echoes are stored server-side (Postgres) per user DID so they persist across devices and sessions. They are marked read when the user visits `/echoes`.
 
 ## Realm feed
 
-The Realm is the home feed. It shows confirmed sessions from people you follow, reverse chronological. Each session card displays:
+The Realm is the home feed. It shows confirmed journeys from people you follow on Agōn, reverse chronological. The feed is backed by `journeys_index` — a single SQL query against the local Postgres index. No per-user AT Proto calls are made at feed request time.
+
+Each journey card displays:
 
 - Player avatar, display name, Bluesky handle
 - Game cover art (square thumbnail, left-aligned)
 - Game title and genre chips
 - Duration and date label ("3h 14m · Today" or "3h 14m · Yesterday")
 - Like button (heart icon + count, inline) — toggleable without leaving the feed
-- Log text if the session has a `log` value
+- Log text if the journey has a `log` value
 
-The only action on the card is the like. There are no comments or reply actions on the card. Likes as feed items ("X liked Y's session") are not shown — the feed answers only "what did people I follow play?"
+The only action on the card is the like. There are no comments or reply actions on the card. Likes as feed items ("X liked Y's journey") are not shown — the feed answers only "what did people I follow play?"
 
 ## Players — game-centric discovery
 
@@ -213,39 +261,86 @@ The design premise is that games are the shared context that makes player discov
 
 Each game card shows:
 - Game cover art, title, and genre chips
-- A row per recent session: player avatar, name, duration, date, and log excerpt (truncated)
+- A row per recent journey: player avatar, name, duration, date, and log excerpt (truncated)
 - Journey count for the game
 
 The page is searchable by game title or genre, and filterable by genre chip. Search matches both game name and genre — typing "RPG" narrows to role-playing games across all entries.
 
-Clicking a player row navigates to that player's profile. Clicking a session row navigates to the journey detail. Both paths lead out of the discovery surface into social actions (follow, like, comment).
+Clicking a player row navigates to that player's profile. Clicking a journey row navigates to the journey detail. Both paths lead out of the discovery surface into social actions (follow, like, comment).
 
-The data backing this page is the same `game_sessions_index` Postgres table used by the session detail "on this journey" sections. The Players query is broader — all indexed sessions, not just those for a single game — ordered by `played_at` descending, grouped by `igdb_id`.
+The data backing this page is the same `journeys_index` Postgres table used by the journey detail "on this journey" sections. The Players query is broader — all indexed journeys, not just those for a single game — ordered by `played_at` descending, grouped by `igdb_id`.
 
-## Session detail
+## Journey detail
 
-Tapping a session card opens the session detail at `/journey/:id`. It shows:
+Tapping a journey card opens the journey detail at `/journey/:id`. It shows:
 
-- Full session metadata and log
+- Full journey metadata and log
 - Like button — the only place the like action is exposed
 - Liked-by avatars — a subset shown inline, expandable to the full list
 - Comments — flat, chronological, posted by any player including the owner; not likeable
-- **Friends on this journey** — people you follow who have also played this game, ordered by most recent session, up to 20
-- **Others on this journey** — players outside your follow graph who have played this game, ordered by most recent session, up to 20
+- **Friends on this journey** — people you follow who have also played this game, ordered by most recent journey, up to 20
+- **Others on this journey** — players outside your follow graph who have played this game, ordered by most recent journey, up to 20
 
-The two journey sections drive discovery and engagement: seeing a friend on the same game invites a like on their session; seeing a stranger invites a follow.
+The two journey sections drive discovery and engagement: seeing a friend on the same game invites a like on their journey; seeing a stranger invites a follow.
 
-## Game sessions index
+## Postgres as a rebuildable index
 
-Querying AT Proto for "all sessions with game X" across the network is impractical — AT Proto has no cross-PDS index for arbitrary record fields. Instead, the API server maintains a lightweight Postgres index:
+Postgres is not the source of truth for journeys or follows. AT Proto is. The Postgres tables that mirror AT Proto data are indexes — local caches optimised for fast queries that would be impractical to run against the distributed AT Proto network on every request.
+
+If the index tables were lost, they could be rebuilt by replaying the relevant AT Proto records from the PDS. The index exists to serve queries cheaply, not to own data.
+
+The only data that lives exclusively in Postgres and has no AT Proto counterpart:
+- Unconfirmed sessions — private scaffolding, evicted after 7 days
+- exe exclusions — per user, permanent until removed
+- exe_game_hints — per user, built from confirmed corrections
+- IGDB cache — server-side cache with TTL
+- Echoes — notification rows, per user DID
+
+## Journeys index
+
+Querying AT Proto for "all journeys with game X" across the network is impractical — AT Proto has no cross-PDS index for arbitrary record fields. Instead, the API server maintains a lightweight Postgres index:
 
 ```
-game_sessions_index(igdb_id, user_did, session_uri, played_at)
+journeys_index(igdb_id, user_did, journey_uri, played_at)
 ```
 
-A row is written when a session is confirmed and published. The session detail query is a single cheap Postgres read: top 20 rows by `played_at` for the given `igdb_id`. The AT Proto record at `session_uri` provides all display data.
+A row is written when a journey is confirmed and published. The journey detail query is a single cheap Postgres read: top 20 rows by `played_at` for the given `igdb_id`. The AT Proto record at `journey_uri` provides all display data.
 
-Limitation: only sessions confirmed through this API server are indexed. Sessions from other Agōn instances would not appear. This is acceptable for MVP — federation is a future concern.
+The Realm feed query joins `journeys_index` against `players_index` to return journeys from followed players — one SQL query, no per-user AT Proto calls.
+
+Limitation: only journeys confirmed through this API server are indexed. Journeys from other Agōn instances would not appear. This is acceptable for MVP — federation is a future concern.
+
+## Players index
+
+```
+players_index(follower_did, followee_did, created_at)
+```
+
+A row is written when a user follows another player on Agōn and deleted when they unfollow. This mirrors the `app.agon.player` records on AT Proto. Used to answer "who does this user follow" and "who follows this user" without querying the PDS.
+
+## Likes index
+
+```
+likes_index(journey_uri, liker_did, like_uri, created_at)
+```
+
+A row is written when a user likes a journey and deleted when they unlike. This mirrors the `app.agon.like` records on AT Proto. Used to answer "how many likes does this journey have" and "who liked this journey" without querying each liker's PDS storage individually.
+
+## Comments index
+
+```
+comments_index(journey_uri, commenter_did, comment_uri, text, created_at)
+```
+
+A row is written when a user posts a comment and deleted when they delete it. This mirrors the `app.agon.comment` records on AT Proto. Used to fetch all comments for a journey in chronological order without querying each commenter's PDS storage individually.
+
+## The index pattern
+
+Every AT Proto record type Agōn defines has the same problem: records are scattered across every user's own PDS storage with no central index. Querying "all likes for journey X" or "all comments for journey X" across the network on every request is impractical.
+
+The solution is always the same: every action goes through the Agōn API, which writes to AT Proto and updates the corresponding Postgres index table in the same operation. The index is always current because the API is the only path for creating these records. No firehose, no polling, no background sync needed.
+
+All four index tables are rebuildable from AT Proto if lost. They exist to serve queries cheaply, not to own data.
 
 ## IGDB
 
@@ -266,19 +361,27 @@ The agent registers `agon://` as a custom URL scheme on install via Velopack. It
 ## Data boundaries
 
 ```
-AT Proto      confirmed sessions — fully denormalised, permanent, user-owned
-              likes — separate records referencing session AT URIs
-              social graph, identity, feed
+AT Proto      app.agon.journey  — confirmed journeys, fully denormalised, permanent, user-owned
+              app.agon.player   — Agōn follows, user-owned, independent of Bluesky follows
+              app.agon.like     — likes, separate records referencing journey AT URIs
+              app.agon.comment  — comments, separate records referencing journey AT URIs
+              identity, auth
 
-Postgres      unconfirmed sessions — evicted after 7 days
-              exe exclusions — per user DID, permanent until removed
+Postgres      unconfirmed sessions  — evicted after 7 days
+              exe exclusions        — per user DID, permanent until removed
               exe_game_hints        — per user DID: exe_name → igdb_id, built automatically
                                       from confirmed corrections, used to skip fuzzy match
                                       on repeat detections
-              game cache — server-side IGDB responses with TTL
-              game_sessions_index — igdb_id / user_did / session_uri / played_at
-                                    written on confirm, used for "on this journey" queries
-              echoes — per user DID, new comment / new follower events, marked read on open
+              IGDB cache            — server-side IGDB responses with TTL
+              journeys_index        — igdb_id / user_did / journey_uri / played_at
+                                      mirror of app.agon.journey records, rebuildable from AT Proto
+              players_index         — follower_did / followee_did / created_at
+                                      mirror of app.agon.player records, rebuildable from AT Proto
+              likes_index           — journey_uri / liker_did / like_uri / created_at
+                                      mirror of app.agon.like records, rebuildable from AT Proto
+              comments_index        — journey_uri / commenter_did / comment_uri / text / created_at
+                                      mirror of app.agon.comment records, rebuildable from AT Proto
+              echoes                — per user DID, new comment / new follower events
 
 localStorage  UI preferences only
 ```
@@ -293,6 +396,7 @@ Tests are written from the start. Go packages have unit tests alongside the code
 - Console session detection (PSN / Xbox APIs are a future consideration)
 - The language-based recommendation engine (requires session note data at scale)
 - Self-hosted PDS
+- Federation with other Agōn instances (journeys_index and players_index only cover this server's users)
 
 ## Rate limiting
 
