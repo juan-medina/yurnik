@@ -94,6 +94,48 @@ func TestJourneyRecord_serialisation(t *testing.T) {
 	}
 }
 
+func TestListPending_unauthenticated(t *testing.T) {
+	h := &Handler{}
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	r := httptest.NewRequest(http.MethodGet, "/api/pending-journeys", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, r)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestListByPlayer_unauthenticated(t *testing.T) {
+	h := &Handler{}
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	r := httptest.NewRequest(http.MethodGet, "/api/players/some.handle/journeys", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, r)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestExclude_unauthenticated(t *testing.T) {
+	h := &Handler{}
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	r := httptest.NewRequest(http.MethodPost, "/api/pending-journeys/some-id/exclude", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, r)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
+	}
+}
+
 func TestJourneyRecord_withOptionals(t *testing.T) {
 	coverURL := "https://images.igdb.com/cover.jpg"
 	logText := "Finally beat Malenia."

@@ -91,6 +91,76 @@ func DeleteJourneyIndex(ctx context.Context, pool *pgxpool.Pool, journeyURI, use
 	return nil
 }
 
+// ListPendingJourneys returns all pending journeys for the given DID with
+// status 'active' or 'ended', ordered by created_at descending.
+func ListPendingJourneys(ctx context.Context, pool *pgxpool.Pool, did string) ([]PendingJourney, error) {
+	rows, err := pool.Query(ctx, `
+		SELECT id, did, status, igdb_id, exe_name, window_title, started_at, ended_at, last_heartbeat
+		FROM pending_journeys
+		WHERE did = $1 AND status IN ('active', 'ended')
+		ORDER BY created_at DESC
+	`, did)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var journeys []PendingJourney
+	for rows.Next() {
+		var p PendingJourney
+		if err := rows.Scan(
+			&p.ID, &p.DID, &p.Status, &p.IGDBID,
+			&p.ExeName, &p.WindowTitle,
+			&p.StartedAt, &p.EndedAt, &p.LastHeartbeat,
+		); err != nil {
+			return nil, err
+		}
+		journeys = append(journeys, p)
+	}
+	return journeys, rows.Err()
+}
+
+// ListJourneysByDID returns journeys_index rows for the given DID, ordered by
+// played_at descending, with optional cursor-based pagination.
+// cursor is the played_at value of the last item on the previous page (RFC3339).
+// Pass empty string for the first page.
+func ListJourneysByDID(ctx context.Context, pool *pgxpool.Pool, did string, limit int, cursor string) ([]IndexedJourney, error) {
+	var rows pgx.Rows
+	var err error
+
+	if cursor == "" {
+		rows, err = pool.Query(ctx, `
+			SELECT journey_uri, igdb_id, user_did, played_at
+			FROM journeys_index
+			WHERE user_did = $1
+			ORDER BY played_at DESC
+			LIMIT $2
+		`, did, limit)
+	} else {
+		rows, err = pool.Query(ctx, `
+			SELECT journey_uri, igdb_id, user_did, played_at
+			FROM journeys_index
+			WHERE user_did = $1 AND played_at < $2
+			ORDER BY played_at DESC
+			LIMIT $3
+		`, did, cursor, limit)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var journeys []IndexedJourney
+	for rows.Next() {
+		var j IndexedJourney
+		if err := rows.Scan(&j.JourneyURI, &j.IGDBID, &j.UserDID, &j.PlayedAt); err != nil {
+			return nil, err
+		}
+		journeys = append(journeys, j)
+	}
+	return journeys, rows.Err()
+}
+
 // GetJourneyURI returns the AT URI for a journey owned by the given DID.
 // The rkey is the last segment of the AT URI and is used as the public journey ID.
 func GetJourneyURI(ctx context.Context, pool *pgxpool.Pool, rkey, userDID string) (string, error) {
