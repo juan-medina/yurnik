@@ -18,6 +18,7 @@ export type Journey = {
 
 export type PendingJourney = {
   id: string;
+  igdbId?: number;
   game: string;
   coverUrl?: string;
   genres: string[];
@@ -28,6 +29,8 @@ export type PendingJourney = {
 };
 
 export type NewJourney = {
+  igdbId?: number;
+  durationSeconds: number;
   game: string;
   coverUrl?: string;
   genres: string[];

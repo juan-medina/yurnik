@@ -7,16 +7,17 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
-// newTestClient returns a Client wired to a test server built from the given
-// handler. The test server is closed when the test ends.
+// newTestClient returns a Client wired to a test server — no DPoP key so tests
+// use plain Bearer auth, matching what app passwords return.
 func newTestClient(t *testing.T, handler http.Handler) *Client {
 	t.Helper()
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
-	return New(srv.URL, srv.Client())
+	return New(srv.URL, srv.Client(), nil)
 }
 
 // --- CreateRecord ---
@@ -70,6 +71,44 @@ func TestCreateRecord_serverError(t *testing.T) {
 	}
 }
 
+// TestCreateRecord_dpopNonceRetry verifies that the client retries with a
+// DPoP nonce when the server responds with use_dpop_nonce.
+func TestCreateRecord_dpopNonceRetry(t *testing.T) {
+	attempts := 0
+	srv := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+		if attempts == 1 {
+			// First attempt: demand a nonce.
+			w.Header().Set("DPoP-Nonce", "test-nonce-123")
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "use_dpop_nonce"})
+			return
+		}
+		// Second attempt: succeed.
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"uri": "at://did:plc:abc/app.agon.journey/xyz",
+			"cid": "bafyreiabc123",
+		})
+	}))
+
+	result, err := srv.CreateRecord(context.Background(), "tok", Record{
+		Collection: "app.agon.journey",
+		Repo:       "did:plc:abc",
+		Record:     map[string]string{},
+	})
+	if err != nil {
+		t.Fatalf("CreateRecord: %v", err)
+	}
+	if attempts != 2 {
+		t.Errorf("attempts = %d, want 2", attempts)
+	}
+	if !strings.HasPrefix(result.URI, "at://") {
+		t.Errorf("URI = %q, want at:// prefix", result.URI)
+	}
+}
+
 // --- DeleteRecord ---
 
 func TestDeleteRecord_success(t *testing.T) {
@@ -100,7 +139,7 @@ func TestDeleteRecord_success(t *testing.T) {
 }
 
 func TestDeleteRecord_invalidURI(t *testing.T) {
-	c := New("http://unused", nil)
+	c := New("http://unused", nil, nil)
 	err := c.DeleteRecord(context.Background(), "tok", "not-an-at-uri")
 	if err == nil {
 		t.Fatal("expected error for invalid URI, got nil")

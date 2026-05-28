@@ -95,7 +95,7 @@ func TestIntegration_ConfirmAndDelete(t *testing.T) {
 		_, _ = pool.Exec(ctx, `DELETE FROM pending_journeys WHERE id = $1`, pendingID)
 	})
 
-	atp := atproto.New(pds, nil)
+	atp := atproto.New(pds, nil, nil)
 	game, err := db.GetGame(ctx, pool, testIGDBID)
 	if err != nil {
 		t.Fatalf("get game: %v", err)
@@ -274,7 +274,7 @@ func TestIntegration_ListConfirmedJourneys(t *testing.T) {
 		t.Fatalf("upsert game: %v", err)
 	}
 
-	atp := atproto.New(pds, nil)
+	atp := atproto.New(pds, nil, nil)
 	now := time.Now().UTC()
 	endedAt := now.Add(-1 * time.Hour)
 	logText := "Integration test — list confirmed journeys."
@@ -363,7 +363,7 @@ func TestIntegration_AddJourney(t *testing.T) {
 		t.Fatalf("upsert game: %v", err)
 	}
 
-	atp := atproto.New(pds, nil)
+	atp := atproto.New(pds, nil, nil)
 	now := time.Now().UTC()
 	playedAt := now.Add(-1 * time.Hour)
 	durationSeconds := 3600

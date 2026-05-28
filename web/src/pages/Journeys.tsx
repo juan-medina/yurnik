@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { CalendarDays, Check, Clock, Heart, MonitorDown, Plus, Search, Trash2, X } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getUserJourneys, getPendingJourneys, addJourney, confirmPendingJourney, dismissPendingJourney, toggleLike } from "@/services/journeys";
+import { getUserJourneys, getPendingJourneys, addJourney, confirmPendingJourney, dismissPendingJourney, excludePendingJourney, toggleLike } from "@/services/journeys";
 import { searchGames } from "@/services/games";
 import { formatCommentAge, formatJourneyDate } from "@/lib/time";
 import { Calendar } from "@/components/ui/calendar";
@@ -54,6 +54,7 @@ function GameSelector({
           </div>
         </div>
         <button
+          type="button"
           onClick={() => { setSearching(true); setQuery(""); }}
           className="shrink-0 text-xs text-primary underline-offset-2 hover:underline"
         >
@@ -174,6 +175,9 @@ function AddJourneyForm({ onAdd, onCancel }: { onAdd: () => void; onCancel: () =
       queryClient.invalidateQueries({ queryKey: ["journeys", "user"] });
       onAdd();
     },
+    onError: () => {
+      // form stays open — user can retry
+    },
   });
 
   const parsedDuration = parseDuration(durationInput);
@@ -189,7 +193,10 @@ function AddJourneyForm({ onAdd, onCancel }: { onAdd: () => void; onCancel: () =
 
   function handleAdd() {
     if (!selected || !parsedDuration) return;
+    const durationSeconds = (parsedDuration.hours * 3600) + (parsedDuration.minutes * 60);
     const input: NewJourney = {
+      igdbId: selected.id ? parseInt(selected.id) : undefined,
+      durationSeconds,
       game: selected.game,
       coverUrl: selected.coverUrl,
       genres: selected.genres,
@@ -285,20 +292,23 @@ function AddJourneyForm({ onAdd, onCancel }: { onAdd: () => void; onCancel: () =
           Cancel
         </button>
         <button
-          disabled={!canSubmit}
+          disabled={!canSubmit || addMutation.isPending}
           onClick={handleAdd}
           className="rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity disabled:opacity-40"
         >
           Log journey
         </button>
       </div>
+      {addMutation.isError && (
+        <p className="mt-2 text-xs text-destructive">Something went wrong — please try again.</p>
+      )}
     </div>
   );
 }
 
 function gameToGame(journey: PendingJourney): Game {
   return {
-    id: journey.game,
+    id: journey.igdbId?.toString() ?? "",
     game: journey.game,
     coverUrl: journey.coverUrl,
     genres: journey.genres,
@@ -316,12 +326,20 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pending-journeys"] }),
   });
 
+  const excludeMutation = useMutation({
+    mutationFn: () => excludePendingJourney(journey.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pending-journeys"] }),
+  });
+
   const confirmMutation = useMutation({
-    mutationFn: (input: { game: string; coverUrl?: string; genres: string[]; log?: string }) =>
+    mutationFn: (input: { igdbId?: number; game: string; coverUrl?: string; genres: string[]; log?: string }) =>
       confirmPendingJourney(journey.id, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pending-journeys"] });
       queryClient.invalidateQueries({ queryKey: ["journeys", "user"] });
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["pending-journeys"] });
     },
   });
 
@@ -339,6 +357,7 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
   function handlePublish() {
     if (!game?.game) return;
     confirmMutation.mutate({
+      igdbId: game.id ? parseInt(game.id) : undefined,
       game: game.game,
       coverUrl: game.coverUrl,
       genres: game.genres,
@@ -370,14 +389,18 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
             Cancel
           </button>
           <button
+            type="button"
             onClick={handlePublish}
-            disabled={!game?.game}
+            disabled={!game?.game || confirmMutation.isPending}
             className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
           >
             <Check size={14} />
             Publish journey
           </button>
         </div>
+        {confirmMutation.isError && (
+          <p className="mt-2 text-xs text-destructive">Something went wrong — please try again.</p>
+        )}
       </div>
     );
   }
@@ -392,7 +415,7 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
             Cancel
           </button>
           <button
-            onClick={() => dismissMutation.mutate()}
+            onClick={() => excludeMutation.mutate()}
             className="flex items-center gap-1.5 rounded-md bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
           >
             Exclude
@@ -560,7 +583,7 @@ export default function Journeys() {
             {history.map((j) => <HistoryCard key={j.id} journey={j} />)}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">No confirmed journeys yet.</p>
+          <p className="text-sm text-muted-foreground">No journeys yet. Add one to get started.</p>
         )}
       </section>
 

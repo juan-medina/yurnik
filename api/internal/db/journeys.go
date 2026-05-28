@@ -60,20 +60,21 @@ func DeletePendingJourney(ctx context.Context, pool *pgxpool.Pool, id, did strin
 
 // IndexedJourney is the data written to journeys_index on confirm.
 type IndexedJourney struct {
-	JourneyURI string
-	IGDBID     int
-	UserDID    string
-	PlayedAt   time.Time
+	JourneyURI      string
+	IGDBID          int
+	UserDID         string
+	PlayedAt        time.Time
+	DurationSeconds int
 }
 
 // InsertJourneyIndex writes a row to journeys_index. Called after a successful
 // AT Proto publish.
 func InsertJourneyIndex(ctx context.Context, pool *pgxpool.Pool, j IndexedJourney) error {
 	_, err := pool.Exec(ctx, `
-		INSERT INTO journeys_index (journey_uri, igdb_id, user_did, played_at)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO journeys_index (journey_uri, igdb_id, user_did, played_at, duration_seconds)
+		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (journey_uri) DO NOTHING
-	`, j.JourneyURI, j.IGDBID, j.UserDID, j.PlayedAt)
+	`, j.JourneyURI, j.IGDBID, j.UserDID, j.PlayedAt, j.DurationSeconds)
 	return err
 }
 
@@ -130,7 +131,7 @@ func ListJourneysByDID(ctx context.Context, pool *pgxpool.Pool, did string, limi
 
 	if cursor == "" {
 		rows, err = pool.Query(ctx, `
-			SELECT journey_uri, igdb_id, user_did, played_at
+			SELECT journey_uri, igdb_id, user_did, played_at, duration_seconds
 			FROM journeys_index
 			WHERE user_did = $1
 			ORDER BY played_at DESC
@@ -138,7 +139,7 @@ func ListJourneysByDID(ctx context.Context, pool *pgxpool.Pool, did string, limi
 		`, did, limit)
 	} else {
 		rows, err = pool.Query(ctx, `
-			SELECT journey_uri, igdb_id, user_did, played_at
+			SELECT journey_uri, igdb_id, user_did, played_at, duration_seconds
 			FROM journeys_index
 			WHERE user_did = $1 AND played_at < $2
 			ORDER BY played_at DESC
@@ -153,7 +154,7 @@ func ListJourneysByDID(ctx context.Context, pool *pgxpool.Pool, did string, limi
 	var journeys []IndexedJourney
 	for rows.Next() {
 		var j IndexedJourney
-		if err := rows.Scan(&j.JourneyURI, &j.IGDBID, &j.UserDID, &j.PlayedAt); err != nil {
+		if err := rows.Scan(&j.JourneyURI, &j.IGDBID, &j.UserDID, &j.PlayedAt, &j.DurationSeconds); err != nil {
 			return nil, err
 		}
 		journeys = append(journeys, j)

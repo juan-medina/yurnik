@@ -65,6 +65,7 @@ func (h *Handler) effectiveClientID() string {
 	}
 	q := url.Values{}
 	q.Set("redirect_uri", h.cfg.RedirectURI)
+	q.Set("scope", "atproto transition:generic")
 	return "http://localhost?" + q.Encode()
 }
 
@@ -86,7 +87,7 @@ func (h *Handler) clientMetadata(w http.ResponseWriter, _ *http.Request) {
 		"redirect_uris":              []string{h.cfg.RedirectURI},
 		"grant_types":                []string{"authorization_code"},
 		"response_types":             []string{"code"},
-		"scope":                      "atproto",
+		"scope":                      "atproto transition:generic",
 		"token_endpoint_auth_method": "none",
 		"application_type":           "native",
 		"dpop_bound_access_tokens":   true,
@@ -170,7 +171,7 @@ func (h *Handler) doPARRequest(state, serverChallenge, nonce string) (parResult,
 		"response_type":         {"code"},
 		"client_id":             {h.effectiveClientID()},
 		"redirect_uri":          {h.cfg.RedirectURI},
-		"scope":                 {"atproto"},
+		"scope":                 {"atproto transition:generic"},
 		"state":                 {state},
 		"code_challenge":        {serverChallenge},
 		"code_challenge_method": {"S256"},

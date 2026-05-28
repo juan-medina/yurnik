@@ -14,8 +14,20 @@ import (
 
 // CreateDPoPProof builds a DPoP proof JWT (ES256) as required by AT Proto OAuth.
 // nonce is optional; pass "" on the first attempt.
+// accessToken is optional; pass "" for OAuth flow requests (PAR, token exchange).
+// For resource requests (PDS calls), pass the access token so the ath claim is included.
 // https://www.ietf.org/rfc/rfc9449.html
 func CreateDPoPProof(priv *ecdsa.PrivateKey, method, endpoint, nonce string) (string, error) {
+	return createDPoPProof(priv, method, endpoint, nonce, "")
+}
+
+// CreateDPoPProofWithToken builds a DPoP proof JWT that includes the ath claim.
+// Required for resource requests (PDS calls) when using DPoP-bound OAuth tokens.
+func CreateDPoPProofWithToken(priv *ecdsa.PrivateKey, method, endpoint, nonce, accessToken string) (string, error) {
+	return createDPoPProof(priv, method, endpoint, nonce, accessToken)
+}
+
+func createDPoPProof(priv *ecdsa.PrivateKey, method, endpoint, nonce, accessToken string) (string, error) {
 	pub := &priv.PublicKey
 
 	// JWK for P-256 — coordinates padded to 32 bytes each.
@@ -49,6 +61,11 @@ func CreateDPoPProof(priv *ecdsa.PrivateKey, method, endpoint, nonce string) (st
 	if nonce != "" {
 		payload["nonce"] = nonce
 	}
+	// ath is required for resource requests — it binds the proof to the access token.
+	if accessToken != "" {
+		hash := sha256.Sum256([]byte(accessToken))
+		payload["ath"] = base64.RawURLEncoding.EncodeToString(hash[:])
+	}
 
 	return signES256JWT(header, payload, priv)
 }
@@ -81,4 +98,3 @@ func signES256JWT(header, payload map[string]interface{}, priv *ecdsa.PrivateKey
 
 	return input + "." + base64.RawURLEncoding.EncodeToString(sig), nil
 }
-

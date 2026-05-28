@@ -9,6 +9,7 @@ package journeys
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"crypto/ed25519"
 	"encoding/json"
 	"fmt"
@@ -26,19 +27,33 @@ import (
 
 // Handler handles journey confirmation and deletion.
 type Handler struct {
-	pool    *pgxpool.Pool
-	atp     *atproto.Client
-	jwtPriv ed25519.PrivateKey
+	pool     *pgxpool.Pool
+	atp      *atproto.Client
+	jwtPriv  ed25519.PrivateKey
+	dpopPriv *ecdsa.PrivateKey
 }
 
 // NewHandler returns a Handler. pds is the PDS base URL — pass empty string for
-// the default (https://bsky.social).
-func NewHandler(pool *pgxpool.Pool, jwtPriv ed25519.PrivateKey, pds string) *Handler {
+// the default (https://bsky.social). dpopPriv is the ECDSA key used to sign
+// DPoP proofs for OAuth-bound access tokens.
+func NewHandler(pool *pgxpool.Pool, jwtPriv ed25519.PrivateKey, dpopPriv *ecdsa.PrivateKey, pds string) *Handler {
 	return &Handler{
-		pool:    pool,
-		atp:     atproto.New(pds, nil),
-		jwtPriv: jwtPriv,
+		pool:     pool,
+		atp:      atproto.New(pds, nil, dpopPriv),
+		jwtPriv:  jwtPriv,
+		dpopPriv: dpopPriv,
 	}
+}
+
+// atpForDID resolves the user's actual PDS from their DID document and returns
+// a client targeting that PDS. OAuth tokens are scoped to the user's PDS, not
+// the authorization server (entryway), so record writes must go to the PDS.
+func (h *Handler) atpForDID(ctx context.Context, did string) (*atproto.Client, error) {
+	pds, err := atproto.ResolvePDS(ctx, did)
+	if err != nil {
+		return nil, fmt.Errorf("resolve PDS for %s: %w", did, err)
+	}
+	return atproto.New(pds, nil, h.dpopPriv), nil
 }
 
 // Register mounts journey routes on mux.
@@ -133,6 +148,13 @@ func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	atp, err := h.atpForDID(r.Context(), did)
+	if err != nil {
+		log.Printf("journeys/add: %v", err)
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+
 	startedAt := playedAt.Add(-time.Duration(req.DurationSeconds) * time.Second)
 
 	rec := journeyRecord{
@@ -149,7 +171,7 @@ func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
 		rec.CoverURL = &game.CoverURL
 	}
 
-	result, err := h.atp.CreateRecord(r.Context(), tokens.AccessToken, atproto.Record{
+	result, err := atp.CreateRecord(r.Context(), tokens.AccessToken, atproto.Record{
 		Collection: "app.agon.journey",
 		Repo:       did,
 		Record:     rec,
@@ -161,10 +183,11 @@ func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := db.InsertJourneyIndex(r.Context(), h.pool, db.IndexedJourney{
-		JourneyURI: result.URI,
-		IGDBID:     game.IGDBID,
-		UserDID:    did,
-		PlayedAt:   playedAt,
+		JourneyURI:      result.URI,
+		IGDBID:          game.IGDBID,
+		UserDID:         did,
+		PlayedAt:        playedAt,
+		DurationSeconds: req.DurationSeconds,
 	}); err != nil {
 		log.Printf("journeys/add: insert index for %s uri=%s: %v", did, result.URI, err)
 	}
@@ -223,6 +246,13 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	atp, err := h.atpForDID(r.Context(), did)
+	if err != nil {
+		log.Printf("journeys/confirm: %v", err)
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+
 	endedAt := time.Now().UTC()
 	if pending.EndedAt != nil {
 		endedAt = *pending.EndedAt
@@ -247,7 +277,7 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
 		rec.CoverURL = &game.CoverURL
 	}
 
-	result, err := h.atp.CreateRecord(r.Context(), tokens.AccessToken, atproto.Record{
+	result, err := atp.CreateRecord(r.Context(), tokens.AccessToken, atproto.Record{
 		Collection: "app.agon.journey",
 		Repo:       did,
 		Record:     rec,
@@ -259,10 +289,11 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := db.InsertJourneyIndex(r.Context(), h.pool, db.IndexedJourney{
-		JourneyURI: result.URI,
-		IGDBID:     game.IGDBID,
-		UserDID:    did,
-		PlayedAt:   endedAt,
+		JourneyURI:      result.URI,
+		IGDBID:          game.IGDBID,
+		UserDID:         did,
+		PlayedAt:        endedAt,
+		DurationSeconds: durationSeconds,
 	}); err != nil {
 		log.Printf("journeys/confirm: insert index for %s uri=%s: %v", did, result.URI, err)
 	}
@@ -318,7 +349,14 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.atp.DeleteRecord(r.Context(), tokens.AccessToken, journeyURI); err != nil {
+	atp, err := h.atpForDID(r.Context(), did)
+	if err != nil {
+		log.Printf("journeys/delete: %v", err)
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if err := atp.DeleteRecord(r.Context(), tokens.AccessToken, journeyURI); err != nil {
 		log.Printf("journeys/delete: delete AT Proto record %s: %v", journeyURI, err)
 		http.Error(w, `{"error":"internal_error","message":"failed to delete journey from PDS"}`, http.StatusInternalServerError)
 		return
@@ -391,13 +429,14 @@ func (h *Handler) listPending(w http.ResponseWriter, r *http.Request) {
 
 // journeyIndexResponse is the JSON shape returned for a confirmed journey from the index.
 type journeyIndexResponse struct {
-	ID        string   `json:"id"`
-	URI       string   `json:"uri"`
-	IGDBID    int      `json:"igdb_id"`
-	GameTitle string   `json:"game_title"`
-	CoverURL  *string  `json:"cover_url,omitempty"`
-	Genres    []string `json:"genres"`
-	PlayedAt  string   `json:"played_at"`
+	ID              string   `json:"id"`
+	URI             string   `json:"uri"`
+	IGDBID          int      `json:"igdb_id"`
+	GameTitle        string   `json:"game_title"`
+	CoverURL         *string  `json:"cover_url,omitempty"`
+	Genres           []string `json:"genres"`
+	PlayedAt         string   `json:"played_at"`
+	DurationSeconds  int      `json:"duration_seconds"`
 }
 
 // listByPlayer returns confirmed journeys for a player, backed by journeys_index.
@@ -441,9 +480,10 @@ func (h *Handler) listByPlayer(w http.ResponseWriter, r *http.Request) {
 	resp := make([]journeyIndexResponse, 0, len(indexed))
 	for _, idx := range indexed {
 		item := journeyIndexResponse{
-			URI:      idx.JourneyURI,
-			IGDBID:   idx.IGDBID,
-			PlayedAt: idx.PlayedAt.UTC().Format(time.RFC3339),
+			URI:             idx.JourneyURI,
+			IGDBID:          idx.IGDBID,
+			PlayedAt:        idx.PlayedAt.UTC().Format(time.RFC3339),
+			DurationSeconds: idx.DurationSeconds,
 		}
 		parts := strings.Split(idx.JourneyURI, "/")
 		if len(parts) > 0 {

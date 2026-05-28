@@ -56,7 +56,7 @@ DROP TABLE IF EXISTS igdb_games;
 DROP TABLE IF EXISTS users;
 
 -- Agōn-specific user data only. Bluesky profile fields (handle, display_name,
--- avatar) are never stored here — they are fetched live from the Bluesky AppView
+-- avatar) are never stored here -- they are fetched live from the Bluesky AppView
 -- on every request so they are always current.
 CREATE TABLE users (
     did          text        PRIMARY KEY,
@@ -78,7 +78,7 @@ CREATE TABLE user_tokens (
 );
 
 -- IGDB response cache. Keyed by IGDB game ID. Refreshed when cached_at is older
--- than the TTL checked at query time — a cache hit never triggers an IGDB call.
+-- than the TTL checked at query time -- a cache hit never triggers an IGDB call.
 CREATE TABLE igdb_games (
     igdb_id   integer     PRIMARY KEY,
     name      text        NOT NULL,
@@ -96,7 +96,7 @@ CREATE TABLE exe_exclusions (
     PRIMARY KEY (did, exe_name)
 );
 
--- Learned exe → IGDB ID mappings, per user. Written when the user corrects a
+-- Learned exe -> IGDB ID mappings, per user. Written when the user corrects a
 -- game match during confirmation. On repeat detections from the same exe the
 -- server checks here before attempting IGDB fuzzy matching.
 CREATE TABLE exe_game_hints (
@@ -125,8 +125,8 @@ CREATE TABLE pending_journeys (
     created_at     timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX pending_journeys_did_idx     ON pending_journeys(did);
-CREATE INDEX pending_journeys_status_idx  ON pending_journeys(status);
+CREATE INDEX pending_journeys_did_idx       ON pending_journeys(did);
+CREATE INDEX pending_journeys_status_idx    ON pending_journeys(status);
 CREATE INDEX pending_journeys_heartbeat_idx ON pending_journeys(last_heartbeat);
 
 -- AT Proto index tables. These are local mirrors of records that live on the
@@ -136,15 +136,18 @@ CREATE INDEX pending_journeys_heartbeat_idx ON pending_journeys(last_heartbeat);
 -- Mirror of app.agon.journey records. Written on confirm, deleted on journey
 -- delete. Powers the Realm feed (joined against players_index) and the
 -- "on this journey" sections in journey detail.
+-- duration_seconds is denormalised from the AT Proto record so the list view
+-- can show duration without fetching each record from the PDS.
 CREATE TABLE journeys_index (
-    journey_uri text        PRIMARY KEY,
-    igdb_id     integer     NOT NULL REFERENCES igdb_games(igdb_id),
-    user_did    text        NOT NULL REFERENCES users(did) ON DELETE CASCADE,
-    played_at   timestamptz NOT NULL,
-    created_at  timestamptz NOT NULL DEFAULT now()
+    journey_uri      text        PRIMARY KEY,
+    igdb_id          integer     NOT NULL REFERENCES igdb_games(igdb_id),
+    user_did         text        NOT NULL REFERENCES users(did) ON DELETE CASCADE,
+    played_at        timestamptz NOT NULL,
+    duration_seconds integer     NOT NULL DEFAULT 0,
+    created_at       timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX journeys_index_igdb_id_played_at_idx ON journeys_index(igdb_id, played_at DESC);
+CREATE INDEX journeys_index_igdb_id_played_at_idx  ON journeys_index(igdb_id, played_at DESC);
 CREATE INDEX journeys_index_user_did_played_at_idx ON journeys_index(user_did, played_at DESC);
 
 -- Mirror of app.agon.player records. Written on follow, deleted on unfollow.
