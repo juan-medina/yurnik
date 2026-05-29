@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Check, Clock, ExternalLink, Heart, Pencil } from "lucide-react";
+import { Check, Clock, Heart, Pencil } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCurrentPlayer, updateProfile } from "@/services/auth";
 import { getUserJourneys, toggleLike } from "@/services/journeys";
@@ -99,18 +99,9 @@ export default function Hero() {
           <div className="min-w-0 flex-1">
             <p className="mb-1 text-xl font-bold leading-tight">{displayName}</p>
 
-            <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="mb-3 text-sm text-muted-foreground">
               <span>@{player.handle}</span>
-              <a
-                href={`https://bsky.app/profile/${player.handle}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-0.5 transition-colors hover:text-foreground"
-                aria-label="Edit profile on Bluesky"
-              >
-                <ExternalLink size={11} />
-                <span className="text-xs">Edit on Bluesky</span>
-              </a>
+              <p className="text-xs text-muted-foreground/60">Username and avatar provided by Discord</p>
             </div>
 
             {editingBio ? (

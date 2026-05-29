@@ -42,6 +42,7 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, 
 type meResponse struct {
 	ID        string  `json:"id"`
 	Handle    string  `json:"handle"`
+	Name      string  `json:"name"`
 	AvatarURL *string `json:"avatar_url"`
 	Bio       *string `json:"bio"`
 	Color     string  `json:"color"`
@@ -65,6 +66,7 @@ func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(meResponse{
 		ID:        user.ID,
 		Handle:    user.Handle,
+		Name:      user.Name,
 		AvatarURL: user.AvatarURL,
 		Bio:       user.Bio,
 		Color:     user.Color,

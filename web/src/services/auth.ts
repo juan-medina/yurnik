@@ -18,7 +18,7 @@ export async function getCurrentPlayer(): Promise<Player> {
   const data = await resp.json();
   return {
     id: data.id,
-    name: data.handle,
+    name: data.name,
     handle: data.handle,
     color: data.color ?? deriveColor(data.id),
     avatarUrl: data.avatar_url ?? undefined,

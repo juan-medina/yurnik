@@ -15,6 +15,7 @@ type User struct {
 	ID        string
 	Provider  string
 	Handle    string
+	Name      string
 	AvatarURL *string
 	Bio       *string
 	Color     string
@@ -36,14 +37,15 @@ type UserIdentity struct {
 func UpsertUser(ctx context.Context, pool *pgxpool.Pool, identity UserIdentity) (string, error) {
 	var id string
 	err := pool.QueryRow(ctx, `
-		INSERT INTO users (provider, provider_id, handle, avatar_url)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO users (provider, provider_id, handle, name, avatar_url)
+		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (provider, provider_id) DO UPDATE
 		  SET handle     = EXCLUDED.handle,
+		      name       = EXCLUDED.name,
 		      avatar_url = EXCLUDED.avatar_url,
 		      updated_at = now()
 		RETURNING id
-	`, identity.Provider, identity.ProviderID, identity.Handle, nullableString(identity.AvatarURL)).Scan(&id)
+	`, identity.Provider, identity.ProviderID, identity.Handle, identity.Name, nullableString(identity.AvatarURL)).Scan(&id)
 	if err != nil {
 		return "", fmt.Errorf("upsert user: %w", err)
 	}
@@ -54,9 +56,9 @@ func UpsertUser(ctx context.Context, pool *pgxpool.Pool, identity UserIdentity) 
 func GetUser(ctx context.Context, pool *pgxpool.Pool, id string) (User, error) {
 	var u User
 	err := pool.QueryRow(ctx, `
-		SELECT id, provider, handle, avatar_url, bio, color
+		SELECT id, provider, handle, name, avatar_url, bio, color
 		FROM users WHERE id = $1
-	`, id).Scan(&u.ID, &u.Provider, &u.Handle, &u.AvatarURL, &u.Bio, &u.Color)
+	`, id).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color)
 	if err == pgx.ErrNoRows {
 		return User{}, fmt.Errorf("user not found: %s", id)
 	}

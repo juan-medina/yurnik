@@ -55,7 +55,7 @@ DROP TABLE IF EXISTS igdb_games;
 DROP TABLE IF EXISTS users;
 
 -- One row per player. provider + provider_id identify the user at login.
--- handle and avatar_url are refreshed from the provider on every login.
+-- handle, name, and avatar_url are refreshed from the provider on every login.
 -- The internal id (UUID) is what the rest of the system uses — provider
 -- details are only joined at login time.
 CREATE TABLE users (
@@ -63,6 +63,7 @@ CREATE TABLE users (
     provider     text        NOT NULL,
     provider_id  text        NOT NULL,
     handle       text        NOT NULL,
+    name         text        NOT NULL,
     avatar_url   text,
     bio          text,
     color        text        NOT NULL DEFAULT '#7c3aed',
