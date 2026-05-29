@@ -27,7 +27,7 @@ type RawPendingJourney = {
   id: string;
   status: string;
   igdb_id?: number;
-  game_title?: string;
+  game?: string;
   cover_url?: string;
   genres?: string[];
   exe_name?: string;
@@ -40,7 +40,7 @@ type RawJourney = {
   id: string;
   uri: string;
   igdb_id: number;
-  game_title: string;
+  game: string;
   cover_url?: string;
   genres: string[];
   played_at: string;
@@ -59,7 +59,7 @@ export async function getUserJourneys(): Promise<Journey[]> {
   return (data.journeys ?? []).map((j): Journey => ({
     id: j.id,
     player,
-    game: j.game_title,
+    game: j.game,
     coverUrl: j.cover_url,
     genres: j.genres,
     duration: formatDuration(j.duration_seconds ?? 0),
@@ -85,7 +85,7 @@ export async function getPendingJourneys(): Promise<PendingJourney[]> {
     return {
       id: p.id,
       igdbId: p.igdb_id,
-      game: p.game_title ?? "",
+      game: p.game ?? "",
       coverUrl: p.cover_url,
       genres: p.genres ?? [],
       duration: formatDuration(durationSeconds),

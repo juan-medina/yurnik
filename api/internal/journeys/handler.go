@@ -100,6 +100,10 @@ func (h *Handler) listPending(w http.ResponseWriter, r *http.Request) {
 		item := pendingResponse{
 			ID:          p.ID,
 			Status:      p.Status,
+			IGDBID:      p.IGDBID,
+			GameTitle:   p.GameName,
+			CoverURL:    p.CoverURL,
+			Genres:      p.Genres,
 			ExeName:     p.ExeName,
 			WindowTitle: p.WindowTitle,
 			StartedAt:   p.StartedAt.UTC().Format(time.RFC3339),
@@ -107,18 +111,7 @@ func (h *Handler) listPending(w http.ResponseWriter, r *http.Request) {
 		if p.EndedAt != nil {
 			s := p.EndedAt.UTC().Format(time.RFC3339)
 			item.EndedAt = &s
-			dur := formatDuration(p.EndedAt.Sub(p.StartedAt))
-			item.Duration = dur
-		}
-		if p.IGDBID != nil {
-			item.IGDBID = p.IGDBID
-			if game, err := db.GetGame(r.Context(), h.pool, *p.IGDBID); err == nil {
-				item.GameTitle = &game.Name
-				item.Genres = game.Genres
-				if game.CoverURL != "" {
-					item.CoverURL = &game.CoverURL
-				}
-			}
+			item.Duration = formatDuration(p.EndedAt.Sub(p.StartedAt))
 		}
 		resp = append(resp, item)
 	}
@@ -330,19 +323,14 @@ func (h *Handler) listMine(w http.ResponseWriter, r *http.Request) {
 		item := journeyResponse{
 			ID:              j.ID,
 			IGDBID:          j.IGDBID,
+			GameTitle:       j.GameName,
+			CoverURL:        j.CoverURL,
+			Genres:          j.Genres,
 			StartedAt:       j.StartedAt.UTC().Format(time.RFC3339),
 			EndedAt:         j.EndedAt.UTC().Format(time.RFC3339),
 			DurationSeconds: j.DurationSeconds,
 			Log:             j.Log,
 			PlayedAt:        j.PlayedAt.UTC().Format(time.RFC3339),
-			Genres:          []string{},
-		}
-		if game, err := db.GetGame(r.Context(), h.pool, j.IGDBID); err == nil {
-			item.GameTitle = game.Name
-			item.Genres = game.Genres
-			if game.CoverURL != "" {
-				item.CoverURL = &game.CoverURL
-			}
 		}
 		resp = append(resp, item)
 	}

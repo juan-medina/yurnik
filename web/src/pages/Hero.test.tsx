@@ -37,7 +37,7 @@ function mockApime(overrides?: { bio?: string }) {
       const journeys = MY_SESSIONS.map((j) => ({
         id: j.id,
         igdb_id: 1,
-        game_title: j.game,
+        game: j.game,
         cover_url: j.coverUrl ?? null,
         genres: j.genres,
         played_at: j.playedAt.toISOString(),
