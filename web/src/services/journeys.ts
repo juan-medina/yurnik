@@ -45,6 +45,7 @@ type RawJourney = {
   genres: string[];
   played_at: string;
   duration_seconds: number;
+  log?: string;
 };
 
 export async function getUserJourneys(): Promise<Journey[]> {
@@ -64,6 +65,7 @@ export async function getUserJourneys(): Promise<Journey[]> {
     genres: j.genres,
     duration: formatDuration(j.duration_seconds ?? 0),
     playedAt: new Date(j.played_at),
+    log: j.log,
     likes: 0,
     liked: likedIds.has(j.id),
   }));

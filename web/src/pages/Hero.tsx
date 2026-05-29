@@ -1,16 +1,15 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { Check, Clock, Heart, Pencil } from "lucide-react";
+import { Check, Pencil } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCurrentPlayer, updateProfile } from "@/services/auth";
-import { getUserJourneys, toggleLike } from "@/services/journeys";
+import { getUserJourneys } from "@/services/journeys";
 import { getFollowers, getFollowing } from "@/services/players";
 import { MY_PLAYER_ID } from "@/services/auth";
 import { avatarSrc, initials } from "@/lib/display";
 import FollowListModal from "@/components/FollowListModal";
-import { formatJourneyDate } from "@/lib/time";
+import JourneyCard from "@/components/JourneyCard";
 import type { Journey, Player } from "@/models";
 
 function totalHours(journeys: Journey[]): string {
@@ -27,7 +26,6 @@ function totalHours(journeys: Journey[]): string {
 }
 
 export default function Hero() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data: player } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
@@ -48,11 +46,6 @@ export default function Hero() {
   const updateProfileMutation = useMutation({
     mutationFn: updateProfile,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auth", "me"] }),
-  });
-
-  const likeMutation = useMutation({
-    mutationFn: toggleLike,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["journeys", "user"] }),
   });
 
   if (!player) return null;
@@ -190,71 +183,9 @@ export default function Hero() {
 
       {journeys.length > 0 ? (
         <div className="flex flex-col gap-3">
-          {journeys.map((journey) => {
-            const likeCount = journey.likes + (journey.liked ? 1 : 0);
-            return (
-              <article
-                key={journey.id}
-                className="flex cursor-pointer gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent/5"
-                onClick={() => navigate(`/journey/${journey.id}`)}
-              >
-                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-slate-800">
-                  {journey.coverUrl
-                    ? <img src={journey.coverUrl} alt={journey.game} className="absolute inset-0 h-full w-full object-cover" />
-                    : <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-slate-300">{journey.game[0]}</span>
-                  }
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="mb-1">
-                    <span className="text-xs text-muted-foreground">{formatJourneyDate(journey.playedAt)}</span>
-                  </div>
-                  <div className="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                    <span className="font-bold">{journey.game}</span>
-                    <div className="flex flex-wrap gap-1">
-                      {journey.genres.map((g) => (
-                        <span
-                          key={g}
-                          className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
-                        >
-                          {g}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="mb-2 flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock size={12} />
-                    <span>{journey.duration}</span>
-                  </div>
-                  {journey.log && (
-                    <p className="mb-2 text-sm italic text-muted-foreground">
-                      &ldquo;{journey.log}&rdquo;
-                    </p>
-                  )}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); likeMutation.mutate(journey.id); }}
-                    aria-label={journey.liked ? "Unlike" : "Like"}
-                    className="flex items-center gap-1.5 transition-colors"
-                  >
-                    <Heart
-                      size={15}
-                      className={
-                        journey.liked
-                          ? "fill-rose-500 text-rose-500"
-                          : "text-muted-foreground hover:text-rose-400"
-                      }
-                    />
-                    {likeCount > 0 && (
-                      <span
-                        className={`text-xs ${journey.liked ? "text-rose-500" : "text-muted-foreground"}`}
-                      >
-                        {likeCount}
-                      </span>
-                    )}
-                  </button>
-                </div>
-              </article>
-            );
-          })}
+          {journeys.map((journey) => (
+            <JourneyCard key={journey.id} journey={journey} queryKey={["journeys", "user"]} />
+          ))}
         </div>
       ) : (
         <div className="rounded-lg border border-border bg-card px-4 py-12 text-center text-sm text-muted-foreground">

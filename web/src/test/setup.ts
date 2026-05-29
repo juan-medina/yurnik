@@ -14,6 +14,7 @@ function makeDefaultFetch() {
       return new Response(
         JSON.stringify({
           id: MY_PLAYER.id,
+          name: MY_PLAYER.name,
           handle: MY_PLAYER.handle,
           avatar_url: MY_PLAYER.avatarUrl ?? null,
           bio: MY_PLAYER.bio ?? null,

@@ -20,6 +20,7 @@ function mockApime(overrides?: { bio?: string }) {
       return new Response(
         JSON.stringify({
           id: MY_PLAYER.id,
+          name: MY_PLAYER.name,
           handle: MY_PLAYER.handle,
           color: MY_PLAYER.color,
           avatar_url: MY_PLAYER.avatarUrl ?? null,
@@ -68,14 +69,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
-});
-
-describe("Hero — Bluesky link", () => {
-  it("links to the player's Bluesky profile for editing", async () => {
-    renderHero();
-    const link = await screen.findByRole("link", { name: "Edit profile on Bluesky" });
-    expect(link).toHaveAttribute("href", `https://bsky.app/profile/${MY_PLAYER.handle}`);
-  });
 });
 
 describe("Hero — bio", () => {
@@ -150,20 +143,10 @@ describe("Hero — journeys", () => {
     }
   });
 
-  it("liking a journey changes the button label to Unlike", async () => {
-    const user = userEvent.setup();
+  it("your own journeys do not show an interactive like button", async () => {
     renderHero();
-    const [firstLike] = await screen.findAllByRole("button", { name: "Like" });
-    await user.click(firstLike);
-    expect(await screen.findByRole("button", { name: "Unlike" })).toBeInTheDocument();
-  });
-
-  it("un-liking a journey restores all Like buttons", async () => {
-    const user = userEvent.setup();
-    renderHero();
-    const [firstLike] = await screen.findAllByRole("button", { name: "Like" });
-    await user.click(firstLike);
-    await user.click(await screen.findByRole("button", { name: "Unlike" }));
-    expect(await screen.findAllByRole("button", { name: "Like" })).toHaveLength(MY_SESSIONS.length);
+    await screen.findByText(MY_SESSIONS[0].game);
+    expect(screen.queryByRole("button", { name: "Like" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Unlike" })).not.toBeInTheDocument();
   });
 });

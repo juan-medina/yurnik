@@ -1,17 +1,17 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { CalendarDays, Check, Clock, Heart, MonitorDown, Plus, Search, Trash2, X } from "lucide-react";
+import { CalendarDays, Check, Clock, MonitorDown, Plus, Search, Trash2, X } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getUserJourneys, getPendingJourneys, addJourney, confirmPendingJourney, dismissPendingJourney, excludePendingJourney, toggleLike } from "@/services/journeys";
+import { getUserJourneys, getPendingJourneys, addJourney, confirmPendingJourney, dismissPendingJourney, excludePendingJourney } from "@/services/journeys";
 import { searchGames } from "@/services/games";
-import { formatCommentAge, formatJourneyDate } from "@/lib/time";
+import { formatCommentAge } from "@/lib/time";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import type { Journey, PendingJourney, NewJourney } from "@/models/journey";
+import JourneyCard from "@/components/JourneyCard";
+import type { PendingJourney, NewJourney } from "@/models/journey";
 import type { Game } from "@/models/game";
 
 function GameCover({ game, coverUrl, size }: { game: string; coverUrl?: string; size: "sm" | "md" }) {
@@ -481,59 +481,6 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
   );
 }
 
-function HistoryCard({ journey }: { journey: Journey }) {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
-  const likeMutation = useMutation({
-    mutationFn: toggleLike,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["journeys", "user"] }),
-  });
-
-  const likeCount = journey.likes + (journey.liked ? 1 : 0);
-
-  return (
-    <article
-      className="flex cursor-pointer gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent/5"
-      onClick={() => navigate(`/journey/${journey.id}`)}
-    >
-      <GameCover game={journey.game} coverUrl={journey.coverUrl} size="md" />
-      <div className="min-w-0 flex-1">
-        <div className="mb-1">
-          <span className="text-xs text-muted-foreground">{formatJourneyDate(journey.playedAt)}</span>
-        </div>
-        <div className="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <span className="font-bold">{journey.game}</span>
-          <div className="flex flex-wrap gap-1">
-            {journey.genres.map((g) => (
-              <span key={g} className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{g}</span>
-            ))}
-          </div>
-        </div>
-        <div className="mb-2 flex items-center gap-1 text-xs text-muted-foreground">
-          <Clock size={12} />
-          <span>{journey.duration}</span>
-        </div>
-        {journey.log && (
-          <p className="mb-2 text-sm italic text-muted-foreground">&ldquo;{journey.log}&rdquo;</p>
-        )}
-        <button
-          onClick={(e) => { e.stopPropagation(); likeMutation.mutate(journey.id); }}
-          className="flex items-center gap-1.5 transition-colors"
-          aria-label={journey.liked ? "Unlike" : "Like"}
-        >
-          <Heart
-            size={15}
-            className={journey.liked ? "fill-rose-500 text-rose-500" : "text-muted-foreground hover:text-rose-400"}
-          />
-          {likeCount > 0 && (
-            <span className={`text-xs ${journey.liked ? "text-rose-500" : "text-muted-foreground"}`}>{likeCount}</span>
-          )}
-        </button>
-      </div>
-    </article>
-  );
-}
 
 export default function Journeys() {
   const [adding, setAdding] = useState(false);
@@ -580,7 +527,7 @@ export default function Journeys() {
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">History</h2>
         {history.length > 0 ? (
           <div className="flex flex-col gap-3">
-            {history.map((j) => <HistoryCard key={j.id} journey={j} />)}
+            {history.map((j) => <JourneyCard key={j.id} journey={j} queryKey={["journeys", "user"]} />)}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">No journeys yet. Add one to get started.</p>
