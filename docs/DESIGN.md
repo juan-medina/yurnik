@@ -53,14 +53,17 @@ Supabase provides managed Postgres. The `pg_cron` extension runs the nightly evi
 
 Discord OAuth is the only authentication method. Users log in with their Discord account. Discord was chosen because it has the highest account penetration among the target audience — gamers already have Discord accounts and are used to linking them to third-party services.
 
-The login flow is standard OAuth 2.0 authorization code grant:
+The login flow is standard OAuth 2.0 authorization code grant with PKCE, handled entirely server-side:
 
-1. `GET /auth/init?redirect_uri=<uri>` — server builds the Discord authorization URL and redirects the browser.
-2. User approves on Discord.
-3. Discord redirects back with `?code=…&state=…`.
-4. `GET /auth/callback?code=…&state=…` — server exchanges the code, calls Discord's `/users/@me`, upserts the user row, issues a session token.
+1. `GET /auth/init?redirect_uri=<uri>` — server generates a PKCE code verifier, stores it in a short-lived state entry, and redirects the browser to the provider.
+2. User approves on the provider.
+3. Provider redirects back with `?code=…&state=…`.
+4. `GET /auth/callback?code=…&state=…` — server exchanges the code using the stored verifier, calls the provider's identity endpoint, upserts the user row, and issues a signed session JWT.
+5. `POST /auth/session` — frontend exchanges the completed state for the JWT.
 
-The `identify` scope is sufficient — it provides the user's stable numeric ID, username, display name, and avatar hash. Email is not requested.
+The provider's access token is used once to retrieve the user's identity and then discarded — it is never stored. The session JWT contains the user's internal UUID and is signed with the server's session key. No session state is kept in the database.
+
+The `identify` scope is sufficient — it provides the user's stable numeric ID, username, display name, and avatar. Email is not requested.
 
 ### Provider-ready identity model
 
