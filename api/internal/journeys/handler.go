@@ -30,6 +30,7 @@ func NewHandler(pool *pgxpool.Pool, jwtPriv ed25519.PrivateKey) *Handler {
 
 // Register mounts journey routes on mux.
 func (h *Handler) Register(mux *http.ServeMux) {
+	mux.HandleFunc("GET /api/journeys/{id}", h.get)
 	mux.HandleFunc("POST /api/players/me/journeys", h.add)
 	mux.HandleFunc("DELETE /api/players/me/journeys/{id}", h.delete)
 	mux.HandleFunc("GET /api/players/me/journeys", h.listMine)
@@ -37,6 +38,53 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/players/me/journeys/pending/{id}/confirm", h.confirm)
 	mux.HandleFunc("POST /api/players/me/journeys/pending/{id}/discard", h.discard)
 	mux.HandleFunc("POST /api/players/me/journeys/pending/{id}/exclude", h.exclude)
+}
+
+func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	j, err := db.GetJourneyByID(r.Context(), h.pool, id)
+	if err != nil {
+		http.Error(w, `{"error":"not_found"}`, http.StatusNotFound)
+		return
+	}
+
+	type playerResp struct {
+		ID        string  `json:"id"`
+		Handle    string  `json:"handle"`
+		Name      string  `json:"name"`
+		AvatarURL *string `json:"avatar_url,omitempty"`
+		Color     string  `json:"color"`
+	}
+	type detailResp struct {
+		ID              string     `json:"id"`
+		IGDBID          int        `json:"igdb_id"`
+		GameTitle       string     `json:"game"`
+		CoverURL        *string    `json:"cover_url,omitempty"`
+		Genres          []string   `json:"genres"`
+		DurationSeconds int        `json:"duration_seconds"`
+		Log             *string    `json:"log,omitempty"`
+		PlayedAt        string     `json:"played_at"`
+		Player          playerResp `json:"player"`
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(detailResp{
+		ID:              j.ID,
+		IGDBID:          j.IGDBID,
+		GameTitle:       j.GameName,
+		CoverURL:        j.CoverURL,
+		Genres:          j.Genres,
+		DurationSeconds: j.DurationSeconds,
+		Log:             j.Log,
+		PlayedAt:        j.PlayedAt.UTC().Format(time.RFC3339),
+		Player: playerResp{
+			ID:        j.UserID,
+			Handle:    j.PlayerHandle,
+			Name:      j.PlayerName,
+			AvatarURL: j.PlayerAvatarURL,
+			Color:     j.PlayerColor,
+		},
+	})
 }
 
 func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, bool) {

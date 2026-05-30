@@ -5,7 +5,6 @@ import type { Journey, PendingJourney, NewJourney } from "@/models/journey";
 import type { Comment, JourneyPlayer } from "@/models/game";
 import type { Player } from "@/models/player";
 import {
-  JOURNEYS as MOCK_JOURNEYS,
   MOCK_COMMENTS,
   MOCK_LIKERS,
   MOCK_FRIENDS_ON_JOURNEY,
@@ -22,6 +21,24 @@ export const likedIds = new Set<string>();
 let _discardedIds = new Set<string>();
 let _confirmedJourneyIds = new Set<string>();
 let _pendingJourneys: PendingJourney[] = [...MOCK_PENDING_JOURNEYS];
+
+type RawJourneyDetail = {
+  id: string;
+  igdb_id: number;
+  game: string;
+  cover_url?: string;
+  genres: string[];
+  duration_seconds: number;
+  log?: string;
+  played_at: string;
+  player: {
+    id: string;
+    handle: string;
+    name: string;
+    avatar_url?: string;
+    color: string;
+  };
+};
 
 type RawPendingJourney = {
   id: string;
@@ -176,13 +193,30 @@ const _likers: Player[] = [...MOCK_LIKERS];
 const _friendsOnJourney = [...MOCK_FRIENDS_ON_JOURNEY];
 const _othersOnJourney = [...MOCK_OTHERS_ON_JOURNEY];
 const extraComments = new Map<string, Comment[]>();
-const _deletedJourneyIds = new Set<string>();
 
 export async function getJourney(id: string): Promise<Journey | undefined> {
-  if (_deletedJourneyIds.has(id)) return undefined;
-  const j = MOCK_JOURNEYS.find((j) => j.id === id);
-  if (!j) return undefined;
-  return { ...j, liked: likedIds.has(j.id) };
+  const resp = await fetch(`${API_BASE}/api/journeys/${id}`, { credentials: "include" });
+  if (resp.status === 404) return undefined;
+  if (!resp.ok) throw new Error(`get journey: ${resp.status}`);
+  const j: RawJourneyDetail = await resp.json();
+  return {
+    id: j.id,
+    player: {
+      id: j.player.id,
+      handle: j.player.handle,
+      name: j.player.name,
+      avatarUrl: j.player.avatar_url,
+      color: j.player.color,
+    },
+    game: j.game,
+    coverUrl: j.cover_url,
+    genres: j.genres,
+    duration: formatDuration(j.duration_seconds),
+    playedAt: new Date(j.played_at),
+    log: j.log,
+    likes: 0,
+    liked: likedIds.has(j.id),
+  };
 }
 
 export async function getComments(journeyId: string): Promise<Comment[]> {
@@ -226,10 +260,7 @@ export async function deleteJourney(journeyId: string): Promise<void> {
     method: "DELETE",
     credentials: "include",
   });
-  if (!resp.ok) {
-    _deletedJourneyIds.add(journeyId);
-    return;
-  }
+  if (!resp.ok) throw new Error(`delete journey: ${resp.status}`);
 }
 
 export async function deleteComment(journeyId: string, commentId: string): Promise<void> {
@@ -245,7 +276,6 @@ export function _reset(): void {
   likedIds.clear();
   extraComments.clear();
   _comments = [...MOCK_COMMENTS];
-  _deletedJourneyIds.clear();
   _discardedIds.clear();
   _confirmedJourneyIds.clear();
   _pendingJourneys = [...MOCK_PENDING_JOURNEYS];

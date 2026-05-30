@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getJourney, getComments, getLikers, getJourneyPlayers, postComment, deleteJourney, deleteComment } from "@/services/journeys";
 import { toggleLike } from "@/services/journeys";
 import { toggleFollow, isFollowingHandle } from "@/services/players";
-import { MY_PLAYER_ID } from "@/services/auth";
+import { getCurrentPlayer, MY_PLAYER_ID } from "@/services/auth";
 import { avatarSrc, playerHref } from "@/lib/display";
 import FollowListModal from "@/components/FollowListModal";
 import { formatCommentAge, formatJourneyDate } from "@/lib/time";
@@ -109,7 +109,7 @@ function CommentRow({ comment, journeyId }: { comment: Comment; journeyId: strin
         ) : (
           <>
             <span className="ml-auto text-xs text-muted-foreground">{formatCommentAge(comment.commentedAt)}</span>
-            {comment.player.id === MY_PLAYER_ID && (
+            {comment.player.id === currentPlayer?.id && (
               <button
                 onClick={() => setConfirming(true)}
                 aria-label="Delete comment"
@@ -133,6 +133,8 @@ export default function JourneyDetail() {
   const [commentText, setCommentText] = useState("");
   const [showLikers, setShowLikers] = useState(false);
   const [confirmDeleteJourney, setConfirmDeleteJourney] = useState(false);
+
+  const { data: currentPlayer } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
 
   const { data: journey } = useQuery({
     queryKey: ["journey", id],
@@ -158,7 +160,7 @@ export default function JourneyDetail() {
     enabled: !!id,
   });
 
-  const isOwner = journey?.player.id === MY_PLAYER_ID;
+  const isOwner = !!currentPlayer && journey?.player.id === currentPlayer.id;
 
   const { data: ownerIsFollowed = false } = useQuery({
     queryKey: ["following", journey?.player.handle],

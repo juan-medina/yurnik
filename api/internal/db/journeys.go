@@ -135,6 +135,45 @@ func DeleteJourney(ctx context.Context, pool *pgxpool.Pool, id, userID string) e
 	return nil
 }
 
+// JourneyWithPlayer is a confirmed journey row joined with igdb_games and users.
+type JourneyWithPlayer struct {
+	ID              string
+	UserID          string
+	IGDBID          int
+	GameName        string
+	CoverURL        *string
+	Genres          []string
+	DurationSeconds int
+	Log             *string
+	PlayedAt        time.Time
+	PlayerHandle    string
+	PlayerName      string
+	PlayerAvatarURL *string
+	PlayerColor     string
+}
+
+// GetJourneyByID returns a single confirmed journey by ID, joined with igdb_games and users.
+func GetJourneyByID(ctx context.Context, pool *pgxpool.Pool, id string) (JourneyWithPlayer, error) {
+	var j JourneyWithPlayer
+	err := pool.QueryRow(ctx, `
+		SELECT j.id, j.user_id, j.igdb_id, g.name, g.cover_url, g.genres,
+		       j.duration_seconds, j.log, j.played_at,
+		       u.handle, u.name, u.avatar_url, u.color
+		FROM journeys j
+		JOIN igdb_games g ON g.igdb_id = j.igdb_id
+		JOIN users u ON u.id = j.user_id
+		WHERE j.id = $1
+	`, id).Scan(
+		&j.ID, &j.UserID, &j.IGDBID, &j.GameName, &j.CoverURL, &j.Genres,
+		&j.DurationSeconds, &j.Log, &j.PlayedAt,
+		&j.PlayerHandle, &j.PlayerName, &j.PlayerAvatarURL, &j.PlayerColor,
+	)
+	if err == pgx.ErrNoRows {
+		return JourneyWithPlayer{}, fmt.Errorf("journey not found: %s", id)
+	}
+	return j, err
+}
+
 // ListJourneysByUser returns confirmed journeys for the given user ID joined
 // with igdb_games, ordered by played_at descending, with optional cursor-based pagination.
 func ListJourneysByUser(ctx context.Context, pool *pgxpool.Pool, userID string, limit int, cursor string) ([]Journey, error) {
