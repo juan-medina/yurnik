@@ -5,7 +5,7 @@ web:
 
 api: run-api
 
-run-api:
+api:
 	powershell -ExecutionPolicy Bypass -File scripts/run-api.ps1
 
 gen-keys:
