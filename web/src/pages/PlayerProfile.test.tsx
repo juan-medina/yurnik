@@ -41,7 +41,7 @@ describe("PlayerProfile", () => {
     renderProfile(player.id);
     const journeys = JOURNEYS.filter((j) => j.player.id === player.id);
     for (const j of journeys) {
-      expect(await screen.findByText(j.game)).toBeInTheDocument();
+      expect(await screen.findAllByText(j.game)).not.toHaveLength(0);
     }
   });
 

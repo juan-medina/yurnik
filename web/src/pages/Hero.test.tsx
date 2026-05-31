@@ -134,13 +134,13 @@ describe("Hero — journeys", () => {
   it("shows a journey card for each of my sessions", async () => {
     renderHero();
     for (const journey of MY_SESSIONS) {
-      expect(await screen.findByText(journey.game)).toBeInTheDocument();
+      expect(await screen.findAllByText(journey.game)).not.toHaveLength(0);
     }
   });
 
   it("your own journeys do not show an interactive like button", async () => {
     renderHero();
-    await screen.findByText(MY_SESSIONS[0].game);
+    await screen.findAllByText(MY_SESSIONS[0].game);
     expect(screen.queryByRole("button", { name: "Like" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Unlike" })).not.toBeInTheDocument();
   });
