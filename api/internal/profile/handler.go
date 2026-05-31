@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/juan-medina/agon/internal/auth"
@@ -25,6 +27,7 @@ func NewHandler(pool *pgxpool.Pool, jwtPriv ed25519.PrivateKey) *Handler {
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/me", h.getMe)
 	mux.HandleFunc("PATCH /api/me", h.patchMe)
+	mux.HandleFunc("GET /api/feed", h.getFeed)
 	mux.HandleFunc("GET /api/players/{id}", h.getPlayer)
 	mux.HandleFunc("GET /api/players/{id}/followers", h.getFollowers)
 	mux.HandleFunc("GET /api/players/{id}/following", h.getFollowing)
@@ -197,6 +200,82 @@ func usersToPlayerItems(users []db.User) []playerItem {
 		items[i] = playerItem{ID: u.ID, Handle: u.Handle, Name: u.Name, AvatarURL: u.AvatarURL, Color: u.Color}
 	}
 	return items
+}
+
+func (h *Handler) getFeed(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.authenticate(w, r)
+	if !ok {
+		return
+	}
+
+	limit := 20
+	if s := r.URL.Query().Get("limit"); s != "" {
+		if n, err := strconv.Atoi(s); err == nil && n > 0 && n <= 50 {
+			limit = n
+		}
+	}
+	cursor := r.URL.Query().Get("cursor")
+
+	journeys, err := db.GetFollowingFeed(r.Context(), h.pool, userID, limit+1, cursor)
+	if err != nil {
+		log.Printf("profile/feed: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	var nextCursor string
+	if len(journeys) > limit {
+		nextCursor = journeys[limit].PlayedAt.UTC().Format(time.RFC3339)
+		journeys = journeys[:limit]
+	}
+
+	type playerResp struct {
+		ID        string  `json:"id"`
+		Handle    string  `json:"handle"`
+		Name      string  `json:"name"`
+		AvatarURL *string `json:"avatar_url,omitempty"`
+		Color     string  `json:"color"`
+	}
+	type feedEntry struct {
+		ID              string     `json:"id"`
+		IGDBID          int        `json:"igdb_id"`
+		GameTitle       string     `json:"game"`
+		CoverURL        *string    `json:"cover_url,omitempty"`
+		Genres          []string   `json:"genres"`
+		DurationSeconds int        `json:"duration_seconds"`
+		Log             *string    `json:"log,omitempty"`
+		PlayedAt        string     `json:"played_at"`
+		Player          playerResp `json:"player"`
+	}
+
+	resp := make([]feedEntry, 0, len(journeys))
+	for _, j := range journeys {
+		resp = append(resp, feedEntry{
+			ID:              j.ID,
+			IGDBID:          j.IGDBID,
+			GameTitle:       j.GameName,
+			CoverURL:        j.CoverURL,
+			Genres:          j.Genres,
+			DurationSeconds: j.DurationSeconds,
+			Log:             j.Log,
+			PlayedAt:        j.PlayedAt.UTC().Format(time.RFC3339),
+			Player: playerResp{
+				ID:        j.UserID,
+				Handle:    j.PlayerHandle,
+				Name:      j.PlayerName,
+				AvatarURL: j.PlayerAvatarURL,
+				Color:     j.PlayerColor,
+			},
+		})
+	}
+
+	result := map[string]any{"journeys": resp}
+	if nextCursor != "" {
+		result["next_cursor"] = nextCursor
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(result)
 }
 
 func (h *Handler) patchMe(w http.ResponseWriter, r *http.Request) {
