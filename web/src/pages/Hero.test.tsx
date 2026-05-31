@@ -12,22 +12,19 @@ import Hero from "./Hero";
 
 const MY_SESSIONS = JOURNEYS.filter((j) => j.player.id === MY_PLAYER_ID);
 
+function toApiPlayer(p: { id: string; handle: string; name: string; avatarUrl?: string; color: string }) {
+  return { id: p.id, handle: p.handle, name: p.name, avatar_url: p.avatarUrl ?? null, color: p.color };
+}
+
 function mockApime(overrides?: { bio?: string }) {
   let currentBio: string | null = overrides?.bio !== undefined ? overrides.bio : MY_PLAYER.bio ?? null;
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = input.toString();
+    const json = (body: unknown) =>
+      new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+
     if (url.includes("/api/me") && (!init?.method || init.method === "GET")) {
-      return new Response(
-        JSON.stringify({
-          id: MY_PLAYER.id,
-          name: MY_PLAYER.name,
-          handle: MY_PLAYER.handle,
-          color: MY_PLAYER.color,
-          avatar_url: MY_PLAYER.avatarUrl ?? null,
-          bio: currentBio,
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
+      return json({ id: MY_PLAYER.id, name: MY_PLAYER.name, handle: MY_PLAYER.handle, color: MY_PLAYER.color, avatar_url: MY_PLAYER.avatarUrl ?? null, bio: currentBio });
     }
     if (url.includes("/api/me") && init?.method === "PATCH") {
       const body = JSON.parse(init.body as string);
@@ -36,18 +33,16 @@ function mockApime(overrides?: { bio?: string }) {
     }
     if (url.includes("/api/players/me/journeys") && (!init?.method || init.method === "GET")) {
       const journeys = MY_SESSIONS.map((j) => ({
-        id: j.id,
-        igdb_id: 1,
-        game: j.game,
-        cover_url: j.coverUrl ?? null,
-        genres: j.genres,
-        played_at: j.playedAt.toISOString(),
-        duration_seconds: 3600,
+        id: j.id, igdb_id: 1, game: j.game, cover_url: j.coverUrl ?? null,
+        genres: j.genres, played_at: j.playedAt.toISOString(), duration_seconds: 3600,
       }));
-      return new Response(
-        JSON.stringify({ journeys }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
+      return json({ journeys });
+    }
+    if (url.includes(`/api/players/${MY_PLAYER.id}/followers`)) {
+      return json({ players: MY_FOLLOWERS.map(toApiPlayer) });
+    }
+    if (url.includes(`/api/players/${MY_PLAYER.id}/following`)) {
+      return json({ players: MY_FOLLOWING.map(toApiPlayer) });
     }
     return new Response("not found", { status: 404 });
   });

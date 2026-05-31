@@ -6,7 +6,7 @@ import { Check, ChevronLeft, Clock, Heart, Trash2, UserPlus } from "lucide-react
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getJourney, getComments, getLikers, getJourneyPlayers, postComment, deleteJourney, deleteComment } from "@/services/journeys";
 import { toggleLike } from "@/services/journeys";
-import { toggleFollow, isFollowingHandle } from "@/services/players";
+import { followPlayer, unfollowPlayer, getIsFollowing } from "@/services/players";
 import { getCurrentPlayer, MY_PLAYER_ID } from "@/services/auth";
 import { avatarSrc, playerHref } from "@/lib/display";
 import FollowListModal from "@/components/FollowListModal";
@@ -28,8 +28,8 @@ function JourneyPlayerRow({ entry, currentPlayerId }: { entry: JourneyPlayer; cu
   const isMe = entry.player.id === currentPlayerId;
   const [following, setFollowing] = useState(entry.isFollowing);
   const followMutation = useMutation({
-    mutationFn: () => toggleFollow(entry.player.handle),
-    onSuccess: () => setFollowing((prev) => !prev),
+    mutationFn: (follow: boolean) => follow ? followPlayer(entry.player.id) : unfollowPlayer(entry.player.id),
+    onSuccess: (_data, follow) => setFollowing(follow),
   });
 
   return (
@@ -53,7 +53,7 @@ function JourneyPlayerRow({ entry, currentPlayerId }: { entry: JourneyPlayer; cu
         <span className="shrink-0 text-xs text-muted-foreground">You</span>
       ) : (
         <button
-          onClick={() => followMutation.mutate()}
+          onClick={() => followMutation.mutate(!following)}
           className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
             following
               ? "border-border bg-muted text-muted-foreground"
@@ -165,8 +165,8 @@ export default function JourneyDetail() {
   const isOwner = !!currentPlayer && journey?.player.id === currentPlayer.id;
 
   const { data: ownerIsFollowed = false } = useQuery({
-    queryKey: ["following", journey?.player.handle],
-    queryFn: () => isFollowingHandle(journey!.player.handle),
+    queryKey: ["following", journey?.player.id],
+    queryFn: () => getIsFollowing(journey!.player.id),
     enabled: !!journey && !isOwner,
   });
 
@@ -176,8 +176,8 @@ export default function JourneyDetail() {
   });
 
   const followOwnerMutation = useMutation({
-    mutationFn: () => toggleFollow(journey!.player.handle),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["following", journey?.player.handle] }),
+    mutationFn: (follow: boolean) => follow ? followPlayer(journey!.player.id) : unfollowPlayer(journey!.player.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["following", journey?.player.id] }),
   });
 
   const postCommentMutation = useMutation({
@@ -224,7 +224,7 @@ export default function JourneyDetail() {
         <span className="text-xs text-muted-foreground">@{journey.player.handle}</span>
         {!isOwner && (
           <button
-            onClick={() => followOwnerMutation.mutate()}
+            onClick={() => followOwnerMutation.mutate(!ownerIsFollowed)}
             aria-label={ownerIsFollowed ? "Unfollow" : "Follow"}
             className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
               ownerIsFollowed

@@ -232,7 +232,7 @@ export async function getJourneyPlayers(journeyId: string): Promise<{
   const data: {
     players: {
       journey_id: string;
-      player: { id: string; handle: string; name: string; avatar_url?: string; color: string };
+      player: { id: string; handle: string; name: string; avatar_url?: string; color: string; is_following: boolean };
       duration_seconds: number;
       played_at: string;
     }[];
@@ -248,7 +248,7 @@ export async function getJourneyPlayers(journeyId: string): Promise<{
     },
     duration: formatDuration(p.duration_seconds),
     playedAt: new Date(p.played_at),
-    isFollowing: false,
+    isFollowing: p.player.is_following,
   }));
 
   return { friends: [], others };

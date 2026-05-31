@@ -6,7 +6,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCurrentPlayer, updateProfile } from "@/services/auth";
 import { getUserJourneys } from "@/services/journeys";
 import { getFollowers, getFollowing } from "@/services/players";
-import { MY_PLAYER_ID } from "@/services/auth";
 import ProfileView from "@/components/ProfileView";
 
 export default function Hero() {
@@ -15,12 +14,14 @@ export default function Hero() {
   const { data: player } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
   const { data: journeys = [] } = useQuery({ queryKey: ["journeys", "user"], queryFn: getUserJourneys });
   const { data: followers = [] } = useQuery({
-    queryKey: ["follow-list", MY_PLAYER_ID, "followers"],
-    queryFn: () => getFollowers(MY_PLAYER_ID),
+    queryKey: ["follow-list", player?.id, "followers"],
+    queryFn: () => getFollowers(player!.id),
+    enabled: !!player,
   });
   const { data: following = [] } = useQuery({
-    queryKey: ["follow-list", MY_PLAYER_ID, "following"],
-    queryFn: () => getFollowing(MY_PLAYER_ID),
+    queryKey: ["follow-list", player?.id, "following"],
+    queryFn: () => getFollowing(player!.id),
+    enabled: !!player,
   });
 
   const [editingBio, setEditingBio] = useState(false);

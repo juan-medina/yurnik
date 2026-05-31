@@ -26,6 +26,10 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/me", h.getMe)
 	mux.HandleFunc("PATCH /api/me", h.patchMe)
 	mux.HandleFunc("GET /api/players/{id}", h.getPlayer)
+	mux.HandleFunc("GET /api/players/{id}/followers", h.getFollowers)
+	mux.HandleFunc("GET /api/players/{id}/following", h.getFollowing)
+	mux.HandleFunc("POST /api/players/{id}/follow", h.followPlayer)
+	mux.HandleFunc("DELETE /api/players/{id}/follow", h.unfollowPlayer)
 }
 
 func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
@@ -39,6 +43,7 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, 
 	}
 	return userID, true
 }
+
 
 type meResponse struct {
 	ID        string  `json:"id"`
@@ -84,24 +89,114 @@ func (h *Handler) getPlayer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	followers, following, err := db.GetFollowCounts(r.Context(), h.pool, id)
+	if err != nil {
+		log.Printf("profile/player: follow counts %s: %v", id, err)
+	}
+
+	isFollowing := false
+	if callerID, ok := h.authenticate(w, r); ok {
+		isFollowing, _ = db.IsFollowing(r.Context(), h.pool, callerID, id)
+	}
+
 	type playerResponse struct {
-		ID        string  `json:"id"`
-		Handle    string  `json:"handle"`
-		Name      string  `json:"name"`
-		AvatarURL *string `json:"avatar_url,omitempty"`
-		Bio       *string `json:"bio,omitempty"`
-		Color     string  `json:"color"`
+		ID          string  `json:"id"`
+		Handle      string  `json:"handle"`
+		Name        string  `json:"name"`
+		AvatarURL   *string `json:"avatar_url,omitempty"`
+		Bio         *string `json:"bio,omitempty"`
+		Color       string  `json:"color"`
+		Followers   int     `json:"followers"`
+		Following   int     `json:"following"`
+		IsFollowing bool    `json:"is_following"`
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(playerResponse{
-		ID:        user.ID,
-		Handle:    user.Handle,
-		Name:      user.Name,
-		AvatarURL: user.AvatarURL,
-		Bio:       user.Bio,
-		Color:     user.Color,
+		ID:          user.ID,
+		Handle:      user.Handle,
+		Name:        user.Name,
+		AvatarURL:   user.AvatarURL,
+		Bio:         user.Bio,
+		Color:       user.Color,
+		Followers:   followers,
+		Following:   following,
+		IsFollowing: isFollowing,
 	})
+}
+
+func (h *Handler) followPlayer(w http.ResponseWriter, r *http.Request) {
+	callerID, ok := h.authenticate(w, r)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	targetID := r.PathValue("id")
+	if callerID == targetID {
+		http.Error(w, "cannot follow yourself", http.StatusBadRequest)
+		return
+	}
+	if err := db.FollowUser(r.Context(), h.pool, callerID, targetID); err != nil {
+		log.Printf("profile/follow: %s -> %s: %v", callerID, targetID, err)
+		http.Error(w, "follow failed", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) unfollowPlayer(w http.ResponseWriter, r *http.Request) {
+	callerID, ok := h.authenticate(w, r)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	targetID := r.PathValue("id")
+	if err := db.UnfollowUser(r.Context(), h.pool, callerID, targetID); err != nil {
+		log.Printf("profile/unfollow: %s -> %s: %v", callerID, targetID, err)
+		http.Error(w, "unfollow failed", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) getFollowers(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	users, err := db.GetFollowers(r.Context(), h.pool, id)
+	if err != nil {
+		log.Printf("profile/followers: %s: %v", id, err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"players": usersToPlayerItems(users)})
+}
+
+func (h *Handler) getFollowing(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	users, err := db.GetFollowing(r.Context(), h.pool, id)
+	if err != nil {
+		log.Printf("profile/following: %s: %v", id, err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"players": usersToPlayerItems(users)})
+}
+
+type playerItem struct {
+	ID        string  `json:"id"`
+	Handle    string  `json:"handle"`
+	Name      string  `json:"name"`
+	AvatarURL *string `json:"avatar_url,omitempty"`
+	Color     string  `json:"color"`
+}
+
+func usersToPlayerItems(users []db.User) []playerItem {
+	items := make([]playerItem, len(users))
+	for i, u := range users {
+		items[i] = playerItem{ID: u.ID, Handle: u.Handle, Name: u.Name, AvatarURL: u.AvatarURL, Color: u.Color}
+	}
+	return items
 }
 
 func (h *Handler) patchMe(w http.ResponseWriter, r *http.Request) {

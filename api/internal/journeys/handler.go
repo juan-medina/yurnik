@@ -98,12 +98,18 @@ func (h *Handler) players(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	followingIDs := map[string]bool{}
+	if callerID, ok := h.tryAuthenticate(w, r); ok {
+		followingIDs, _ = db.GetFollowingIDs(r.Context(), h.pool, callerID)
+	}
+
 	type playerResp struct {
-		ID        string  `json:"id"`
-		Handle    string  `json:"handle"`
-		Name      string  `json:"name"`
-		AvatarURL *string `json:"avatar_url,omitempty"`
-		Color     string  `json:"color"`
+		ID          string  `json:"id"`
+		Handle      string  `json:"handle"`
+		Name        string  `json:"name"`
+		AvatarURL   *string `json:"avatar_url,omitempty"`
+		Color       string  `json:"color"`
+		IsFollowing bool    `json:"is_following"`
 	}
 	type entryResp struct {
 		JourneyID       string     `json:"journey_id"`
@@ -115,8 +121,15 @@ func (h *Handler) players(w http.ResponseWriter, r *http.Request) {
 	resp := make([]entryResp, 0, len(others))
 	for _, p := range others {
 		resp = append(resp, entryResp{
-			JourneyID:       p.JourneyID,
-			Player:          playerResp{ID: p.UserID, Handle: p.Handle, Name: p.Name, AvatarURL: p.AvatarURL, Color: p.Color},
+			JourneyID: p.JourneyID,
+			Player: playerResp{
+				ID:          p.UserID,
+				Handle:      p.Handle,
+				Name:        p.Name,
+				AvatarURL:   p.AvatarURL,
+				Color:       p.Color,
+				IsFollowing: followingIDs[p.UserID],
+			},
 			DurationSeconds: p.DurationSeconds,
 			PlayedAt:        p.PlayedAt.UTC().Format(time.RFC3339),
 		})
@@ -135,6 +148,18 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, 
 	userID, err := auth.ParseAndRenewSession(w, cookie.Value, h.jwtPriv)
 	if err != nil {
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return "", false
+	}
+	return userID, true
+}
+
+func (h *Handler) tryAuthenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
+	cookie, err := r.Cookie("agon_session")
+	if err != nil {
+		return "", false
+	}
+	userID, err := auth.ParseAndRenewSession(w, cookie.Value, h.jwtPriv)
+	if err != nil {
 		return "", false
 	}
 	return userID, true

@@ -3,22 +3,9 @@
 
 import type { Player } from "@/models/player";
 import type { Journey } from "@/models/journey";
-import {
-  MY_FOLLOWING,
-  MY_FOLLOWERS,
-  MY_PLAYER,
-  MOCK_FOLLOW_LISTS,
-} from "@/lib/mock";
 import { likedIds } from "./journeys";
 import { API_BASE } from "@/lib/api";
 import { formatDuration } from "@/lib/time";
-
-const _myFollowing: Player[] = [...MY_FOLLOWING];
-const _myFollowers: Player[] = [...MY_FOLLOWERS];
-const _myPlayerId: string = MY_PLAYER.id;
-const _followLists: Record<string, { followers: Player[]; following: Player[] }> = MOCK_FOLLOW_LISTS;
-
-const followingHandles = new Set<string>(_myFollowing.map((p) => p.handle));
 
 type RawPlayer = {
   id: string;
@@ -27,6 +14,9 @@ type RawPlayer = {
   avatar_url?: string;
   bio?: string;
   color: string;
+  followers?: number;
+  following?: number;
+  is_following?: boolean;
 };
 
 type RawJourney = {
@@ -40,15 +30,7 @@ type RawJourney = {
   log?: string;
 };
 
-export function isFollowingHandle(handle: string): boolean {
-  return followingHandles.has(handle);
-}
-
-export async function getPlayer(id: string): Promise<Player | undefined> {
-  const resp = await fetch(`${API_BASE}/api/players/${id}`);
-  if (resp.status === 404) return undefined;
-  if (!resp.ok) throw new Error(`get player: ${resp.status}`);
-  const p: RawPlayer = await resp.json();
+function rawToPlayer(p: RawPlayer): Player {
   return {
     id: p.id,
     handle: p.handle,
@@ -56,7 +38,23 @@ export async function getPlayer(id: string): Promise<Player | undefined> {
     avatarUrl: p.avatar_url,
     bio: p.bio,
     color: p.color,
+    followers: p.followers,
+    following: p.following,
+    isFollowing: p.is_following,
   };
+}
+
+export async function getPlayer(id: string): Promise<Player | undefined> {
+  const resp = await fetch(`${API_BASE}/api/players/${id}`, { credentials: "include" });
+  if (resp.status === 404) return undefined;
+  if (!resp.ok) throw new Error(`get player: ${resp.status}`);
+  const p: RawPlayer = await resp.json();
+  return rawToPlayer(p);
+}
+
+export async function getIsFollowing(playerId: string): Promise<boolean> {
+  const player = await getPlayer(playerId);
+  return player?.isFollowing ?? false;
 }
 
 export async function getPlayerJourneys(id: string): Promise<Journey[]> {
@@ -82,21 +80,33 @@ export async function getPlayerJourneys(id: string): Promise<Journey[]> {
 }
 
 export async function getFollowers(playerId: string): Promise<Player[]> {
-  if (playerId === _myPlayerId) return [..._myFollowers];
-  return [...(_followLists[playerId]?.followers ?? [])];
+  const resp = await fetch(`${API_BASE}/api/players/${playerId}/followers`);
+  if (!resp.ok) throw new Error(`get followers: ${resp.status}`);
+  const data: { players: RawPlayer[] } = await resp.json();
+  return (data.players ?? []).map(rawToPlayer);
 }
 
 export async function getFollowing(playerId: string): Promise<Player[]> {
-  if (playerId === _myPlayerId) return [..._myFollowing];
-  return [...(_followLists[playerId]?.following ?? [])];
+  const resp = await fetch(`${API_BASE}/api/players/${playerId}/following`);
+  if (!resp.ok) throw new Error(`get following: ${resp.status}`);
+  const data: { players: RawPlayer[] } = await resp.json();
+  return (data.players ?? []).map(rawToPlayer);
 }
 
-export async function toggleFollow(handle: string): Promise<void> {
-  if (followingHandles.has(handle)) followingHandles.delete(handle);
-  else followingHandles.add(handle);
+export async function followPlayer(playerId: string): Promise<void> {
+  const resp = await fetch(`${API_BASE}/api/players/${playerId}/follow`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!resp.ok) throw new Error(`follow: ${resp.status}`);
 }
 
-export function _reset(): void {
-  followingHandles.clear();
-  _myFollowing.forEach((p) => followingHandles.add(p.handle));
+export async function unfollowPlayer(playerId: string): Promise<void> {
+  const resp = await fetch(`${API_BASE}/api/players/${playerId}/follow`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!resp.ok) throw new Error(`unfollow: ${resp.status}`);
 }
+
+export function _reset(): void {}

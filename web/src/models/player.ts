@@ -11,4 +11,5 @@ export type Player = {
   isAdmin?: boolean;
   followers?: number;
   following?: number;
+  isFollowing?: boolean;
 };

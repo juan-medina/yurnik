@@ -3,8 +3,8 @@
 import { Navigate, useNavigate, useParams } from "react-router";
 import { Check, ChevronLeft, UserPlus } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getPlayer, getPlayerJourneys, getFollowers, getFollowing, toggleFollow } from "@/services/players";
-import { getCurrentPlayer, MY_PLAYER_ID } from "@/services/auth";
+import { getPlayer, getPlayerJourneys, getFollowers, getFollowing, followPlayer, unfollowPlayer } from "@/services/players";
+import { getCurrentPlayer } from "@/services/auth";
 import ProfileView from "@/components/ProfileView";
 
 export default function PlayerProfile() {
@@ -41,20 +41,13 @@ export default function PlayerProfile() {
     enabled: !!player,
   });
 
-  const { data: isFollowing = false } = useQuery({
-    queryKey: ["following", player?.handle],
-    queryFn: async () => {
-      const { isFollowingHandle } = await import("@/services/players");
-      return isFollowingHandle(player!.handle);
-    },
-    enabled: !!player,
-  });
+  const isFollowing = player?.isFollowing ?? false;
 
   const followMutation = useMutation({
-    mutationFn: () => toggleFollow(player!.handle),
+    mutationFn: (follow: boolean) => follow ? followPlayer(player!.id) : unfollowPlayer(player!.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["following", player?.handle] });
-      queryClient.invalidateQueries({ queryKey: ["follow-list"] });
+      queryClient.invalidateQueries({ queryKey: ["player", id] });
+      queryClient.invalidateQueries({ queryKey: ["follow-list", player?.id] });
     },
   });
 
@@ -68,6 +61,8 @@ export default function PlayerProfile() {
       </div>
     );
   }
+
+  const isOwnProfile = currentPlayer?.id === player.id;
 
   return (
     <ProfileView
@@ -87,9 +82,9 @@ export default function PlayerProfile() {
         </button>
       }
       profileActions={
-        player.id !== MY_PLAYER_ID ? (
+        !isOwnProfile ? (
           <button
-            onClick={() => followMutation.mutate()}
+            onClick={() => followMutation.mutate(!isFollowing)}
             aria-label={isFollowing ? "Unfollow" : "Follow"}
             className={`flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
               isFollowing

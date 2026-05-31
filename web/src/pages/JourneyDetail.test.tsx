@@ -3,7 +3,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { MOCK_COMMENTS, MOCK_OTHERS_ON_JOURNEY, MY_PLAYER_ID, MY_PLAYER, JOURNEYS } from "@/lib/mock";
+import { MOCK_COMMENTS, MOCK_OTHERS_ON_JOURNEY, MY_PLAYER_ID, MY_PLAYER, JOURNEYS, PLAYERS } from "@/lib/mock";
 import { _reset as resetJourneys } from "@/services/journeys";
 import { _reset as resetPlayers } from "@/services/players";
 import { renderWithProviders } from "@/test/utils";
@@ -11,6 +11,10 @@ import JourneyDetail from "./JourneyDetail";
 
 const s1 = JOURNEYS.find((j) => j.id === "s1")!;
 const s2 = JOURNEYS.find((j) => j.id === "s2")!;
+
+// Players initially followed: MY_FOLLOWING = PLAYERS[1..3] = p2, p3, p4
+const initiallyFollowed = new Set(["p2", "p3", "p4"]);
+let followedIds: Set<string>;
 
 function journeyResponse(j: typeof s1, igdbId: number, durationSeconds: number) {
   return JSON.stringify({
@@ -31,11 +35,33 @@ function makeFetch() {
     if (url.includes("/api/me") && method === "GET") {
       return json(JSON.stringify({ id: MY_PLAYER.id, name: MY_PLAYER.name, handle: MY_PLAYER.handle, avatar_url: null, bio: null, color: MY_PLAYER.color }));
     }
+
+    // Follow / unfollow mutations
+    if (url.includes("/api/players/") && url.endsWith("/follow") && method === "POST") {
+      const pid = url.split("/api/players/")[1].replace("/follow", "");
+      followedIds.add(pid);
+      return new Response(null, { status: 204 });
+    }
+    if (url.includes("/api/players/") && url.endsWith("/follow") && method === "DELETE") {
+      const pid = url.split("/api/players/")[1].replace("/follow", "");
+      followedIds.delete(pid);
+      return new Response(null, { status: 204 });
+    }
+
+    // Player detail (used by getIsFollowing)
+    const playerDetailMatch = url.match(/\/api\/players\/([^/]+)$/);
+    if (playerDetailMatch && method === "GET") {
+      const pid = playerDetailMatch[1];
+      const player = PLAYERS.find((p) => p.id === pid);
+      if (!player) return new Response("not found", { status: 404 });
+      return json(JSON.stringify({ id: player.id, handle: player.handle, name: player.name, avatar_url: null, color: player.color, followers: 0, following: 0, is_following: followedIds.has(pid) }));
+    }
+
     if (/\/api\/journeys\/s1\/players/.test(url)) {
       return json(JSON.stringify({
         players: MOCK_OTHERS_ON_JOURNEY.map((p) => ({
           journey_id: `j_${p.player.id}`,
-          player: { id: p.player.id, handle: p.player.handle, name: p.player.name, avatar_url: null, color: p.player.color },
+          player: { id: p.player.id, handle: p.player.handle, name: p.player.name, avatar_url: null, color: p.player.color, is_following: followedIds.has(p.player.id) },
           duration_seconds: 3600,
           played_at: new Date().toISOString(),
         })),
@@ -68,6 +94,7 @@ function renderJourney(id: string) {
 }
 
 beforeEach(() => {
+  followedIds = new Set(initiallyFollowed);
   resetJourneys();
   resetPlayers();
   vi.stubGlobal("fetch", makeFetch());

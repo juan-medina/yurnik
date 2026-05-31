@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 import type { Player } from "@/models/player";
-import { MY_PLAYER_ID as MOCK_MY_PLAYER_ID } from "@/lib/mock";
 import { API_BASE } from "@/lib/api";
 import { deriveColor } from "@/lib/display";
 
-// Still points to the mock ID while follow lists are not yet backed by the API.
-export const MY_PLAYER_ID: string = MOCK_MY_PLAYER_ID;
+// Updated on every successful getCurrentPlayer call. Used for playerHref routing.
+export let MY_PLAYER_ID: string = "";
 
 export class SessionExpiredError extends Error {}
 
@@ -16,6 +15,7 @@ export async function getCurrentPlayer(): Promise<Player> {
   if (resp.status === 401 || resp.status === 404) throw new SessionExpiredError();
   if (!resp.ok) throw new Error(`get profile: ${resp.status}`);
   const data = await resp.json();
+  MY_PLAYER_ID = data.id;
   return {
     id: data.id,
     name: data.name,
@@ -59,5 +59,3 @@ export async function signOut(): Promise<void> {
   window.location.href = "/login";
 }
 
-// No-op kept for test compatibility.
-export function _reset(): void {}
