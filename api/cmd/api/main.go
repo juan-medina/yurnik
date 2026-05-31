@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/juan-medina/agon/internal/admin"
 	"github.com/juan-medina/agon/internal/auth"
 	"github.com/juan-medina/agon/internal/db"
 	"github.com/juan-medina/agon/internal/games"
@@ -51,6 +52,7 @@ func main() {
 	profile.NewHandler(pool, jwtPriv).Register(mux)
 	games.NewHandler(igdbClient, pool).Register(mux)
 	journeys.NewHandler(pool, jwtPriv).Register(mux)
+	admin.NewHandler(pool, jwtPriv).Register(mux)
 
 	log.Printf("listening on %s (frontend: %s)", addr, cfg.FrontendURL)
 	if err := http.ListenAndServe(addr, cors(allowedOrigin, mux)); err != nil {

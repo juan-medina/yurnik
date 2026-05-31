@@ -23,6 +23,7 @@ export async function getCurrentPlayer(): Promise<Player> {
     color: data.color ?? deriveColor(data.id),
     avatarUrl: data.avatar_url ?? undefined,
     bio: data.bio ?? undefined,
+    isAdmin: data.is_admin === true,
   };
 }
 

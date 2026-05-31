@@ -19,6 +19,7 @@ type User struct {
 	AvatarURL *string
 	Bio       *string
 	Color     string
+	IsAdmin   bool
 }
 
 // UserIdentity holds the identity fields returned by the OAuth provider.
@@ -56,13 +57,34 @@ func UpsertUser(ctx context.Context, pool *pgxpool.Pool, identity UserIdentity) 
 func GetUser(ctx context.Context, pool *pgxpool.Pool, id string) (User, error) {
 	var u User
 	err := pool.QueryRow(ctx, `
-		SELECT id, provider, handle, name, avatar_url, bio, color
+		SELECT id, provider, handle, name, avatar_url, bio, color, is_admin
 		FROM users WHERE id = $1
-	`, id).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color)
+	`, id).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.IsAdmin)
 	if err == pgx.ErrNoRows {
 		return User{}, fmt.Errorf("user not found: %s", id)
 	}
 	return u, err
+}
+
+// ListUsers returns all users ordered by name.
+func ListUsers(ctx context.Context, pool *pgxpool.Pool) ([]User, error) {
+	rows, err := pool.Query(ctx, `
+		SELECT id, provider, handle, name, avatar_url, bio, color, is_admin
+		FROM users ORDER BY name
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list users: %w", err)
+	}
+	defer rows.Close()
+	var users []User
+	for rows.Next() {
+		var u User
+		if err := rows.Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.IsAdmin); err != nil {
+			return nil, fmt.Errorf("scan user: %w", err)
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
 }
 
 // UpdateBio sets the bio for the given user ID.

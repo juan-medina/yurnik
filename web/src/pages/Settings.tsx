@@ -1,19 +1,26 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCurrentPlayer, signOut } from "@/services/auth";
+import { listAdminUsers, impersonateUser } from "@/services/admin";
 import { getExclusions, removeExclusion, getGameHints, removeGameHint, updateGameHint } from "@/services/settings";
 import { getGameLibrary } from "@/services/games";
 import { avatarSrc, initials } from "@/lib/display";
+import type { Player } from "@/models/player";
 
 export default function Settings() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data: player } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
+  const { data: adminUsers } = useQuery({
+    queryKey: ["admin", "users"],
+    queryFn: listAdminUsers,
+    enabled: player?.isAdmin === true,
+  });
   const { data: exclusions = [] } = useQuery({ queryKey: ["settings", "exclusions"], queryFn: getExclusions });
   const { data: hints = [] } = useQuery({ queryKey: ["settings", "hints"], queryFn: getGameHints });
   const { data: games = [] } = useQuery({ queryKey: ["games"], queryFn: getGameLibrary });
@@ -54,6 +61,11 @@ export default function Settings() {
     onSuccess: () => navigate("/login", { replace: true }),
   });
 
+  const impersonateMutation = useMutation({
+    mutationFn: (userId: string) => impersonateUser(userId),
+    onSuccess: () => { window.location.href = "/"; },
+  });
+
   const editGameResults =
     editingHintExe !== null && editQuery.length >= 2
       ? games.filter((g) => g.game.toLowerCase().includes(editQuery.toLowerCase())).slice(0, 5)
@@ -91,7 +103,15 @@ export default function Settings() {
                 {initials(player.name)}
               </div>
               <div className="min-w-0">
-                <div className="truncate font-semibold">{player.name}</div>
+                <div className="flex items-center gap-2">
+                  <span className="truncate font-semibold">{player.name}</span>
+                  {player.isAdmin && (
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                      <ShieldCheck size={11} />
+                      Admin
+                    </span>
+                  )}
+                </div>
                 <div className="truncate text-sm text-muted-foreground">@{player.handle}</div>
               </div>
             </div>
@@ -303,6 +323,74 @@ export default function Settings() {
 
         </div>
       </section>
+
+      {/* Admin — impersonation */}
+      {player.isAdmin && (
+        <section>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Admin
+          </h2>
+          <div className="rounded-lg border border-border bg-card p-5">
+            <h3 className="font-semibold">Impersonate user</h3>
+            <p className="mb-4 mt-1 text-sm text-muted-foreground">
+              Switch session to another registered user for UI testing. You will be redirected to home.
+            </p>
+            {!adminUsers || adminUsers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No other users registered.</p>
+            ) : (
+              <ul className="space-y-2">
+                {adminUsers
+                  .filter((u: Player) => u.id !== player.id)
+                  .map((u: Player) => (
+                    <li
+                      key={u.id}
+                      className="flex items-center justify-between rounded-md border border-border px-3 py-2"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <img
+                          src={avatarSrc(u)}
+                          alt={u.name}
+                          className="h-8 w-8 shrink-0 rounded-full object-cover"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.style.display = "none";
+                            target.nextElementSibling?.removeAttribute("hidden");
+                          }}
+                        />
+                        <div
+                          hidden
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                          style={{ backgroundColor: u.color }}
+                        >
+                          {initials(u.name)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate text-sm font-medium">{u.name}</span>
+                            {u.isAdmin && (
+                              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+                                <ShieldCheck size={10} />
+                                Admin
+                              </span>
+                            )}
+                          </div>
+                          <div className="truncate text-xs text-muted-foreground">@{u.handle}</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => impersonateMutation.mutate(u.id)}
+                        disabled={impersonateMutation.isPending}
+                        className="shrink-0 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+                      >
+                        Impersonate
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

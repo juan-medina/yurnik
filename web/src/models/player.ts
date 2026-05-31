@@ -8,6 +8,7 @@ export type Player = {
   color: string;
   avatarUrl?: string;
   bio?: string;
+  isAdmin?: boolean;
   followers?: number;
   following?: number;
 };

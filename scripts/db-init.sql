@@ -67,6 +67,7 @@ CREATE TABLE users (
     avatar_url   text,
     bio          text,
     color        text        NOT NULL DEFAULT '#7c3aed',
+    is_admin     boolean     NOT NULL DEFAULT false,
     created_at   timestamptz NOT NULL DEFAULT now(),
     updated_at   timestamptz NOT NULL DEFAULT now(),
     UNIQUE (provider, provider_id)

@@ -46,6 +46,7 @@ type meResponse struct {
 	AvatarURL *string `json:"avatar_url"`
 	Bio       *string `json:"bio"`
 	Color     string  `json:"color"`
+	IsAdmin   bool    `json:"is_admin"`
 }
 
 func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
@@ -70,6 +71,7 @@ func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
 		AvatarURL: user.AvatarURL,
 		Bio:       user.Bio,
 		Color:     user.Color,
+		IsAdmin:   user.IsAdmin,
 	})
 }
 
