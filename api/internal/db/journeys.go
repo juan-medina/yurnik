@@ -218,6 +218,84 @@ func ListOthersOnJourney(ctx context.Context, pool *pgxpool.Pool, journeyID stri
 	return players, rows.Err()
 }
 
+// ActivityEntry is a single journey row for the discovery feed, joined with game and player info.
+type ActivityEntry struct {
+	SessionID       string
+	UserID          string
+	IGDBID          int
+	GameName        string
+	CoverURL        *string
+	Genres          []string
+	DurationSeconds int
+	Log             *string
+	PlayedAt        time.Time
+	PlayerHandle    string
+	PlayerName      string
+	PlayerAvatarURL *string
+	PlayerColor     string
+}
+
+// GetGameActivity returns the diversity-capped discovery feed: at most 12 games ranked
+// by unique-player count, with at most 4 deduplicated (one per player) sessions each.
+func GetGameActivity(ctx context.Context, pool *pgxpool.Pool) ([]ActivityEntry, error) {
+	rows, err := pool.Query(ctx, `
+		WITH latest_per_player_game AS (
+			SELECT DISTINCT ON (j.user_id, j.igdb_id)
+				j.id, j.user_id, j.igdb_id, j.duration_seconds, j.log, j.played_at,
+				g.name AS game_name, g.cover_url, g.genres,
+				u.handle, u.name AS player_name, u.avatar_url, u.color
+			FROM journeys j
+			JOIN igdb_games g ON g.igdb_id = j.igdb_id
+			JOIN users u ON u.id = j.user_id
+			ORDER BY j.user_id, j.igdb_id, j.played_at DESC
+		),
+		game_stats AS (
+			SELECT igdb_id, COUNT(*) AS unique_players, MAX(played_at) AS last_played
+			FROM latest_per_player_game
+			GROUP BY igdb_id
+		),
+		top_games AS (
+			SELECT igdb_id,
+			       ROW_NUMBER() OVER (ORDER BY last_played DESC) AS game_rank
+			FROM game_stats
+			LIMIT 12
+		),
+		ranked_entries AS (
+			SELECT l.id, l.user_id, l.igdb_id, l.duration_seconds, l.log, l.played_at,
+			       l.game_name, l.cover_url, l.genres,
+			       l.handle, l.player_name, l.avatar_url, l.color,
+			       t.game_rank,
+			       ROW_NUMBER() OVER (PARTITION BY l.igdb_id ORDER BY l.played_at DESC) AS entry_rank
+			FROM latest_per_player_game l
+			JOIN top_games t ON t.igdb_id = l.igdb_id
+		)
+		SELECT id, user_id, igdb_id, game_name, cover_url, genres,
+		       duration_seconds, log, played_at,
+		       handle, player_name, avatar_url, color
+		FROM ranked_entries
+		WHERE entry_rank <= 4
+		ORDER BY game_rank, played_at DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []ActivityEntry
+	for rows.Next() {
+		var e ActivityEntry
+		if err := rows.Scan(
+			&e.SessionID, &e.UserID, &e.IGDBID, &e.GameName, &e.CoverURL, &e.Genres,
+			&e.DurationSeconds, &e.Log, &e.PlayedAt,
+			&e.PlayerHandle, &e.PlayerName, &e.PlayerAvatarURL, &e.PlayerColor,
+		); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
+}
+
 // ListJourneysByUser returns confirmed journeys for the given user ID joined
 // with igdb_games, ordered by played_at descending, with optional cursor-based pagination.
 func ListJourneysByUser(ctx context.Context, pool *pgxpool.Pool, userID string, limit int, cursor string) ([]Journey, error) {

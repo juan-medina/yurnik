@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/juan-medina/agon/internal/db"
@@ -24,6 +25,7 @@ func NewHandler(client *Client, pool *pgxpool.Pool) *Handler {
 
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/games/search", h.search)
+	mux.HandleFunc("GET /api/activity", h.activity)
 }
 
 type gameResponse struct {
@@ -73,4 +75,76 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func (h *Handler) activity(w http.ResponseWriter, r *http.Request) {
+	entries, err := db.GetGameActivity(r.Context(), h.pool)
+	if err != nil {
+		log.Printf("games/activity: %v", err)
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	type playerResp struct {
+		ID        string  `json:"id"`
+		Handle    string  `json:"handle"`
+		Name      string  `json:"name"`
+		AvatarURL *string `json:"avatar_url,omitempty"`
+		Color     string  `json:"color"`
+	}
+	type entryResp struct {
+		SessionID       string     `json:"session_id"`
+		Player          playerResp `json:"player"`
+		DurationSeconds int        `json:"duration_seconds"`
+		PlayedAt        string     `json:"played_at"`
+		Log             *string    `json:"log,omitempty"`
+	}
+	type gameResp struct {
+		ID       string      `json:"id"`
+		Game     string      `json:"game"`
+		CoverURL *string     `json:"cover_url,omitempty"`
+		Genres   []string    `json:"genres"`
+		Entries  []entryResp `json:"entries"`
+	}
+
+	// Group flat rows into per-game buckets preserving order.
+	var games []gameResp
+	index := map[int]int{} // igdb_id → slice index
+	for _, e := range entries {
+		if _, seen := index[e.IGDBID]; !seen {
+			index[e.IGDBID] = len(games)
+			genres := e.Genres
+			if genres == nil {
+				genres = []string{}
+			}
+			games = append(games, gameResp{
+				ID:       strconv.Itoa(e.IGDBID),
+				Game:     e.GameName,
+				CoverURL: e.CoverURL,
+				Genres:   genres,
+				Entries:  []entryResp{},
+			})
+		}
+		i := index[e.IGDBID]
+		games[i].Entries = append(games[i].Entries, entryResp{
+			SessionID: e.SessionID,
+			Player: playerResp{
+				ID:        e.UserID,
+				Handle:    e.PlayerHandle,
+				Name:      e.PlayerName,
+				AvatarURL: e.PlayerAvatarURL,
+				Color:     e.PlayerColor,
+			},
+			DurationSeconds: e.DurationSeconds,
+			PlayedAt:        e.PlayedAt.UTC().Format(time.RFC3339),
+			Log:             e.Log,
+		})
+	}
+
+	if games == nil {
+		games = []gameResp{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"games": games})
 }
