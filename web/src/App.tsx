@@ -12,11 +12,13 @@ import Echoes from "@/pages/Echoes";
 import JourneyDetail from "@/pages/JourneyDetail";
 import PlayerProfile from "@/pages/PlayerProfile";
 import Settings from "@/pages/Settings";
+import AgentAuth from "@/pages/AgentAuth";
 import NotFound from "@/pages/NotFound";
 
 const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
   { path: "/auth/complete", element: <AuthComplete /> },
+  { path: "/auth/agent", element: <AgentAuth /> },
   {
     path: "/",
     element: <Shell />,

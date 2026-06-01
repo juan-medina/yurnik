@@ -14,7 +14,15 @@ export default function AuthComplete() {
     started.current = true;
 
     completeSignIn()
-      .then(() => navigate("/", { replace: true }))
+      .then(() => {
+        const next = sessionStorage.getItem("auth_next");
+        if (next) {
+          sessionStorage.removeItem("auth_next");
+          navigate(next, { replace: true });
+        } else {
+          navigate("/", { replace: true });
+        }
+      })
       .catch(() => navigate("/login?error=auth_failed", { replace: true }));
   }, [navigate]);
 

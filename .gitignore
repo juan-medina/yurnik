@@ -22,6 +22,14 @@ pnpm-debug.log*
 .env.*.local
 .env.test
 
+# .NET build output
+obj/
+[Bb]in/
+TestResults/
+.vs/
+*.user
+*.suo
+
 # IDE
 .idea/
 .vscode/

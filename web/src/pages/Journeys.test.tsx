@@ -139,6 +139,25 @@ describe("Journeys — pending actions", () => {
     renderJourneys();
     expect(await screen.findByText("Unknown Game")).toBeInTheDocument();
   });
+
+  it("confirming an unknown game opens search pre-populated with the window title", async () => {
+    const user = userEvent.setup();
+    renderJourneys();
+    // The third pending journey (ps3) has game="" and windowTitle="SVB!"
+    const confirmButtons = await screen.findAllByRole("button", { name: "Confirm" });
+    await user.click(confirmButtons[2]);
+    const searchInput = screen.getByPlaceholderText("Search for a game…") as HTMLInputElement;
+    expect(searchInput.value).toBe("SVB!");
+  });
+
+  it("confirming state shows exe name and window title", async () => {
+    const user = userEvent.setup();
+    renderJourneys();
+    const [firstConfirm] = await screen.findAllByRole("button", { name: "Confirm" });
+    await user.click(firstConfirm);
+    // cyberpunk2077.exe · "Cyberpunk 2077" should be visible
+    expect(screen.getByText(/cyberpunk2077\.exe/)).toBeInTheDocument();
+  });
 });
 
 describe("Journeys — client hint", () => {

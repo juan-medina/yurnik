@@ -54,6 +54,18 @@ export async function completeSignIn(): Promise<void> {
   if (!resp.ok) throw new Error(`session exchange failed: ${resp.status}`);
 }
 
+// Called by /auth/agent. Issues a Bearer token the agent receives via agon://.
+export async function getAgentToken(): Promise<string> {
+  const resp = await fetch(`${API_BASE}/api/v1/agent/token`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (resp.status === 401) throw new SessionExpiredError();
+  if (!resp.ok) throw new Error(`agent token: ${resp.status}`);
+  const data = await resp.json();
+  return data.token as string;
+}
+
 export async function signOut(): Promise<void> {
   await fetch(`${API_BASE}/auth/logout`, { method: "POST", credentials: "include" });
   window.location.href = "/login";

@@ -1,25 +1,41 @@
-.PHONY: web api run-api gen-keys test lint build setup db-init db-start db-stop
+.PHONY: run-api run-agent run-web test test-api test-agent test-web build build-api build-web build-agent gen-keys lint setup db-init db-start db-stop
 
-web:
+run-api:
+	powershell -ExecutionPolicy Bypass -File scripts/run-api.ps1
+
+run-agent:
+	cd agent && dotnet run --project Agon.Agent
+
+run-web:
 	powershell -ExecutionPolicy Bypass -File scripts/run-web.ps1
 
-api: run-api
+test: test-api test-agent test-web
 
-api:
-	powershell -ExecutionPolicy Bypass -File scripts/run-api.ps1
+test-api:
+	cd api && go test ./... -v
+
+test-agent:
+	cd agent && dotnet test Agon.sln
+
+test-web:
+	cd web && pnpm test --run
+
+build: build-api build-web build-agent
+
+build-api:
+	cd api && go build -o bin/api ./cmd/api
+
+build-web:
+	cd web && pnpm build
+
+build-agent:
+	cd agent && dotnet publish Agon.Agent/Agon.Agent.csproj -c Release
 
 gen-keys:
 	cd api && go run ./cmd/gen-keys
 
-test:
-	cd api && go test ./... -v
-	cd web && pnpm test
-
 lint:
 	cd web && pnpm lint
-
-build:
-	cd web && pnpm build
 
 setup:
 	powershell -ExecutionPolicy Bypass -File scripts/setup.ps1

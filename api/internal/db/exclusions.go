@@ -5,6 +5,7 @@ package db
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -18,6 +19,30 @@ type GameHint struct {
 	ExeName string
 	IGDBID  int
 	Title   string
+}
+
+// IsExcluded returns true if the given exe is on the user's exclusion list.
+func IsExcluded(ctx context.Context, pool *pgxpool.Pool, userID, exeName string) (bool, error) {
+	var excluded bool
+	err := pool.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM exe_exclusions WHERE user_id = $1 AND exe_name = $2)
+	`, userID, exeName).Scan(&excluded)
+	return excluded, err
+}
+
+// GetGameHintIGDBID returns the IGDB ID from a learned exe→game mapping, or nil if none exists.
+func GetGameHintIGDBID(ctx context.Context, pool *pgxpool.Pool, userID, exeName string) (*int, error) {
+	var igdbID int
+	err := pool.QueryRow(ctx, `
+		SELECT igdb_id FROM exe_game_hints WHERE user_id = $1 AND exe_name = $2
+	`, userID, exeName).Scan(&igdbID)
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &igdbID, nil
 }
 
 // InsertExclusion adds an exe to the user's exclusion list.

@@ -29,11 +29,13 @@ function GameCover({ game, coverUrl, size }: { game: string; coverUrl?: string; 
 function GameSelector({
   value,
   onChange,
+  initialQuery = "",
 }: {
   value: Game | null;
   onChange: (game: Game) => void;
+  initialQuery?: string;
 }) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [searching, setSearching] = useState(value === null);
   const { data: results = [] } = useQuery({
     queryKey: ["games", "search", query],
@@ -319,6 +321,7 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
   const queryClient = useQueryClient();
   const [cardState, setCardState] = useState<"collapsed" | "confirming" | "excluding">("collapsed");
   const [game, setGame] = useState<Game | null>(gameToGame(journey));
+  const [searchQuery, setSearchQuery] = useState("");
   const [log, setLog] = useState("");
 
   const dismissMutation = useMutation({
@@ -343,8 +346,17 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
     },
   });
 
+  const hintQuery = journey.windowTitle || journey.exeName?.replace(/\.exe$/i, "") || "";
+
   function openConfirm(searchMode = false) {
-    setGame(searchMode ? null : gameToGame(journey));
+    const hasGame = !!journey.game;
+    if (searchMode || !hasGame) {
+      setGame(null);
+      setSearchQuery(hintQuery);
+    } else {
+      setGame(gameToGame(journey));
+      setSearchQuery("");
+    }
     setCardState("confirming");
   }
 
@@ -369,8 +381,15 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
     return (
       <div className="rounded-lg border border-primary/30 bg-card p-4">
         <div className="mb-3">
-          <GameSelector value={game} onChange={setGame} />
+          <GameSelector value={game} onChange={setGame} initialQuery={searchQuery} />
         </div>
+        {(journey.exeName || journey.windowTitle) && (
+          <div className="mb-2 text-xs text-muted-foreground">
+            {journey.exeName}
+            {journey.exeName && journey.windowTitle && " · "}
+            {journey.windowTitle && `"${journey.windowTitle}"`}
+          </div>
+        )}
         <div className="mb-1 flex items-center gap-1 text-xs text-muted-foreground">
           <Clock size={12} />
           <span>{journey.duration}</span>

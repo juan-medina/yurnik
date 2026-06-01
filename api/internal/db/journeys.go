@@ -68,7 +68,7 @@ func ListPendingJourneys(ctx context.Context, pool *pgxpool.Pool, userID string)
 		       p.exe_name, p.window_title, p.started_at, p.ended_at, p.last_heartbeat
 		FROM pending_journeys p
 		LEFT JOIN igdb_games g ON g.igdb_id = p.igdb_id
-		WHERE p.user_id = $1 AND p.status IN ('active', 'ended')
+		WHERE p.user_id = $1 AND p.status = 'ended'
 		ORDER BY p.created_at DESC
 	`, userID)
 	if err != nil {
@@ -107,6 +107,42 @@ type Journey struct {
 	CreatedAt       time.Time
 	LikeCount       int
 	IsLiked         bool
+}
+
+// InsertPendingJourney creates a new pending journey row and returns the new ID.
+// igdbID may be nil when no game hint is known yet.
+// endedAt may be nil for active journeys; when set the status is immediately 'ended'.
+func InsertPendingJourney(ctx context.Context, pool *pgxpool.Pool, userID, exeName, windowTitle string, startedAt time.Time, igdbID *int, endedAt *time.Time) (string, error) {
+	var id string
+	status := "active"
+	if endedAt != nil {
+		status = "ended"
+	}
+	err := pool.QueryRow(ctx, `
+		INSERT INTO pending_journeys (user_id, exe_name, window_title, started_at, igdb_id, ended_at, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id
+	`, userID, exeName, windowTitle, startedAt, igdbID, endedAt, status).Scan(&id)
+	if err != nil {
+		return "", fmt.Errorf("insert pending journey: %w", err)
+	}
+	return id, nil
+}
+
+// EndPendingJourney sets ended_at and transitions status to 'ended'.
+func EndPendingJourney(ctx context.Context, pool *pgxpool.Pool, id, userID string, endedAt time.Time) error {
+	tag, err := pool.Exec(ctx, `
+		UPDATE pending_journeys
+		SET ended_at = $1, status = 'ended'
+		WHERE id = $2 AND user_id = $3 AND status = 'active'
+	`, endedAt, id, userID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("pending journey not found or already ended: %s", id)
+	}
+	return nil
 }
 
 // InsertJourney writes a confirmed journey row and returns the new ID.

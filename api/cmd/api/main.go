@@ -13,6 +13,7 @@ import (
 	"os"
 
 	"github.com/juan-medina/agon/internal/admin"
+	"github.com/juan-medina/agon/internal/agent"
 	"github.com/juan-medina/agon/internal/auth"
 	"github.com/juan-medina/agon/internal/db"
 	"github.com/juan-medina/agon/internal/echoes"
@@ -51,6 +52,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	auth.NewHandler(jwtPriv, pool, cfg).Register(mux)
+	agent.NewHandler(pool, jwtPriv).Register(mux)
 	profile.NewHandler(pool, jwtPriv).Register(mux)
 	games.NewHandler(igdbClient, pool).Register(mux)
 	journeys.NewHandler(pool, jwtPriv).Register(mux)
