@@ -24,13 +24,13 @@ Requirements: Go 1.23+, Node 22 (via fnm), pnpm, Net 9
 
 ```sh
 # API server
-make api
+make run-api
 
 # Tray agent
-make agent
+make run-agent
 
 # Web frontend
-make web
+make run-web
 
 # All tests
 make test
