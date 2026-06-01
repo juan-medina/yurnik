@@ -73,7 +73,9 @@ describe("Journeys — pending actions", () => {
     await user.click(firstConfirm);
     const [changeInForm] = screen.getAllByRole("button", { name: "Change" });
     await user.click(changeInForm);
-    await user.type(screen.getByPlaceholderText("Search for a game…"), "Sekiro");
+    const searchInput = screen.getByPlaceholderText("Search for a game…");
+    await user.clear(searchInput);
+    await user.type(searchInput, "Sekiro");
     await user.click(await screen.findByRole("button", { name: /Sekiro/ }));
     expect(screen.getByText("Sekiro")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Search for a game…")).not.toBeInTheDocument();

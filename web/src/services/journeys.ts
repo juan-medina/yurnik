@@ -64,6 +64,7 @@ export async function getUserJourneys(): Promise<Journey[]> {
   console.log("[getUserJourneys] journeys count:", data.journeys?.length ?? 0);
   return (data.journeys ?? []).map((j): Journey => ({
     id: j.id,
+    igdbId: j.igdb_id,
     player,
     game: j.game,
     coverUrl: j.cover_url,

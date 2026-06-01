@@ -31,6 +31,7 @@ export async function getFeedJourneys(): Promise<Journey[]> {
   const data: { journeys: RawFeedEntry[] } = await resp.json();
   return (data.journeys ?? []).map((j): Journey => ({
     id: j.id,
+    igdbId: j.igdb_id,
     player: {
       id: j.player.id,
       handle: j.player.handle,

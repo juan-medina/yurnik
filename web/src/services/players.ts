@@ -68,6 +68,7 @@ export async function getPlayerJourneys(id: string): Promise<Journey[]> {
   const data: { journeys: RawJourney[] } = await resp.json();
   return (data.journeys ?? []).map((j): Journey => ({
     id: j.id,
+    igdbId: j.igdb_id,
     player,
     game: j.game,
     coverUrl: j.cover_url,

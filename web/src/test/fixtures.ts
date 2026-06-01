@@ -63,7 +63,7 @@ function minsAgo(n: number): Date {
 
 export const JOURNEYS: Journey[] = [
   {
-    id: "s1", player: PLAYERS[0], game: "Elden Ring",
+    id: "s1", igdbId: 1, player: PLAYERS[0], game: "Elden Ring",
     coverUrl: coverUrl("Elden Ring"),
     genres: ["RPG", "Soulslike", "Open World"],
     duration: "3h 14m", playedAt: minsAgo(23),
@@ -71,14 +71,14 @@ export const JOURNEYS: Journey[] = [
     likes: 47, liked: false,
   },
   {
-    id: "s2", player: PLAYERS[1], game: "Baldur's Gate 3",
+    id: "s2", igdbId: 2, player: PLAYERS[1], game: "Baldur's Gate 3",
     coverUrl: coverUrl("Baldur's Gate 3"),
     genres: ["RPG", "Strategy", "Co-op"],
     duration: "4h 30m", playedAt: hoursAgo(1),
     likes: 12, liked: false,
   },
   {
-    id: "s3", player: PLAYERS[2], game: "Hollow Knight",
+    id: "s3", igdbId: 3, player: PLAYERS[2], game: "Hollow Knight",
     coverUrl: coverUrl("Hollow Knight"),
     genres: ["Metroidvania", "Action", "Indie"],
     duration: "2h 07m", playedAt: hoursAgo(3),
@@ -86,14 +86,14 @@ export const JOURNEYS: Journey[] = [
     likes: 8, liked: false,
   },
   {
-    id: "s4", player: PLAYERS[3], game: "Cyberpunk 2077",
+    id: "s4", igdbId: 4, player: PLAYERS[3], game: "Cyberpunk 2077",
     coverUrl: coverUrl("Cyberpunk 2077"),
     genres: ["RPG", "Open World", "Sci-fi"],
     duration: "1h 52m", playedAt: new Date(),
     likes: 0, liked: false,
   },
   {
-    id: "s5", player: PLAYERS[0], game: "Hades II",
+    id: "s5", igdbId: 5, player: PLAYERS[0], game: "Hades II",
     coverUrl: coverUrl("Hades II"),
     genres: ["Roguelite", "Action", "Indie"],
     duration: "45m", playedAt: daysAgo(1),
@@ -101,14 +101,14 @@ export const JOURNEYS: Journey[] = [
     likes: 23, liked: false,
   },
   {
-    id: "s6", player: PLAYERS[1], game: "Dead Cells",
+    id: "s6", igdbId: 6, player: PLAYERS[1], game: "Dead Cells",
     coverUrl: coverUrl("Dead Cells"),
     genres: ["Roguelike", "Action", "Platformer"],
     duration: "1h 18m", playedAt: daysAgo(2),
     likes: 5, liked: false,
   },
   {
-    id: "s7", player: PLAYERS[2], game: "Elden Ring",
+    id: "s7", igdbId: 1, player: PLAYERS[2], game: "Elden Ring",
     coverUrl: coverUrl("Elden Ring"),
     genres: ["RPG", "Soulslike", "Open World"],
     duration: "2h 44m", playedAt: daysAgo(2),
@@ -116,7 +116,7 @@ export const JOURNEYS: Journey[] = [
     likes: 31, liked: false,
   },
   {
-    id: "s8",
+    id: "s8", igdbId: 1,
     player: { id: "o1", name: "Jordan Park", handle: "jordanp.bsky.social", color: "#0284c7" },
     game: "Elden Ring", coverUrl: coverUrl("Elden Ring"),
     genres: ["RPG", "Soulslike", "Open World"],
@@ -124,7 +124,7 @@ export const JOURNEYS: Journey[] = [
     likes: 4, liked: false,
   },
   {
-    id: "s9",
+    id: "s9", igdbId: 4,
     player: { id: "o2", name: "Priya Nair", handle: "priyanair.bsky.social", color: "#7c3aed" },
     game: "Cyberpunk 2077", coverUrl: coverUrl("Cyberpunk 2077"),
     genres: ["RPG", "Open World", "Sci-fi"],
@@ -132,7 +132,7 @@ export const JOURNEYS: Journey[] = [
     likes: 2, liked: false,
   },
   {
-    id: "s10",
+    id: "s10", igdbId: 3,
     player: { id: "o4", name: "Fen Wu", handle: "fenwu.bsky.social", color: "#db2777" },
     game: "Hollow Knight", coverUrl: coverUrl("Hollow Knight"),
     genres: ["Metroidvania", "Action", "Indie"],
@@ -140,7 +140,7 @@ export const JOURNEYS: Journey[] = [
     likes: 7, liked: false,
   },
   {
-    id: "s11",
+    id: "s11", igdbId: 5,
     player: { id: "o3", name: "Luca Rossi", handle: "lucarossi.bsky.social", color: "#059669" },
     game: "Hades II", coverUrl: coverUrl("Hades II"),
     genres: ["Roguelite", "Action", "Indie"],
@@ -148,7 +148,7 @@ export const JOURNEYS: Journey[] = [
     likes: 15, liked: false,
   },
   {
-    id: "s12",
+    id: "s12", igdbId: 6,
     player: { id: "o1", name: "Jordan Park", handle: "jordanp.bsky.social", color: "#0284c7" },
     game: "Dead Cells", coverUrl: coverUrl("Dead Cells"),
     genres: ["Roguelike", "Action", "Platformer"],
