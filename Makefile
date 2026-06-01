@@ -4,7 +4,7 @@ run-api:
 	powershell -ExecutionPolicy Bypass -File scripts/run-api.ps1
 
 run-agent:
-	cd agent && dotnet run --project Agon.Agent
+	cd agent && dotnet run --project Yurnik.Agent
 
 run-web:
 	powershell -ExecutionPolicy Bypass -File scripts/run-web.ps1
@@ -15,7 +15,7 @@ test-api:
 	cd api && go test ./... -v
 
 test-agent:
-	cd agent && dotnet test Agon.sln
+	cd agent && dotnet test Yurnik.sln
 
 test-web:
 	cd web && pnpm test --run
@@ -29,7 +29,7 @@ build-web:
 	cd web && pnpm build
 
 build-agent:
-	cd agent && dotnet publish Agon.Agent/Agon.Agent.csproj -c Release
+	cd agent && dotnet publish Yurnik.Agent/Yurnik.Agent.csproj -c Release
 
 gen-keys:
 	cd api && go run ./cmd/gen-keys

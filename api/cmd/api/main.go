@@ -12,15 +12,15 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/juan-medina/agon/internal/admin"
-	"github.com/juan-medina/agon/internal/agent"
-	"github.com/juan-medina/agon/internal/auth"
-	"github.com/juan-medina/agon/internal/db"
-	"github.com/juan-medina/agon/internal/echoes"
-	"github.com/juan-medina/agon/internal/games"
-	"github.com/juan-medina/agon/internal/journeys"
-	"github.com/juan-medina/agon/internal/profile"
-	"github.com/juan-medina/agon/internal/settings"
+	"github.com/juan-medina/yurnik/internal/admin"
+	"github.com/juan-medina/yurnik/internal/agent"
+	"github.com/juan-medina/yurnik/internal/auth"
+	"github.com/juan-medina/yurnik/internal/db"
+	"github.com/juan-medina/yurnik/internal/echoes"
+	"github.com/juan-medina/yurnik/internal/games"
+	"github.com/juan-medina/yurnik/internal/journeys"
+	"github.com/juan-medina/yurnik/internal/profile"
+	"github.com/juan-medina/yurnik/internal/settings"
 )
 
 func main() {

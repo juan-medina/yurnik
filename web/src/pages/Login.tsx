@@ -11,9 +11,9 @@ export default function Login() {
     <div className="flex h-screen flex-col items-center justify-center bg-background text-foreground">
       <div className="flex w-full max-w-sm flex-col items-center gap-8 px-6">
         <div className="flex flex-col items-center gap-3">
-          <span className="text-5xl font-bold tracking-tight text-primary">agōn</span>
+          <span className="text-5xl font-bold tracking-tight text-primary">Yurnik</span>
           <p className="text-center text-sm text-muted-foreground">
-            An open social network for gaming sessions
+            An open social network for gaming journeys
           </p>
         </div>
         <div className="w-full space-y-3">

@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/juan-medina/agon/internal/auth"
-	"github.com/juan-medina/agon/internal/db"
+	"github.com/juan-medina/yurnik/internal/auth"
+	"github.com/juan-medina/yurnik/internal/db"
 )
 
 // Handler handles journey routes.
@@ -310,7 +310,7 @@ func (h *Handler) deleteComment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
-	cookie, err := r.Cookie("agon_session")
+	cookie, err := r.Cookie("yurnik_session")
 	if err != nil {
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 		return "", false
@@ -324,7 +324,7 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, 
 }
 
 func (h *Handler) tryAuthenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
-	cookie, err := r.Cookie("agon_session")
+	cookie, err := r.Cookie("yurnik_session")
 	if err != nil {
 		return "", false
 	}

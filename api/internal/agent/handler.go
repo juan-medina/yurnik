@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/juan-medina/agon/internal/auth"
-	"github.com/juan-medina/agon/internal/db"
+	"github.com/juan-medina/yurnik/internal/auth"
+	"github.com/juan-medina/yurnik/internal/db"
 )
 
 // Handler handles agent API routes.
@@ -38,9 +38,9 @@ func (h *Handler) Register(mux *http.ServeMux) {
 
 // token requires a valid web session cookie and returns a signed agent JWT.
 // Called by the /auth/agent web page; the token is then handed to the agent
-// via the agon:// URL scheme.
+// via the yurnik:// URL scheme.
 func (h *Handler) token(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("agon_session")
+	cookie, err := r.Cookie("yurnik_session")
 	if err != nil {
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 		return

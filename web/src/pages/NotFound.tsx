@@ -10,7 +10,7 @@ export default function NotFound() {
       <div>
         <p className="text-4xl font-bold text-muted-foreground">404</p>
         <p className="mt-2 font-semibold">Page not found</p>
-        <p className="mt-1 text-sm text-muted-foreground">This path doesn&apos;t exist in agōn.</p>
+        <p className="mt-1 text-sm text-muted-foreground">This path doesn&apos;t exist in Yurnik.</p>
       </div>
       <Link
         to="/"

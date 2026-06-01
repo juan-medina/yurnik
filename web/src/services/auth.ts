@@ -45,7 +45,7 @@ export function signIn(): void {
 }
 
 // Called by the /auth/complete page after Discord redirects back. The server
-// reads the auth_state cookie, issues a session JWT, and sets the agon_session cookie.
+// reads the auth_state cookie, issues a session JWT, and sets the yurnik_session cookie.
 export async function completeSignIn(): Promise<void> {
   const resp = await fetch(`${API_BASE}/auth/session`, {
     method: "POST",
@@ -54,7 +54,7 @@ export async function completeSignIn(): Promise<void> {
   if (!resp.ok) throw new Error(`session exchange failed: ${resp.status}`);
 }
 
-// Called by /auth/agent. Issues a Bearer token the agent receives via agon://.
+// Called by /auth/agent. Issues a Bearer token the agent receives via yurnik://.
 export async function getAgentToken(): Promise<string> {
   const resp = await fetch(`${API_BASE}/api/v1/agent/token`, {
     method: "POST",

@@ -94,7 +94,7 @@ func ParseAndRenewSession(w http.ResponseWriter, tokenString string, priv ed2551
 	if time.Since(claims.IssuedAt.Time) > sessionRenewAfter {
 		if newToken, err := CreateSessionJWT(claims.Subject, priv); err == nil {
 			http.SetCookie(w, &http.Cookie{
-				Name:     "agon_session",
+				Name:     "yurnik_session",
 				Value:    newToken,
 				Path:     "/",
 				HttpOnly: true,

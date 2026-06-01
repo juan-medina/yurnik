@@ -1,10 +1,10 @@
 # API
 
-Agōn API — endpoint reference. All routes are served from the same binary. Prefix every path with `/api/v1`.
+Yurnik API — endpoint reference. All routes are served from the same binary. Prefix every path with `/api/v1`.
 
 ## Conventions
 
-- **Base URL** — `https://api.agon.social/api/v1` in production. The frontend reads `VITE_API_URL` at build time.
+- **Base URL** — `https://api.yurnik.social/api/v1` in production. The frontend reads `VITE_API_URL` at build time.
 - **Encoding** — JSON throughout. `Content-Type: application/json` on all request bodies.
 - **Timestamps** — RFC 3339 UTC in all requests and responses (`"2026-05-23T14:30:00Z"`).
 - **Durations** — integer seconds in requests and responses. Clients format for display (`11640` → `"3h 14m"`).
@@ -21,7 +21,7 @@ Login is via OAuth. The web app flow:
 4. `GET /auth/callback?code=…&state=…` — server exchanges the code, upserts the user, issues a session token.
 5. `POST /auth/session` — client exchanges the completed state for a bearer token.
 
-The agent receives its token via the `agon://auth?token=…` custom URL scheme after the user logs in on the web app.
+The agent receives its token via the `yurnik://auth?token=…` custom URL scheme after the user logs in on the web app.
 
 All authenticated endpoints require:
 

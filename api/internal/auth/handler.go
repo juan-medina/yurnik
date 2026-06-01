@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/juan-medina/agon/internal/db"
+	"github.com/juan-medina/yurnik/internal/db"
 )
 
 // Config holds OAuth endpoints and application URLs.
@@ -186,7 +186,7 @@ func (h *Handler) session(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   -1,
 	})
 	http.SetCookie(w, &http.Cookie{
-		Name:     "agon_session",
+		Name:     "yurnik_session",
 		Value:    tokenString,
 		Path:     "/",
 		HttpOnly: true,
@@ -201,7 +201,7 @@ func (h *Handler) session(w http.ResponseWriter, r *http.Request) {
 // logout clears the session cookie.
 func (h *Handler) logout(w http.ResponseWriter, _ *http.Request) {
 	http.SetCookie(w, &http.Cookie{
-		Name:   "agon_session",
+		Name:   "yurnik_session",
 		Value:  "",
 		Path:   "/",
 		MaxAge: -1,

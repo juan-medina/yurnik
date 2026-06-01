@@ -1,6 +1,6 @@
 # Decisions
 
-Architecture Decision Records for Agōn. Each entry captures a choice, its context, and the reasoning behind it. Decisions are recorded here so they are not relitigated. The code and `DESIGN.md` describe what the system is — this document explains why it is that way.
+Architecture Decision Records for Yurnik. Each entry captures a choice, its context, and the reasoning behind it. Decisions are recorded here so they are not relitigated. The code and `DESIGN.md` describe what the system is — this document explains why it is that way.
 
 ---
 
@@ -86,7 +86,7 @@ This was the natural consequence of removing AT Proto: previously the server nee
 
 AT Proto was considered as the identity and storage layer. The decision was made not to use it for the following reasons:
 
-Every write would require a second write to the PDS — double the latency and egress cost per action. All queries would still need a local Postgres index anyway, since feeds, like counts, and comment lists are impractical to assemble across a distributed network on every request. AT Proto would be a write-through cache that provides no query value. The federation promise does not deliver at MVP scale — there are no other Agōn clients to read the records, and the API must mediate all writes to keep indexes current. The auth layer (DPoP, PAR, PDS token refresh) is significantly more complex than standard OAuth 2.0.
+Every write would require a second write to the PDS — double the latency and egress cost per action. All queries would still need a local Postgres index anyway, since feeds, like counts, and comment lists are impractical to assemble across a distributed network on every request. AT Proto would be a write-through cache that provides no query value. The federation promise does not deliver at MVP scale — there are no other Yurnik clients to read the records, and the API must mediate all writes to keep indexes current. The auth layer (DPoP, PAR, PDS token refresh) is significantly more complex than standard OAuth 2.0.
 
 Data portability can be addressed independently — a `GET /users/me/export` endpoint is a simpler and more direct answer than delegating storage to a third-party protocol.
 
@@ -94,7 +94,7 @@ Data portability can be addressed independently — a `GET /users/me/export` end
 
 ## Postgres as the source of truth
 
-Postgres is the single source of truth for all data. There is no external record store or distributed ledger. This simplifies the write path (one write per action), eliminates egress to third-party infrastructure, and keeps the query model straightforward. All tables are owned by Agōn and backed up through Supabase.
+Postgres is the single source of truth for all data. There is no external record store or distributed ledger. This simplifies the write path (one write per action), eliminates egress to third-party infrastructure, and keeps the query model straightforward. All tables are owned by Yurnik and backed up through Supabase.
 
 ---
 

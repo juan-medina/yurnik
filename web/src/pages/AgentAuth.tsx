@@ -18,7 +18,7 @@ export default function AgentAuth() {
 
     getAgentToken()
       .then((token) => {
-        window.location.href = `agon://auth?token=${encodeURIComponent(token)}`;
+        window.location.href = `yurnik://auth?token=${encodeURIComponent(token)}`;
         setState("success");
       })
       .catch((err) => {

@@ -77,16 +77,16 @@ func TestSession_success(t *testing.T) {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
 
-	// agon_session cookie must be set and non-empty.
+	// yurnik_session cookie must be set and non-empty.
 	var sessionCookie *http.Cookie
 	for _, c := range w.Result().Cookies() {
-		if c.Name == "agon_session" {
+		if c.Name == "yurnik_session" {
 			sessionCookie = c
 			break
 		}
 	}
 	if sessionCookie == nil || strings.TrimSpace(sessionCookie.Value) == "" {
-		t.Error("agon_session cookie missing or empty")
+		t.Error("yurnik_session cookie missing or empty")
 	}
 
 	// State must be consumed — a second call with the same cookie fails.

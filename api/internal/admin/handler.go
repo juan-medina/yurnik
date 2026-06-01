@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/juan-medina/agon/internal/auth"
-	"github.com/juan-medina/agon/internal/db"
+	"github.com/juan-medina/yurnik/internal/auth"
+	"github.com/juan-medina/yurnik/internal/db"
 )
 
 const sessionDuration = 7 * 24 * time.Hour
@@ -33,7 +33,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 // requireAdmin authenticates the request and returns the caller if they are an
 // admin. Writes 401/403 and returns false otherwise.
 func (h *Handler) requireAdmin(w http.ResponseWriter, r *http.Request) (db.User, bool) {
-	cookie, err := r.Cookie("agon_session")
+	cookie, err := r.Cookie("yurnik_session")
 	if err != nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return db.User{}, false
@@ -110,7 +110,7 @@ func (h *Handler) impersonate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     "agon_session",
+		Name:     "yurnik_session",
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,

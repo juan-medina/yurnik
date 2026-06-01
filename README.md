@@ -1,8 +1,6 @@
-# Agōn
+# Yurnik
 
-> *ἀγών — a gathering, a contest, a session of play*
-
-Agōn is a social network for gaming journeys. Log what you play, see what people you follow are playing, discover games through the people you trust.
+Yurnik is a social network for gaming journeys. Log what you play, see what people you follow are playing, discover games through the people you trust.
 
 ## What it is
 
@@ -20,19 +18,9 @@ Agōn is a social network for gaming journeys. Log what you play, see what peopl
 
 Early development. Not ready for use.
 
-## Structure
-
-```
-cmd/api       API server entry point
-cmd/agent     Tray agent entry point
-internal/     Shared Go packages
-web/          React frontend
-docs/         Architecture and design decisions
-```
-
 ## Development
 
-Requirements: Go 1.23+, Node 22 (via fnm), pnpm
+Requirements: Go 1.23+, Node 22 (via fnm), pnpm, Net 9
 
 ```sh
 # API server

@@ -4,7 +4,7 @@ Guidance for Claude Code when working in this repository. For architecture and d
 
 ## Project
 
-Agōn is an open social network for gaming journeys. Three components in one monorepo:
+Yurnik is an open social network for gaming journeys. Three components in one monorepo:
 
 - `api/` — Go API server
 - `agent/` — C# tray agent (Windows, Velopack)
@@ -56,7 +56,7 @@ When writing code that calls external services or downstream dependencies, never
 - .NET 9, nullable reference types enabled, warnings as errors
 - No exceptions for control flow. Prefer returning null or a result type for expected failures
 - No UI beyond the system tray icon — any configuration or journey management opens the web app via the default browser
-- The agent registers `agon://` as a custom URL scheme. URL handlers are the only way the web app communicates back to the agent
+- The agent registers `yurnik://` as a custom URL scheme. URL handlers are the only way the web app communicates back to the agent
 - The agent must never hammer the API. Heartbeats are every 10 minutes. Any retry on failure must use exponential backoff. There is no scenario in which the agent sends requests in a tight loop
 - File header on every `.cs` file:
 

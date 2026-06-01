@@ -25,7 +25,7 @@ export default function Sidebar() {
   return (
     <aside className="flex w-48 shrink-0 flex-col border-r border-border bg-sidebar">
       <div className="flex h-14 items-center px-4 font-bold tracking-tight text-primary">
-        agōn
+        yurnik
       </div>
       <nav className="flex flex-1 flex-col gap-1 p-2">
         {navItems.map(({ to, label, icon: Icon, end }) => (

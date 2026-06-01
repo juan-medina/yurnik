@@ -68,8 +68,8 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-& psql -U postgres -c "ALTER ROLE agon_admin WITH PASSWORD '$adminPassword';"
-& psql -U postgres -c "ALTER ROLE agon_api WITH PASSWORD '$apiPassword';"
+& psql -U postgres -c "ALTER ROLE yurnik_admin WITH PASSWORD '$adminPassword';"
+& psql -U postgres -c "ALTER ROLE yurnik_api WITH PASSWORD '$apiPassword';"
 
 Write-Ok 'Database initialised'
 
@@ -82,8 +82,8 @@ if (-not (Test-Path $envFile)) {
 }
 
 # Only touch the two DB vars -- everything else in .env is left as-is.
-Set-EnvLine $envFile 'DATABASE_URL'       "postgres://agon_api:$apiPassword@localhost:5432/agon_dev"
-Set-EnvLine $envFile 'DATABASE_ADMIN_URL' "postgres://agon_admin:$adminPassword@localhost:5432/agon_dev"
+Set-EnvLine $envFile 'DATABASE_URL'       "postgres://yurnik_api:$apiPassword@localhost:5432/yurnik_dev"
+Set-EnvLine $envFile 'DATABASE_ADMIN_URL' "postgres://yurnik_admin:$adminPassword@localhost:5432/yurnik_dev"
 
 Write-Ok '.env updated (DATABASE_URL, DATABASE_ADMIN_URL)'
 Write-Host ''

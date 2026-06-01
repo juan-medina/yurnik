@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/juan-medina/agon/internal/auth"
-	"github.com/juan-medina/agon/internal/db"
+	"github.com/juan-medina/yurnik/internal/auth"
+	"github.com/juan-medina/yurnik/internal/db"
 )
 
 // Handler handles echo routes.
@@ -34,7 +34,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 }
 
 func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
-	cookie, err := r.Cookie("agon_session")
+	cookie, err := r.Cookie("yurnik_session")
 	if err != nil {
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 		return "", false

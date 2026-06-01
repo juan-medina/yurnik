@@ -7,7 +7,7 @@ Operational decisions and the reasoning behind them. Architecture decisions live
 ```
 Cloudflare Pages          React SPA — static assets, global CDN, free
     │
-    │  API calls (api.agon.gg)
+    │  API calls (api.yurnik.gg)
     ▼
 Cloudflare proxy          DNS, SSL termination, DDoS absorption, rate limiting
     │
@@ -22,7 +22,7 @@ Supabase                  Managed Postgres
 
 The React SPA is deployed directly from Git. Cloudflare Pages rebuilds and deploys on every push to `main`. Pull requests get preview URLs automatically. Static assets are served from Cloudflare's edge globally at no bandwidth cost.
 
-No server is involved in serving the frontend. The SPA communicates with the API at `api.agon.gg`.
+No server is involved in serving the frontend. The SPA communicates with the API at `api.yurnik.gg`.
 
 ## API — Hetzner VPS
 
@@ -80,12 +80,12 @@ A minimal service file:
 
 ```ini
 [Unit]
-Description=Agōn API
+Description=Yurnik API
 After=network.target
 
 [Service]
-EnvironmentFile=/etc/agon/env
-ExecStart=/usr/local/bin/agon-api
+EnvironmentFile=/etc/yurnik/env
+ExecStart=/usr/local/bin/yurnik-api
 Restart=on-failure
 RestartSec=5
 

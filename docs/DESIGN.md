@@ -8,10 +8,10 @@ Consistent terms used throughout this document, the codebase, and the UI. When i
 
 | Term | Meaning |
 |------|---------|
-| **Journey** | A single confirmed gaming session — one game, one player, one block of time. The core unit of Agōn. |
+| **Journey** | A single confirmed gaming session — one game, one player, one block of time. The core unit of Yurnik. |
 | **Pending journey** | A journey that has been detected or started but not yet confirmed by the user. Private, stored in Postgres only, never published. Evicted after 7 days. |
 | **Log** | The owner's optional narrative note on a journey, written once at confirmation time. Immutable after confirm. |
-| **Player** | A user of Agōn. Identified by their internal UUID. |
+| **Player** | A user of Yurnik. Identified by their internal UUID. |
 | **Realm** | The home feed — confirmed journeys from players you follow, in reverse chronological order. |
 | **Journeys** | The page showing your own journeys — confirmed history and pending confirmation inbox. |
 | **Players** | The game-centric discovery page — browse who is playing what. Not a social graph view. |
@@ -69,7 +69,7 @@ The `identify` scope is sufficient — it provides the user's stable numeric ID,
 
 The users table stores `(provider, provider_id)` as the stable external identity alongside an internal UUID. This means adding a second provider (Google, GitHub) requires only a new OAuth handler — no schema changes. Discord's numeric user ID is the `provider_id`; the internal UUID is what the rest of the system uses. The two are only joined at login.
 
-The agent receives its session token via the `agon://auth?token=…` custom URL scheme after the user logs in on the web app.
+The agent receives its session token via the `yurnik://auth?token=…` custom URL scheme after the user logs in on the web app.
 
 ## API server
 
@@ -201,7 +201,7 @@ IGDB responses are cached in Postgres with a TTL. Clients read game metadata fro
 
 ## Custom URL scheme
 
-The agent registers `agon://` as a custom URL scheme on install via Velopack. Its sole purpose is the OAuth callback: after the user completes Discord OAuth in the browser, the web app redirects to `agon://auth?token=...`, the OS routes this to the running agent, and the agent stores the token.
+The agent registers `yurnik://` as a custom URL scheme on install via Velopack. Its sole purpose is the OAuth callback: after the user completes Discord OAuth in the browser, the web app redirects to `yurnik://auth?token=...`, the OS routes this to the running agent, and the agent stores the token.
 
 ## Time and timestamps
 

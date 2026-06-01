@@ -1,6 +1,6 @@
 # Copilot Instructions
 
-This is Agōn — a social network for gaming journeys. Three components in one monorepo:
+This is Yurnik — a social network for gaming journeys. Three components in one monorepo:
 
 - `api/` — Go API server
 - `agent/` — C# tray agent (Windows, Velopack)
@@ -16,7 +16,7 @@ See `docs/DESIGN.md` for architecture decisions. See `docs/DEPLOYMENT.md` for ho
 - IGDB is only called from the Go API server. Never from the frontend or the agent
 - IGDB responses are cached in Postgres with a TTL — a cache hit must never result in an IGDB call
 - The agent has no UI — configuration and journey management open the web app via browser
-- The agent communicates with the web app only through `agon://` URL scheme calls
+- The agent communicates with the web app only through `yurnik://` URL scheme calls
 - Discord OAuth is the only authentication method. Do not add alternatives
 - Every `.go` file starts with `// SPDX-FileCopyrightText: 2026 Juan Medina` and `// SPDX-License-Identifier: MIT`
 - Every `.cs` file starts with the same SPDX header
