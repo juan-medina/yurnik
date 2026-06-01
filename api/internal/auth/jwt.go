@@ -35,6 +35,25 @@ func CreateSessionJWT(userID string, priv ed25519.PrivateKey) (string, error) {
 	return t.SignedString(priv)
 }
 
+// TokenAge returns how long ago the given JWT was issued, or an error if the
+// token is invalid. Used by the agent heartbeat to decide whether to renew.
+func TokenAge(tokenString string, pub ed25519.PublicKey) (time.Duration, error) {
+	t, err := jwt.ParseWithClaims(tokenString, &sessionClaims{}, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodEd25519); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return pub, nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	claims, ok := t.Claims.(*sessionClaims)
+	if !ok || !t.Valid {
+		return 0, fmt.Errorf("invalid token")
+	}
+	return time.Since(claims.IssuedAt.Time), nil
+}
+
 // ParseSessionJWT verifies a session JWT and returns the user's internal UUID.
 func ParseSessionJWT(tokenString string, pub ed25519.PublicKey) (string, error) {
 	t, err := jwt.ParseWithClaims(tokenString, &sessionClaims{}, func(t *jwt.Token) (interface{}, error) {

@@ -7,7 +7,7 @@ interface IAgonClient
 {
     void SetToken(string token);
     void ClearToken();
-    Task<bool> HeartbeatAsync();
+    Task<HeartbeatResult> HeartbeatAsync();
     Task<CreatePendingResult> CreatePendingJourneyAsync(
         string exeName, string windowTitle, DateTimeOffset startedAt, DateTimeOffset endedAt);
 }

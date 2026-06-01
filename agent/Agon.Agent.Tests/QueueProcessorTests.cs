@@ -24,7 +24,7 @@ class FakeAgonClient : IAgonClient
 
     public void SetToken(string token) { }
     public void ClearToken() { }
-    public Task<bool> HeartbeatAsync() => Task.FromResult(true);
+    public Task<HeartbeatResult> HeartbeatAsync() => Task.FromResult(new HeartbeatResult(true));
 
     public Task<CreatePendingResult> CreatePendingJourneyAsync(
         string exeName, string windowTitle, DateTimeOffset startedAt, DateTimeOffset endedAt)

@@ -54,13 +54,20 @@ sealed class AuthManager : IAuthState, IDisposable
 
         _client.SetToken(token);
 
-        var valid = await _client.HeartbeatAsync();
-        if (!valid)
+        var heartbeat = await _client.HeartbeatAsync();
+        if (!heartbeat.Valid)
         {
             Log.Warn("Stored token rejected by API — clearing");
             _store.DeleteToken();
             _client.ClearToken();
             return false;
+        }
+
+        if (heartbeat.NewToken is not null)
+        {
+            Log.Info("Token renewed");
+            _store.SaveToken(heartbeat.NewToken);
+            _client.SetToken(heartbeat.NewToken);
         }
 
         Log.Info("Token validated — authenticated");

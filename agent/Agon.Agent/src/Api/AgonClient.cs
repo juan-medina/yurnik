@@ -14,6 +14,12 @@ enum ApiResult { Ok, Unauthorized, TransientFailure }
 record CreatePendingResult(ApiResult Status, string? JourneyId);
 
 /// <summary>
+/// Returned by HeartbeatAsync. Valid=false means 401 or network error.
+/// NewToken is set when the server issued a fresh token (token was older than 24h).
+/// </summary>
+record HeartbeatResult(bool Valid, string? NewToken = null);
+
+/// <summary>
 /// Typed HTTP client for the Agon API.
 /// Returns result types — never throws for expected failures.
 /// Caller is responsible for backoff; this class does not retry.
@@ -34,19 +40,33 @@ sealed class AgonClient(string baseUrl) : IAgonClient
     }
 
     /// <summary>
-    /// Validates the current token. Returns false on 401 or network failure.
+    /// Validates the current token. Returns Valid=false on 401 or network failure.
+    /// Returns NewToken when the server issued a fresh token (token age > 24h).
     /// </summary>
-    public async Task<bool> HeartbeatAsync()
+    public async Task<HeartbeatResult> HeartbeatAsync()
     {
         try
         {
             var resp = await _http.PostAsync("api/v1/agent/heartbeat", null);
-            return resp.StatusCode != HttpStatusCode.Unauthorized;
+
+            if (resp.StatusCode == HttpStatusCode.Unauthorized)
+                return new HeartbeatResult(false);
+
+            if (resp.StatusCode == HttpStatusCode.OK)
+            {
+                var json = await resp.Content.ReadAsStringAsync();
+                var doc = JsonDocument.Parse(json);
+                var newToken = doc.RootElement.GetProperty("token").GetString();
+                return new HeartbeatResult(true, newToken);
+            }
+
+            // 204 — valid, no renewal needed
+            return new HeartbeatResult(true);
         }
         catch (Exception ex)
         {
             Log.Error("Heartbeat failed", ex);
-            return false;
+            return new HeartbeatResult(false);
         }
     }
 

@@ -62,11 +62,24 @@ func (h *Handler) token(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
 }
 
-// heartbeat validates the agent's Bearer token. Returns 204 on success, 401 on failure.
+// heartbeat validates the agent's Bearer token. Returns 204 when valid, or
+// 200 {"token":"<new>"} when the token is valid but older than 24 hours.
 func (h *Handler) heartbeat(w http.ResponseWriter, r *http.Request) {
-	if _, ok := h.authenticateBearer(w, r); !ok {
+	userID, ok := h.authenticateBearer(w, r)
+	if !ok {
 		return
 	}
+
+	token, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	pub := h.jwtPriv.Public().(ed25519.PublicKey)
+	if age, err := auth.TokenAge(token, pub); err == nil && age > 24*time.Hour {
+		if newToken, err := auth.CreateSessionJWT(userID, h.jwtPriv); err == nil {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]string{"token": newToken})
+			return
+		}
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
