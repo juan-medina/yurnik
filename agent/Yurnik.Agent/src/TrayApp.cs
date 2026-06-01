@@ -28,9 +28,10 @@ sealed class TrayApp : IDisposable
         _watcher = watcher;
         _processor = processor;
 
+        var iconStream = typeof(TrayApp).Assembly.GetManifestResourceStream("Yurnik.Agent.Resources.tray.ico");
         _tray = new NotifyIcon
         {
-            Icon = SystemIcons.Application, // TODO: replace with Yurnik icon
+            Icon = iconStream is not null ? new Icon(iconStream) : SystemIcons.Application,
             Visible = true,
             Text = "Yurnik — starting…",
             ContextMenuStrip = BuildContextMenu(),
