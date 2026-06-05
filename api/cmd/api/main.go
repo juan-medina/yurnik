@@ -77,8 +77,6 @@ func main() {
 	settings.NewHandler(pool, jwtPriv).Register(mux)
 	admin.NewHandler(pool, jwtPriv).Register(mux)
 
-	games.BackfillGameMeta(context.Background(), igdbClient, pool)
-
 	log.Printf("listening on %s (frontend: %s, rate limit: %.0f rps)", addr, cfg.FrontendURL, rps)
 	if err := http.ListenAndServe(addr, cors(allowedOrigin, middleware.RateLimit(rps, mux))); err != nil {
 		log.Fatalf("server: %v", err)

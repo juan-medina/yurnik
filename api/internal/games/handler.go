@@ -3,7 +3,6 @@
 package games
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -24,40 +23,6 @@ func NewHandler(client *Client, pool *pgxpool.Pool) *Handler {
 	return &Handler{client: client, pool: pool}
 }
 
-// BackfillGameMeta fetches release_year and category from IGDB for any cached
-// games that are missing that data. Intended to run once at startup; safe to
-// call on every deploy — it exits immediately when there is nothing to do.
-func BackfillGameMeta(ctx context.Context, client *Client, pool *pgxpool.Pool) {
-	ids, err := db.StaleGameIDs(ctx, pool)
-	if err != nil {
-		log.Printf("backfill: list stale games: %v", err)
-		return
-	}
-	if len(ids) == 0 {
-		return
-	}
-	log.Printf("backfill: fetching meta for %d game(s)", len(ids))
-
-	// IGDB limit is 500 per request; batch if needed.
-	const batchSize = 500
-	for i := 0; i < len(ids); i += batchSize {
-		end := i + batchSize
-		if end > len(ids) {
-			end = len(ids)
-		}
-		fetched, err := client.FetchByIDs(ctx, ids[i:end])
-		if err != nil {
-			log.Printf("backfill: fetch batch: %v", err)
-			return
-		}
-		for _, g := range fetched {
-			if err := db.UpdateGameMeta(ctx, pool, g.IGDBID, g.ReleaseYear, g.Category); err != nil {
-				log.Printf("backfill: update %d: %v", g.IGDBID, err)
-			}
-		}
-	}
-	log.Printf("backfill: done")
-}
 
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/games/search", h.search)

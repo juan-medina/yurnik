@@ -42,37 +42,6 @@ func GetGame(ctx context.Context, pool *pgxpool.Pool, igdbID int) (CachedGame, e
 	return g, nil
 }
 
-// StaleGameIDs returns IGDB IDs of cached games that are missing release_year or category.
-func StaleGameIDs(ctx context.Context, pool *pgxpool.Pool) ([]int, error) {
-	rows, err := pool.Query(ctx, `
-		SELECT igdb_id FROM igdb_games
-		WHERE release_year IS NULL OR category IS NULL
-	`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var ids []int
-	for rows.Next() {
-		var id int
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		ids = append(ids, id)
-	}
-	return ids, rows.Err()
-}
-
-// UpdateGameMeta writes release_year and category for a single cached game.
-func UpdateGameMeta(ctx context.Context, pool *pgxpool.Pool, igdbID int, releaseYear *int, category *int) error {
-	_, err := pool.Exec(ctx, `
-		UPDATE igdb_games
-		SET release_year = $1, category = $2
-		WHERE igdb_id = $3
-	`, releaseYear, category, igdbID)
-	return err
-}
-
 func UpsertGame(ctx context.Context, pool *pgxpool.Pool, g CachedGame) error {
 	var coverURL *string
 	if g.CoverURL != "" {

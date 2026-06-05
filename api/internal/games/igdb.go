@@ -99,71 +99,9 @@ type igdbGame struct {
 	Category         *int   `json:"game_type"`
 }
 
-// FetchByIDs fetches game metadata for a list of IGDB IDs. Used to backfill
-// release_year and category for cached games that predate those columns.
-// Batches up to 500 IDs per request (IGDB max). Rate-limited like Search.
-func (c *Client) FetchByIDs(ctx context.Context, ids []int) ([]Game, error) {
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	if err := c.limiter.Wait(ctx); err != nil {
-		return nil, fmt.Errorf("igdb rate limit: %w", err)
-	}
-	tok, err := c.getToken(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	var sb strings.Builder
-	for i, id := range ids {
-		if i > 0 {
-			sb.WriteByte(',')
-		}
-		fmt.Fprintf(&sb, "%d", id)
-	}
-	body := fmt.Sprintf("fields name,first_release_date,game_type; where id = (%s); limit 500;", sb.String())
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.igdb.com/v4/games", strings.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("build igdb request: %w", err)
-	}
-	req.Header.Set("Client-ID", c.clientID)
-	req.Header.Set("Authorization", "Bearer "+tok)
-	req.Header.Set("Content-Type", "text/plain")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("igdb fetch: %w", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		b, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("igdb fetch %d: %s", resp.StatusCode, b)
-	}
-
-	var raw []igdbGame
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return nil, fmt.Errorf("decode igdb response: %w", err)
-	}
-
-	games := make([]Game, 0, len(raw))
-	for _, g := range raw {
-		game := Game{IGDBID: g.ID, Name: g.Name, Category: g.Category}
-		if g.FirstReleaseDate != nil {
-			y := time.Unix(*g.FirstReleaseDate, 0).UTC().Year()
-			game.ReleaseYear = &y
-		}
-		games = append(games, game)
-	}
-	return games, nil
-}
-
 // Search queries IGDB for games matching query. It blocks until the rate
 // limiter allows the call. Results are not cached here — the caller is
 // responsible for persisting them.
-//
-// IGDB's search endpoint silently drops the category field even when requested,
-// so Search makes a second FetchByIDs call to retrieve category separately.
 func (c *Client) Search(ctx context.Context, query string, offset int) ([]Game, error) {
 	if err := c.limiter.Wait(ctx); err != nil {
 		return nil, fmt.Errorf("igdb rate limit: %w", err)
