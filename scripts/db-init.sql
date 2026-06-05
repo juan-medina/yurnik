@@ -57,16 +57,22 @@ DROP TABLE IF EXISTS users;
 
 -- One row per player. provider + provider_id identify the user at login.
 -- handle, name, and avatar_url are refreshed from the provider on every login.
+-- custom_avatar_url is set by the user uploading their own avatar to R2;
+-- when set it takes priority over avatar_url via COALESCE in all queries.
+-- display_name is set by the user to override the Discord name;
+-- when set it takes priority over name via COALESCE in all queries.
 -- The internal id (UUID) is what the rest of the system uses — provider
 -- details are only joined at login time.
 CREATE TABLE users (
-    id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-    provider     text        NOT NULL,
-    provider_id  text        NOT NULL,
-    handle       text        NOT NULL,
-    name         text        NOT NULL,
-    avatar_url   text,
-    bio          text,
+    id                 uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    provider           text        NOT NULL,
+    provider_id        text        NOT NULL,
+    handle             text        NOT NULL,
+    name               text        NOT NULL,
+    avatar_url         text,
+    custom_avatar_url  text,
+    display_name       text,
+    bio                text,
     color        text        NOT NULL DEFAULT '#7c3aed',
     is_admin     boolean     NOT NULL DEFAULT false,
     created_at   timestamptz NOT NULL DEFAULT now(),

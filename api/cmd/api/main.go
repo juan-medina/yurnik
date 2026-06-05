@@ -22,6 +22,7 @@ import (
 	"github.com/juan-medina/yurnik/internal/journeys"
 	"github.com/juan-medina/yurnik/internal/middleware"
 	"github.com/juan-medina/yurnik/internal/profile"
+	"github.com/juan-medina/yurnik/internal/r2"
 	"github.com/juan-medina/yurnik/internal/settings"
 )
 
@@ -58,10 +59,18 @@ func main() {
 
 	igdbClient := games.NewClient(mustEnv("IGDB_CLIENT_ID"), mustEnv("IGDB_CLIENT_SECRET"))
 
+	r2Client := r2.NewClient(r2.Config{
+		AccountID:       mustEnv("R2_ACCOUNT_ID"),
+		AccessKeyID:     mustEnv("R2_ACCESS_KEY_ID"),
+		SecretAccessKey: mustEnv("R2_SECRET_ACCESS_KEY"),
+		Bucket:          mustEnv("R2_BUCKET"),
+		PublicURL:       mustEnv("R2_PUBLIC_URL"),
+	})
+
 	mux := http.NewServeMux()
 	auth.NewHandler(jwtPriv, pool, cfg).Register(mux)
 	agent.NewHandler(pool, jwtPriv).Register(mux)
-	profile.NewHandler(pool, jwtPriv).Register(mux)
+	profile.NewHandler(pool, jwtPriv, r2Client).Register(mux)
 	games.NewHandler(igdbClient, pool).Register(mux)
 	journeys.NewHandler(pool, jwtPriv).Register(mux)
 	echoes.NewHandler(pool, jwtPriv).Register(mux)

@@ -28,6 +28,8 @@ interface ProfileViewProps {
   header?: ReactNode;
   /** Follow/unfollow button rendered at the trailing edge of the profile card */
   profileActions?: ReactNode;
+  /** Avatar area: upload widget (Hero) or static image (PlayerProfile) */
+  avatarContent?: ReactNode;
   /** Bio area: editable widget (Hero) or plain text (PlayerProfile) */
   bioContent?: ReactNode;
 }
@@ -41,6 +43,7 @@ export default function ProfileView({
   sectionTitle,
   header,
   profileActions,
+  avatarContent,
   bioContent,
 }: ProfileViewProps) {
   const { t } = useTranslation();
@@ -57,25 +60,28 @@ export default function ProfileView({
       <div className="mb-4 rounded-lg border border-border bg-card p-5">
         <div className="flex items-start gap-5">
           {/* Avatar */}
-          <div className="h-16 w-16 shrink-0">
-            <img
-              src={avatarSrc(player)}
-              alt={player.name}
-              className="h-full w-full rounded-full object-cover"
-              onError={(e) => {
-                const target = e.currentTarget;
-                target.style.display = "none";
-                target.nextElementSibling?.removeAttribute("hidden");
-              }}
-            />
-            <div
-              hidden
-              className="flex h-full w-full items-center justify-center rounded-full text-xl font-bold text-white"
-              style={{ backgroundColor: player.color }}
-            >
-              {initials(player.name)}
+          {avatarContent ?? (
+            <div className="h-16 w-16 shrink-0">
+              <img
+                key={avatarSrc(player)}
+                src={avatarSrc(player)}
+                alt={player.name}
+                className="h-full w-full rounded-full object-cover"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  target.style.display = "none";
+                  target.nextElementSibling?.removeAttribute("hidden");
+                }}
+              />
+              <div
+                hidden
+                className="flex h-full w-full items-center justify-center rounded-full text-xl font-bold text-white"
+                style={{ backgroundColor: player.color }}
+              >
+                {initials(player.name)}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Name, handle, bio */}
           <div className="min-w-0 flex-1">

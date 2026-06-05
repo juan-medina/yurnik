@@ -7,6 +7,8 @@ export type Player = {
   handle: string;
   color: string;
   avatarUrl?: string;
+  hasCustomAvatar?: boolean;
+  hasCustomName?: boolean;
   bio?: string;
   isAdmin?: boolean;
   followers?: number;

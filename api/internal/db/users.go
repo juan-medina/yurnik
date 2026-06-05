@@ -12,14 +12,16 @@ import (
 
 // User is a row from the users table.
 type User struct {
-	ID        string
-	Provider  string
-	Handle    string
-	Name      string
-	AvatarURL *string
-	Bio       *string
-	Color     string
-	IsAdmin   bool
+	ID              string
+	Provider        string
+	Handle          string
+	Name            string
+	AvatarURL       *string
+	Bio             *string
+	Color           string
+	IsAdmin         bool
+	HasCustomAvatar bool
+	HasCustomName   bool
 }
 
 // UserIdentity holds the identity fields returned by the OAuth provider.
@@ -34,7 +36,7 @@ type UserIdentity struct {
 
 // UpsertUser inserts or updates the user row for the given provider identity
 // and returns the internal UUID. Handle and avatar_url are refreshed on every
-// login; bio and color are never touched here.
+// login; bio, color, and custom_avatar_url are never touched here.
 func UpsertUser(ctx context.Context, pool *pgxpool.Pool, identity UserIdentity) (string, error) {
 	var id string
 	err := pool.QueryRow(ctx, `
@@ -53,13 +55,23 @@ func UpsertUser(ctx context.Context, pool *pgxpool.Pool, identity UserIdentity) 
 	return id, nil
 }
 
+// UpdateAvatar sets the custom avatar URL for the given user ID.
+// Pass an empty string to clear the custom avatar and fall back to the Discord avatar.
+func UpdateAvatar(ctx context.Context, pool *pgxpool.Pool, userID, avatarURL string) error {
+	_, err := pool.Exec(ctx, `
+		UPDATE users SET custom_avatar_url = $1, updated_at = now() WHERE id = $2
+	`, nullableString(avatarURL), userID)
+	return err
+}
+
 // GetUser returns the user row for the given internal UUID.
 func GetUser(ctx context.Context, pool *pgxpool.Pool, id string) (User, error) {
 	var u User
 	err := pool.QueryRow(ctx, `
-		SELECT id, provider, handle, name, avatar_url, bio, color, is_admin
+		SELECT id, provider, handle, COALESCE(display_name, name), COALESCE(custom_avatar_url, avatar_url), bio, color, is_admin,
+		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL
 		FROM users WHERE id = $1
-	`, id).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.IsAdmin)
+	`, id).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.IsAdmin, &u.HasCustomAvatar, &u.HasCustomName)
 	if err == pgx.ErrNoRows {
 		return User{}, fmt.Errorf("user not found: %s", id)
 	}
@@ -69,7 +81,7 @@ func GetUser(ctx context.Context, pool *pgxpool.Pool, id string) (User, error) {
 // ListUsers returns all users ordered by name.
 func ListUsers(ctx context.Context, pool *pgxpool.Pool) ([]User, error) {
 	rows, err := pool.Query(ctx, `
-		SELECT id, provider, handle, name, avatar_url, bio, color, is_admin
+		SELECT id, provider, handle, COALESCE(display_name, name), COALESCE(custom_avatar_url, avatar_url), bio, color, is_admin, false, false
 		FROM users ORDER BY name
 	`)
 	if err != nil {
@@ -79,7 +91,7 @@ func ListUsers(ctx context.Context, pool *pgxpool.Pool) ([]User, error) {
 	var users []User
 	for rows.Next() {
 		var u User
-		if err := rows.Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.IsAdmin); err != nil {
+		if err := rows.Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.IsAdmin, &u.HasCustomAvatar, &u.HasCustomName); err != nil {
 			return nil, fmt.Errorf("scan user: %w", err)
 		}
 		users = append(users, u)
@@ -92,6 +104,15 @@ func UpdateBio(ctx context.Context, pool *pgxpool.Pool, id, bio string) error {
 	_, err := pool.Exec(ctx, `
 		UPDATE users SET bio = $1, updated_at = now() WHERE id = $2
 	`, bio, id)
+	return err
+}
+
+// UpdateDisplayName sets the custom display name for the given user ID.
+// Pass an empty string to clear it and fall back to the Discord name.
+func UpdateDisplayName(ctx context.Context, pool *pgxpool.Pool, id, displayName string) error {
+	_, err := pool.Exec(ctx, `
+		UPDATE users SET display_name = $1, updated_at = now() WHERE id = $2
+	`, nullableString(displayName), id)
 	return err
 }
 
@@ -116,7 +137,7 @@ func UnfollowUser(ctx context.Context, pool *pgxpool.Pool, followerID, followeeI
 // GetFollowers returns users who follow the given user ID, ordered by name.
 func GetFollowers(ctx context.Context, pool *pgxpool.Pool, userID string) ([]User, error) {
 	rows, err := pool.Query(ctx, `
-		SELECT u.id, u.provider, u.handle, u.name, u.avatar_url, u.bio, u.color, u.is_admin
+		SELECT u.id, u.provider, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.bio, u.color, u.is_admin, false, false
 		FROM users u
 		JOIN follows f ON f.follower_id = u.id
 		WHERE f.followee_id = $1
@@ -131,7 +152,7 @@ func GetFollowers(ctx context.Context, pool *pgxpool.Pool, userID string) ([]Use
 // GetFollowing returns users that the given user ID follows, ordered by name.
 func GetFollowing(ctx context.Context, pool *pgxpool.Pool, userID string) ([]User, error) {
 	rows, err := pool.Query(ctx, `
-		SELECT u.id, u.provider, u.handle, u.name, u.avatar_url, u.bio, u.color, u.is_admin
+		SELECT u.id, u.provider, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.bio, u.color, u.is_admin, false, false
 		FROM users u
 		JOIN follows f ON f.followee_id = u.id
 		WHERE f.follower_id = $1
@@ -188,7 +209,7 @@ func scanUsers(rows pgx.Rows) ([]User, error) {
 	var users []User
 	for rows.Next() {
 		var u User
-		if err := rows.Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.IsAdmin); err != nil {
+		if err := rows.Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.IsAdmin, &u.HasCustomAvatar, &u.HasCustomName); err != nil {
 			return nil, fmt.Errorf("scan user: %w", err)
 		}
 		users = append(users, u)

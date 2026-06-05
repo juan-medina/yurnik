@@ -13,21 +13,25 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/juan-medina/yurnik/internal/auth"
 	"github.com/juan-medina/yurnik/internal/db"
+	"github.com/juan-medina/yurnik/internal/r2"
 )
 
 type Handler struct {
 	pool    *pgxpool.Pool
 	jwtPriv ed25519.PrivateKey
+	r2      *r2.Client
 }
 
-func NewHandler(pool *pgxpool.Pool, jwtPriv ed25519.PrivateKey) *Handler {
-	return &Handler{pool: pool, jwtPriv: jwtPriv}
+func NewHandler(pool *pgxpool.Pool, jwtPriv ed25519.PrivateKey, r2Client *r2.Client) *Handler {
+	return &Handler{pool: pool, jwtPriv: jwtPriv, r2: r2Client}
 }
 
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/me", h.getMe)
 	mux.HandleFunc("GET /api/me/profile", h.getMeProfile)
 	mux.HandleFunc("PATCH /api/me", h.patchMe)
+	mux.HandleFunc("POST /api/me/avatar", h.uploadAvatar)
+	mux.HandleFunc("DELETE /api/me/avatar", h.deleteAvatar)
 	mux.HandleFunc("GET /api/feed", h.getFeed)
 	mux.HandleFunc("GET /api/players/{id}", h.getPlayer)
 	mux.HandleFunc("GET /api/players/{id}/profile", h.getPlayerProfile)
@@ -51,13 +55,15 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, 
 
 
 type meResponse struct {
-	ID        string  `json:"id"`
-	Handle    string  `json:"handle"`
-	Name      string  `json:"name"`
-	AvatarURL *string `json:"avatar_url"`
-	Bio       *string `json:"bio"`
-	Color     string  `json:"color"`
-	IsAdmin   bool    `json:"is_admin"`
+	ID              string  `json:"id"`
+	Handle          string  `json:"handle"`
+	Name            string  `json:"name"`
+	AvatarURL       *string `json:"avatar_url"`
+	Bio             *string `json:"bio"`
+	Color           string  `json:"color"`
+	IsAdmin         bool    `json:"is_admin"`
+	HasCustomAvatar bool    `json:"has_custom_avatar"`
+	HasCustomName   bool    `json:"has_custom_name"`
 }
 
 func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
@@ -76,13 +82,15 @@ func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(meResponse{
-		ID:        user.ID,
-		Handle:    user.Handle,
-		Name:      user.Name,
-		AvatarURL: user.AvatarURL,
-		Bio:       user.Bio,
-		Color:     user.Color,
-		IsAdmin:   user.IsAdmin,
+		ID:              user.ID,
+		Handle:          user.Handle,
+		Name:            user.Name,
+		AvatarURL:       user.AvatarURL,
+		Bio:             user.Bio,
+		Color:           user.Color,
+		IsAdmin:         user.IsAdmin,
+		HasCustomAvatar: user.HasCustomAvatar,
+		HasCustomName:   user.HasCustomName,
 	})
 }
 
@@ -394,7 +402,8 @@ func (h *Handler) patchMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
-		Bio *string `json:"bio"`
+		Bio         *string `json:"bio"`
+		DisplayName *string `json:"display_name"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
@@ -407,6 +416,69 @@ func (h *Handler) patchMe(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "update failed", http.StatusInternalServerError)
 			return
 		}
+	}
+
+	if body.DisplayName != nil {
+		if err := db.UpdateDisplayName(r.Context(), h.pool, userID, *body.DisplayName); err != nil {
+			log.Printf("profile/me: update display name %s: %v", userID, err)
+			http.Error(w, "update failed", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// deleteAvatar clears the custom avatar, reverting to the Discord avatar.
+func (h *Handler) deleteAvatar(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.authenticate(w, r)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if err := db.UpdateAvatar(r.Context(), h.pool, userID, ""); err != nil {
+		log.Printf("profile/avatar: delete %s: %v", userID, err)
+		http.Error(w, "delete failed", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// uploadAvatar receives the avatar file, validates it, writes it to R2, and
+// persists the public URL. Content-Length is checked before reading the body
+// so oversized uploads are rejected immediately without consuming bandwidth.
+func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) {
+	if r.ContentLength > r2.MaxAvatarBytes {
+		http.Error(w, "file too large: maximum 2 MB", http.StatusRequestEntityTooLarge)
+		return
+	}
+
+	contentType := r.Header.Get("Content-Type")
+	if !r2.AllowedContentTypes[contentType] {
+		http.Error(w, "unsupported content type: use image/jpeg, image/png, or image/webp", http.StatusBadRequest)
+		return
+	}
+
+	userID, ok := h.authenticate(w, r)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Guard against clients that lie about Content-Length or omit it.
+	body := http.MaxBytesReader(w, r.Body, r2.MaxAvatarBytes)
+
+	publicURL, err := h.r2.UploadAvatar(r.Context(), userID, contentType, body, r.ContentLength)
+	if err != nil {
+		log.Printf("profile/avatar: upload %s: %v", userID, err)
+		http.Error(w, "upload failed", http.StatusInternalServerError)
+		return
+	}
+
+	if err := db.UpdateAvatar(r.Context(), h.pool, userID, publicURL); err != nil {
+		log.Printf("profile/avatar: update db %s: %v", userID, err)
+		http.Error(w, "update failed", http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
 import { MonitorDown, Search, ShieldCheck } from "lucide-react";
+import AvatarEditor from "@/components/AvatarEditor";
 import { useNavigate } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -95,23 +96,11 @@ export default function Settings() {
         <div className="rounded-lg border border-border bg-card p-5">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <img
-                src={avatarSrc(player)}
-                alt={player.name}
-                className="h-10 w-10 shrink-0 rounded-full object-cover"
-                onError={(e) => {
-                  const target = e.currentTarget;
-                  target.style.display = "none";
-                  target.nextElementSibling?.removeAttribute("hidden");
-                }}
+              <AvatarEditor
+                player={player}
+                size="sm"
+                onChanged={() => queryClient.invalidateQueries({ queryKey: ["auth", "me"] })}
               />
-              <div
-                hidden
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                style={{ backgroundColor: player.color }}
-              >
-                {initials(player.name)}
-              </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="truncate font-semibold">{player.name}</span>

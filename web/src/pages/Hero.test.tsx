@@ -64,41 +64,27 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("Hero — bio", () => {
-  it("displays the bio from mock player", async () => {
+describe("Hero — profile", () => {
+  it("displays the bio from the player", async () => {
     renderHero();
     expect(await screen.findByText(MY_PLAYER.bio!)).toBeInTheDocument();
   });
 
-  it("clicking Edit bio shows a textarea with the current bio", async () => {
+  it("clicking the edit button opens the Edit profile modal", async () => {
     const user = userEvent.setup();
     renderHero();
-    await user.click(await screen.findByRole("button", { name: "Edit bio" }));
-    expect(screen.getByRole("textbox", { name: "Bio" })).toHaveValue(MY_PLAYER.bio!);
+    await user.click(await screen.findByRole("button", { name: /edit profile/i }));
+    expect(screen.getByRole("heading", { name: "Edit profile" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /display name/i })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /bio/i })).toBeInTheDocument();
   });
 
-  it("saving an edited bio updates the displayed text", async () => {
+  it("canceling the modal closes it without saving", async () => {
     const user = userEvent.setup();
     renderHero();
-    await user.click(await screen.findByRole("button", { name: "Edit bio" }));
-    const textarea = screen.getByRole("textbox", { name: "Bio" });
-    await user.clear(textarea);
-    await user.type(textarea, "New bio text");
-    await user.click(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("New bio text")).toBeInTheDocument();
-    expect(screen.queryByRole("textbox", { name: "Bio" })).not.toBeInTheDocument();
-  });
-
-  it("canceling bio edit restores the original bio", async () => {
-    const user = userEvent.setup();
-    renderHero();
-    await user.click(await screen.findByRole("button", { name: "Edit bio" }));
-    const textarea = screen.getByRole("textbox", { name: "Bio" });
-    await user.clear(textarea);
-    await user.type(textarea, "Changed text");
+    await user.click(await screen.findByRole("button", { name: /edit profile/i }));
     await user.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.getByText(MY_PLAYER.bio!)).toBeInTheDocument();
-    expect(screen.queryByRole("textbox", { name: "Bio" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Edit profile" })).not.toBeInTheDocument();
   });
 });
 

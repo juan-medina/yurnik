@@ -22,18 +22,23 @@ export async function getCurrentPlayer(): Promise<Player> {
     handle: data.handle,
     color: data.color ?? deriveColor(data.id),
     avatarUrl: data.avatar_url ?? undefined,
+    hasCustomAvatar: data.has_custom_avatar === true,
+    hasCustomName: data.has_custom_name === true,
     bio: data.bio ?? undefined,
     isAdmin: data.is_admin === true,
   };
 }
 
-export async function updateProfile(patch: { name?: string; bio?: string }): Promise<void> {
-  if (patch.bio === undefined) return;
+export async function updateProfile(patch: { bio?: string; displayName?: string }): Promise<void> {
+  const body: Record<string, string> = {};
+  if (patch.bio !== undefined) body.bio = patch.bio;
+  if (patch.displayName !== undefined) body.display_name = patch.displayName;
+  if (Object.keys(body).length === 0) return;
   const resp = await apiFetch(`${API_BASE}/api/me`, {
     method: "PATCH",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ bio: patch.bio }),
+    body: JSON.stringify(body),
   });
   if (!resp.ok) throw new Error(`update profile: ${resp.status}`);
 }

@@ -61,6 +61,7 @@ export default function TopBar({ onMenuClick = () => {} }: TopBarProps) {
           {player ? (
             <div className="relative h-8 w-8">
               <img
+                key={avatarSrc(player)}
                 src={avatarSrc(player)}
                 alt={player.name}
                 className="h-full w-full rounded-full object-cover"

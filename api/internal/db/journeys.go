@@ -262,7 +262,7 @@ func GetJourneyByID(ctx context.Context, pool *pgxpool.Pool, id, viewerID string
 	const base = `
 		SELECT j.id, j.user_id, j.igdb_id, g.name, g.cover_url, g.genres,
 		       j.duration_seconds, j.log, j.played_at,
-		       u.handle, u.name, u.avatar_url, u.color,
+		       u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.color,
 		       (SELECT COUNT(*) FROM likes l WHERE l.journey_id = j.id)`
 	const tail = `
 		FROM journeys j
@@ -312,7 +312,7 @@ func ListOthersOnJourney(ctx context.Context, pool *pgxpool.Pool, journeyID stri
 	rows, err := pool.Query(ctx, `
 		WITH src AS (SELECT igdb_id, user_id FROM journeys WHERE id = $1)
 		SELECT j.id, j.duration_seconds, j.played_at,
-		       u.id, u.handle, u.name, u.avatar_url, u.color
+		       u.id, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.color
 		FROM journeys j
 		JOIN users u ON u.id = j.user_id
 		JOIN src ON j.igdb_id = src.igdb_id AND j.user_id != src.user_id
@@ -363,7 +363,7 @@ func GetGameActivity(ctx context.Context, pool *pgxpool.Pool) ([]ActivityEntry, 
 			SELECT DISTINCT ON (j.user_id, j.igdb_id)
 				j.id, j.user_id, j.igdb_id, j.duration_seconds, j.log, j.played_at,
 				g.name AS game_name, g.cover_url, g.genres,
-				u.handle, u.name AS player_name, u.avatar_url, u.color
+				u.handle, COALESCE(u.display_name, u.name) AS player_name, COALESCE(u.custom_avatar_url, u.avatar_url) AS avatar_url, u.color
 			FROM journeys j
 			JOIN igdb_games g ON g.igdb_id = j.igdb_id
 			JOIN users u ON u.id = j.user_id
@@ -422,7 +422,7 @@ func GetFollowingFeed(ctx context.Context, pool *pgxpool.Pool, userID string, li
 	const cols = `
 		j.id, j.user_id, j.igdb_id, g.name, g.cover_url, g.genres,
 		j.duration_seconds, j.log, j.played_at,
-		u.handle, u.name, u.avatar_url, u.color,
+		u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.color,
 		(SELECT COUNT(*) FROM likes l WHERE l.journey_id = j.id),
 		EXISTS(SELECT 1 FROM likes l WHERE l.journey_id = j.id AND l.user_id = $1)`
 
@@ -490,7 +490,7 @@ type JourneyComment struct {
 func ListComments(ctx context.Context, pool *pgxpool.Pool, journeyID string) ([]JourneyComment, error) {
 	rows, err := pool.Query(ctx, `
 		SELECT c.id, c.journey_id, c.user_id, c.body, c.created_at,
-		       u.handle, u.name, u.avatar_url, u.color
+		       u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.color
 		FROM comments c
 		JOIN users u ON u.id = c.user_id
 		WHERE c.journey_id = $1
@@ -525,7 +525,7 @@ func InsertComment(ctx context.Context, pool *pgxpool.Pool, journeyID, userID, b
 			RETURNING id, journey_id, user_id, body, created_at
 		)
 		SELECT ins.id, ins.journey_id, ins.user_id, ins.body, ins.created_at,
-		       u.handle, u.name, u.avatar_url, u.color
+		       u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.color
 		FROM ins
 		JOIN users u ON u.id = ins.user_id
 	`, journeyID, userID, body).Scan(
