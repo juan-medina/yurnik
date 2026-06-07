@@ -4,7 +4,7 @@
 import type { Player } from "@/models/player";
 import type { Journey, PendingJourney } from "@/models/journey";
 import type { Echo } from "@/models/echo";
-import type { Game, GameActivity, Comment, JourneyPlayer } from "@/models/game";
+import type { Game, GameActivity, GameDetail, Comment, JourneyPlayer } from "@/models/game";
 
 export const PLAYERS: Player[] = [
   {
@@ -189,27 +189,27 @@ export const MOCK_COMMENTS: Comment[] = [
 ];
 
 export const MOCK_FRIENDS_ON_JOURNEY: JourneyPlayer[] = [
-  { player: PLAYERS[1], duration: "2h 44m", playedAt: daysAgo(2), isFollowing: true },
-  { player: PLAYERS[2], duration: "1h 30m", playedAt: daysAgo(5), isFollowing: true },
-  { player: PLAYERS[3], duration: "4h 10m", playedAt: daysAgo(7), isFollowing: true },
+  { player: PLAYERS[1], duration: "2h 44m", playedAt: daysAgo(2), isFollowing: true, isSelf: false },
+  { player: PLAYERS[2], duration: "1h 30m", playedAt: daysAgo(5), isFollowing: true, isSelf: false },
+  { player: PLAYERS[3], duration: "4h 10m", playedAt: daysAgo(7), isFollowing: true, isSelf: false },
 ];
 
 export const MOCK_OTHERS_ON_JOURNEY: JourneyPlayer[] = [
   {
     player: { id: "o1", name: "Jordan Park", handle: "jordanp.bsky.social", color: "#0284c7" },
-    duration: "3h 02m", playedAt: daysAgo(1), isFollowing: false,
+    duration: "3h 02m", playedAt: daysAgo(1), isFollowing: false, isSelf: false,
   },
   {
     player: { id: "o2", name: "Priya Nair", handle: "priyanair.bsky.social", color: "#7c3aed" },
-    duration: "55m", playedAt: daysAgo(3), isFollowing: false,
+    duration: "55m", playedAt: daysAgo(3), isFollowing: false, isSelf: false,
   },
   {
     player: { id: "o3", name: "Luca Rossi", handle: "lucarossi.bsky.social", color: "#059669" },
-    duration: "6h 18m", playedAt: daysAgo(4), isFollowing: false,
+    duration: "6h 18m", playedAt: daysAgo(4), isFollowing: false, isSelf: false,
   },
   {
     player: { id: "o4", name: "Fen Wu", handle: "fenwu.bsky.social", color: "#db2777" },
-    duration: "2h 11m", playedAt: daysAgo(7), isFollowing: false,
+    duration: "2h 11m", playedAt: daysAgo(7), isFollowing: false, isSelf: false,
   },
 ];
 
@@ -257,6 +257,27 @@ export const GAME_LIBRARY: Game[] = [
   { id: "g11", game: "Persona 5 Royal", coverUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1687950/library_600x900.jpg", genres: ["RPG", "JRPG", "Turn-based"] },
   { id: "g12", game: "Monster Hunter: World", coverUrl: "https://cdn.akamai.steamstatic.com/steam/apps/582010/library_600x900.jpg", genres: ["Action", "RPG", "Co-op"] },
 ];
+
+export const MOCK_GAME_DETAIL: GameDetail = {
+  id: "1",
+  name: "Elden Ring",
+  coverUrl: coverUrl("Elden Ring"),
+  genres: ["RPG", "Soulslike", "Open World"],
+  releaseYear: 2022,
+  platforms: ["PC", "PlayStation 5", "Xbox Series X"],
+  developer: "FromSoftware",
+  publisher: "Bandai Namco",
+  summary: "A vast world where open fields with a variety of situations and huge dungeons are seamlessly connected.",
+  screenshots: [
+    "https://images.igdb.com/igdb/image/upload/t_screenshot_big/sc1.jpg",
+    "https://images.igdb.com/igdb/image/upload/t_screenshot_big/sc2.jpg",
+  ],
+  trailerId: "E3y8jNIHZCA",
+  storeLinks: {
+    steam: "https://store.steampowered.com/app/1245620",
+    epic: "https://store.epicgames.com/p/elden-ring",
+  },
+};
 
 export const MOCK_PENDING_JOURNEYS: PendingJourney[] = [
   {

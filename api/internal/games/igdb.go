@@ -99,6 +99,173 @@ type igdbGame struct {
 	Category         *int   `json:"game_type"`
 }
 
+// GameDetails holds the on-demand fields fetched for a single game page.
+type GameDetails struct {
+	IGDBID           int
+	Summary          *string
+	Screenshots      []string
+	Platforms        []string
+	Developer        *string
+	Publisher        *string
+	TrailerID        *string
+	StoreLinks       map[string]string // key: "steam"|"epic"|"playstation"|"xbox"|"gog", value: URL
+	AggregatedRating *float64          // external critics, 0–100
+	Rating           *float64          // IGDB community, 0–100
+}
+
+// GetDetails fetches the full detail record for a single IGDB game ID.
+func (c *Client) GetDetails(ctx context.Context, igdbID int) (GameDetails, error) {
+	if err := c.limiter.Wait(ctx); err != nil {
+		return GameDetails{}, fmt.Errorf("igdb rate limit: %w", err)
+	}
+
+	tok, err := c.getToken(ctx)
+	if err != nil {
+		return GameDetails{}, err
+	}
+
+	gameBody := fmt.Sprintf(
+		`fields summary,screenshots.image_id,platforms.name,`+
+			`involved_companies.company.name,involved_companies.developer,involved_companies.publisher,`+
+			`videos.video_id,aggregated_rating,rating;`+
+			` where id = %d;`,
+		igdbID,
+	)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.igdb.com/v4/games", strings.NewReader(gameBody))
+	if err != nil {
+		return GameDetails{}, fmt.Errorf("build igdb details request: %w", err)
+	}
+	req.Header.Set("Client-ID", c.clientID)
+	req.Header.Set("Authorization", "Bearer "+tok)
+	req.Header.Set("Content-Type", "text/plain")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return GameDetails{}, fmt.Errorf("igdb details: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return GameDetails{}, fmt.Errorf("igdb details %d: %s", resp.StatusCode, b)
+	}
+
+	rawBody, _ := io.ReadAll(resp.Body)
+	var raw []struct {
+		ID      int     `json:"id"`
+		Summary *string `json:"summary"`
+		Screenshots []struct {
+			ImageID string `json:"image_id"`
+		} `json:"screenshots"`
+		Platforms []struct {
+			Name string `json:"name"`
+		} `json:"platforms"`
+		InvolvedCompanies []struct {
+			Company   struct{ Name string `json:"name"` } `json:"company"`
+			Developer bool `json:"developer"`
+			Publisher bool `json:"publisher"`
+		} `json:"involved_companies"`
+		Videos []struct {
+			VideoID string `json:"video_id"`
+		} `json:"videos"`
+		AggregatedRating *float64 `json:"aggregated_rating"`
+		Rating           *float64 `json:"rating"`
+	}
+	if err := json.Unmarshal(rawBody, &raw); err != nil {
+		return GameDetails{}, fmt.Errorf("decode igdb details: %w", err)
+	}
+	if len(raw) == 0 {
+		return GameDetails{}, fmt.Errorf("igdb details: game %d not found", igdbID)
+	}
+
+	g := raw[0]
+	d := GameDetails{IGDBID: igdbID, Summary: g.Summary}
+
+	for _, s := range g.Screenshots {
+		d.Screenshots = append(d.Screenshots,
+			"https://images.igdb.com/igdb/image/upload/t_screenshot_big/"+s.ImageID+".jpg")
+	}
+	for _, p := range g.Platforms {
+		d.Platforms = append(d.Platforms, p.Name)
+	}
+	for _, ic := range g.InvolvedCompanies {
+		name := ic.Company.Name
+		if ic.Developer && d.Developer == nil {
+			d.Developer = &name
+		}
+		if ic.Publisher && d.Publisher == nil {
+			d.Publisher = &name
+		}
+	}
+	if len(g.Videos) > 0 {
+		d.TrailerID = &g.Videos[0].VideoID
+	}
+	d.AggregatedRating = g.AggregatedRating
+	d.Rating = g.Rating
+
+	d.StoreLinks = c.fetchStoreLinks(ctx, tok, igdbID)
+
+	return d, nil
+}
+
+// fetchStoreLinks queries /v4/websites for all URLs associated with the game,
+// then classifies store links by URL pattern. IGDB does not reliably return the
+// category field on website objects, so pattern matching on the URL is the only
+// robust approach.
+func (c *Client) fetchStoreLinks(ctx context.Context, tok string, igdbID int) map[string]string {
+	if err := c.limiter.Wait(ctx); err != nil {
+		return nil
+	}
+
+	body := fmt.Sprintf(`fields url; where game = %d; limit 30;`, igdbID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.igdb.com/v4/websites", strings.NewReader(body))
+	if err != nil {
+		return nil
+	}
+	req.Header.Set("Client-ID", c.clientID)
+	req.Header.Set("Authorization", "Bearer "+tok)
+	req.Header.Set("Content-Type", "text/plain")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		if resp != nil {
+			resp.Body.Close()
+		}
+		return nil
+	}
+	defer resp.Body.Close()
+
+	var websites []struct {
+		URL string `json:"url"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&websites); err != nil {
+		return nil
+	}
+
+	links := map[string]string{}
+	for _, w := range websites {
+		u := strings.ToLower(w.URL)
+		switch {
+		case strings.Contains(u, "store.steampowered.com"):
+			links["steam"] = w.URL
+		case strings.Contains(u, "store.epicgames.com"):
+			links["epic"] = w.URL
+		case strings.Contains(u, "store.playstation.com"):
+			links["playstation"] = w.URL
+		case strings.Contains(u, "xbox.com") && (strings.Contains(u, "/games/") || strings.Contains(u, "/store/")):
+			links["xbox"] = w.URL
+		case strings.Contains(u, "gog.com") && strings.Contains(u, "/game"):
+			links["gog"] = w.URL
+		case strings.Contains(u, "nintendo.com") && strings.Contains(u, "/software/"):
+			links["nintendo"] = w.URL
+		}
+	}
+	if len(links) == 0 {
+		return nil
+	}
+	return links
+}
+
 // Search queries IGDB for games matching query. It blocks until the rate
 // limiter allows the call. Results are not cached here — the caller is
 // responsible for persisting them.

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import GenreChip from "@/components/GenreChip";
 import { CalendarDays, Check, ChevronLeft, Clock, Heart, Pencil, Trash2, UserPlus } from "lucide-react";
+import { Info } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { getJourney, getComments, getLikers, getJourneyPlayers, postComment, deleteJourney, deleteComment, updateJourney } from "@/services/journeys";
@@ -426,11 +427,14 @@ export default function JourneyDetail() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between">
                   <h1 className="mb-1.5 text-xl font-bold">
-                  {journey.game}
-                  {journey.releaseYear && (
-                    <span className="ml-2 text-sm font-normal text-muted-foreground">({journey.releaseYear})</span>
-                  )}
-                </h1>
+                    <Link to={`/game/${journey.igdbId}`} className="inline-flex items-center gap-1.5 hover:underline">
+                      {journey.game}
+                      <Info size={14} className="shrink-0 text-muted-foreground" />
+                    </Link>
+                    {journey.releaseYear && (
+                      <span className="ml-2 text-sm font-normal text-muted-foreground">({journey.releaseYear})</span>
+                    )}
+                  </h1>
                   {isOwner && (
                     <button
                       onClick={startEditing}

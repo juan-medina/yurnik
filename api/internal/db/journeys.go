@@ -341,6 +341,42 @@ func ListOthersOnJourney(ctx context.Context, pool *pgxpool.Pool, journeyID stri
 	return players, rows.Err()
 }
 
+// ListJourneysByIGDBID returns the most recent journey per player for the given game,
+// ordered by played_at desc. The caller uses GetFollowingIDs to split following/others/self.
+func ListJourneysByIGDBID(ctx context.Context, pool *pgxpool.Pool, igdbID int) ([]PlayerOnJourney, error) {
+	rows, err := pool.Query(ctx, `
+		SELECT * FROM (
+			SELECT DISTINCT ON (j.user_id)
+			       j.id, j.duration_seconds, j.played_at,
+			       u.id, u.handle, COALESCE(u.display_name, u.name),
+			       COALESCE(u.custom_avatar_url, u.avatar_url), u.color
+			FROM journeys j
+			JOIN users u ON u.id = j.user_id
+			WHERE j.igdb_id = $1
+			ORDER BY j.user_id, j.played_at DESC
+		) sub
+		ORDER BY played_at DESC
+		LIMIT 50
+	`, igdbID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var players []PlayerOnJourney
+	for rows.Next() {
+		var p PlayerOnJourney
+		if err := rows.Scan(
+			&p.JourneyID, &p.DurationSeconds, &p.PlayedAt,
+			&p.UserID, &p.Handle, &p.Name, &p.AvatarURL, &p.Color,
+		); err != nil {
+			return nil, err
+		}
+		players = append(players, p)
+	}
+	return players, rows.Err()
+}
+
 // ActivityEntry is a single journey row for the discovery feed, joined with game and player info.
 type ActivityEntry struct {
 	SessionID       string

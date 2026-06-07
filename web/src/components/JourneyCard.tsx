@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { Link, useNavigate } from "react-router";
-import { Clock, Heart } from "lucide-react";
+import { Clock, Heart, Info } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { toggleLike } from "@/services/journeys";
 import { getCurrentPlayer, MY_PLAYER_ID } from "@/services/auth";
@@ -33,12 +33,16 @@ export default function JourneyCard({ journey, queryKey, showPlayer = false }: J
       className="flex cursor-pointer gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent/5"
       onClick={() => navigate(`/journey/${journey.id}`)}
     >
-      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-slate-800">
+      <Link
+        to={`/game/${journey.igdbId}`}
+        onClick={(e) => e.stopPropagation()}
+        className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-slate-800 transition-opacity hover:opacity-80"
+      >
         {journey.coverUrl
           ? <img src={journey.coverUrl} alt={journey.game} className="absolute inset-0 h-full w-full object-cover" />
           : <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-slate-300">{journey.game[0]}</span>
         }
-      </div>
+      </Link>
 
       <div className="min-w-0 flex-1">
         {showPlayer && (
@@ -63,7 +67,14 @@ export default function JourneyCard({ journey, queryKey, showPlayer = false }: J
         )}
 
         <div className="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <span className="font-bold">{journey.game}</span>
+          <Link
+            to={`/game/${journey.igdbId}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 font-bold hover:underline"
+          >
+            {journey.game}
+            <Info size={13} className="shrink-0 text-muted-foreground" />
+          </Link>
           {journey.releaseYear && (
             <span className="text-xs text-muted-foreground">({journey.releaseYear})</span>
           )}

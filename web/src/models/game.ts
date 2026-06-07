@@ -12,6 +12,23 @@ export type Game = {
   category?: number;
 };
 
+export type GameDetail = {
+  id: string;
+  name: string;
+  coverUrl?: string;
+  genres: string[];
+  releaseYear?: number;
+  platforms: string[];
+  developer?: string;
+  publisher?: string;
+  summary?: string;
+  screenshots: string[];
+  trailerId?: string;
+  storeLinks: Record<string, string>;
+  aggregatedRating?: number;
+  rating?: number;
+};
+
 export type JourneyEntry = {
   sessionId: string;
   player: Player;
@@ -41,4 +58,5 @@ export type JourneyPlayer = {
   duration: string;
   playedAt: Date;
   isFollowing: boolean;
+  isSelf: boolean;
 };

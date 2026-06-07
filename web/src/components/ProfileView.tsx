@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { useState, type ReactNode } from "react";
+import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import GenreChip from "@/components/GenreChip";
 import { avatarSrc, initials } from "@/lib/display";
@@ -136,25 +137,25 @@ export default function ProfileView({
           </h2>
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
             {recentGames.map((g) => (
-              <div key={g.igdbId}>
+              <Link key={g.igdbId} to={`/game/${g.igdbId}`} className="group block">
                 {g.coverUrl ? (
                   <img
                     src={g.coverUrl}
                     alt={g.name}
-                    className="mb-2 aspect-[3/4] w-full rounded-md object-cover"
+                    className="mb-2 aspect-[3/4] w-full rounded-md object-cover transition-opacity group-hover:opacity-80"
                   />
                 ) : (
-                  <div className="mb-2 flex aspect-[3/4] w-full items-center justify-center rounded-md bg-muted">
+                  <div className="mb-2 flex aspect-[3/4] w-full items-center justify-center rounded-md bg-muted transition-opacity group-hover:opacity-80">
                     <span className="px-1 text-center text-xs text-muted-foreground">{g.name}</span>
                   </div>
                 )}
-                <p className="truncate text-xs font-medium" title={g.name}>
+                <p className="truncate text-xs font-medium group-hover:underline" title={g.name}>
                   {g.name}
                 </p>
                 {g.releaseYear && (
                   <p className="text-xs text-muted-foreground">{g.releaseYear}</p>
                 )}
-              </div>
+              </Link>
             ))}
           </div>
         </div>

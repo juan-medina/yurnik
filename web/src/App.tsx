@@ -9,6 +9,7 @@ import Players from "@/pages/Players";
 import Hero from "@/pages/Hero";
 import Echoes from "@/pages/Echoes";
 import JourneyDetail from "@/pages/JourneyDetail";
+import GameDetail from "@/pages/GameDetail";
 import PlayerProfile from "@/pages/PlayerProfile";
 import Settings from "@/pages/Settings";
 import AgentAuth from "@/pages/AgentAuth";
@@ -28,6 +29,7 @@ const router = createBrowserRouter([
       { path: "players", element: <Players /> },
       { path: "hero", element: <Hero /> },
       { path: "journey/:id", element: <JourneyDetail /> },
+      { path: "game/:igdbId", element: <GameDetail /> },
       { path: "player/:id", element: <PlayerProfile /> },
       { path: "echoes", element: <Echoes /> },
       { path: "settings", element: <Settings /> },

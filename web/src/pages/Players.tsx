@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { Clock, Search } from "lucide-react";
+import { Clock, Info, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { getGameActivity } from "@/services/games";
@@ -14,14 +14,17 @@ import GenreChip from "@/components/GenreChip";
 import { formatJourneyDate } from "@/lib/time";
 import type { GameActivity, JourneyEntry } from "@/models";
 
-function GameCover({ game, coverUrl }: { game: string; coverUrl?: string }) {
+function GameCover({ id, game, coverUrl }: { id: string; game: string; coverUrl?: string }) {
   return (
-    <div className="relative h-14 w-12 shrink-0 overflow-hidden rounded-md bg-slate-800">
+    <Link
+      to={`/game/${id}`}
+      className="relative h-14 w-12 shrink-0 overflow-hidden rounded-md bg-slate-800 transition-opacity hover:opacity-80"
+    >
       {coverUrl
         ? <img src={coverUrl} alt={game} className="absolute inset-0 h-full w-full object-cover" />
         : <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-slate-300">{game[0]}</span>
       }
-    </div>
+    </Link>
   );
 }
 
@@ -64,10 +67,16 @@ function GameCard({ activity }: { activity: GameActivity }) {
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card">
       <div className="flex items-center gap-3 p-4">
-        <GameCover game={activity.game} coverUrl={activity.coverUrl} />
+        <GameCover id={activity.id} game={activity.game} coverUrl={activity.coverUrl} />
         <div className="min-w-0 flex-1">
           <p className="font-semibold">
-            {activity.game}
+            <Link
+              to={`/game/${activity.id}`}
+              className="inline-flex items-center gap-1 hover:underline"
+            >
+              {activity.game}
+              <Info size={13} className="shrink-0 text-muted-foreground" />
+            </Link>
             {activity.releaseYear && (
               <span className="ml-1.5 text-xs font-normal text-muted-foreground">({activity.releaseYear})</span>
             )}

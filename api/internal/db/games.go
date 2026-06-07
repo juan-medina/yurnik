@@ -4,11 +4,15 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+const gameDetailTTL = 7 * 24 * time.Hour
 
 type CachedGame struct {
 	IGDBID      int
@@ -40,6 +44,73 @@ func GetGame(ctx context.Context, pool *pgxpool.Pool, igdbID int) (CachedGame, e
 		g.CoverURL = *coverURL
 	}
 	return g, nil
+}
+
+// CachedGameDetail holds the on-demand detail fields fetched from IGDB.
+type CachedGameDetail struct {
+	IGDBID           int
+	Summary          *string
+	Screenshots      []string
+	Platforms        []string
+	Developer        *string
+	Publisher        *string
+	TrailerID        *string
+	StoreLinks       map[string]string // key: "steam"|"epic"|"playstation"|"xbox"|"gog"|"nintendo"
+	AggregatedRating *float64          // external critics, 0–100; nil when not available
+	Rating           *float64          // IGDB community, 0–100; nil when not available
+	CachedAt         time.Time
+}
+
+// GetGameDetail returns the cached detail row for the given IGDB ID.
+// The second return value is false when the row is missing or stale (older than
+// gameDetailTTL) — the caller should re-fetch from IGDB and call UpsertGameDetail.
+func GetGameDetail(ctx context.Context, pool *pgxpool.Pool, igdbID int) (CachedGameDetail, bool, error) {
+	var d CachedGameDetail
+	var storeLinksJSON []byte
+	err := pool.QueryRow(ctx, `
+		SELECT igdb_id, summary, screenshots, platforms, developer, publisher, trailer_id, store_links,
+		       aggregated_rating, rating, cached_at
+		FROM igdb_game_details
+		WHERE igdb_id = $1
+	`, igdbID).Scan(
+		&d.IGDBID, &d.Summary, &d.Screenshots, &d.Platforms,
+		&d.Developer, &d.Publisher, &d.TrailerID, &storeLinksJSON,
+		&d.AggregatedRating, &d.Rating, &d.CachedAt,
+	)
+	if err == pgx.ErrNoRows {
+		return CachedGameDetail{}, false, nil
+	}
+	if err != nil {
+		return CachedGameDetail{}, false, err
+	}
+	if len(storeLinksJSON) > 0 {
+		_ = json.Unmarshal(storeLinksJSON, &d.StoreLinks)
+	}
+	return d, time.Since(d.CachedAt) < gameDetailTTL, nil
+}
+
+// UpsertGameDetail inserts or refreshes the detail cache row for a game.
+func UpsertGameDetail(ctx context.Context, pool *pgxpool.Pool, d CachedGameDetail) error {
+	storeLinksJSON, err := json.Marshal(d.StoreLinks)
+	if err != nil {
+		return fmt.Errorf("marshal store_links: %w", err)
+	}
+	_, err = pool.Exec(ctx, `
+		INSERT INTO igdb_game_details (igdb_id, summary, screenshots, platforms, developer, publisher, trailer_id, store_links, aggregated_rating, rating, cached_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
+		ON CONFLICT (igdb_id) DO UPDATE
+		  SET summary           = EXCLUDED.summary,
+		      screenshots       = EXCLUDED.screenshots,
+		      platforms         = EXCLUDED.platforms,
+		      developer         = EXCLUDED.developer,
+		      publisher         = EXCLUDED.publisher,
+		      trailer_id        = EXCLUDED.trailer_id,
+		      store_links       = EXCLUDED.store_links,
+		      aggregated_rating = EXCLUDED.aggregated_rating,
+		      rating            = EXCLUDED.rating,
+		      cached_at         = now()
+	`, d.IGDBID, d.Summary, d.Screenshots, d.Platforms, d.Developer, d.Publisher, d.TrailerID, storeLinksJSON, d.AggregatedRating, d.Rating)
+	return err
 }
 
 func UpsertGame(ctx context.Context, pool *pgxpool.Pool, g CachedGame) error {

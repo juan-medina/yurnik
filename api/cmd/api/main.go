@@ -71,7 +71,7 @@ func main() {
 	auth.NewHandler(jwtPriv, pool, cfg).Register(mux)
 	agent.NewHandler(pool, jwtPriv).Register(mux)
 	profile.NewHandler(pool, jwtPriv, r2Client).Register(mux)
-	games.NewHandler(igdbClient, pool).Register(mux)
+	games.NewHandler(igdbClient, pool, jwtPriv).Register(mux)
 	journeys.NewHandler(pool, jwtPriv).Register(mux)
 	echoes.NewHandler(pool, jwtPriv).Register(mux)
 	settings.NewHandler(pool, jwtPriv).Register(mux)

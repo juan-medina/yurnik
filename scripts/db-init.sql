@@ -52,6 +52,7 @@ DROP TABLE IF EXISTS journeys;
 DROP TABLE IF EXISTS pending_journeys;
 DROP TABLE IF EXISTS exe_game_hints;
 DROP TABLE IF EXISTS exe_exclusions;
+DROP TABLE IF EXISTS igdb_game_details;
 DROP TABLE IF EXISTS igdb_games;
 DROP TABLE IF EXISTS users;
 
@@ -90,6 +91,23 @@ CREATE TABLE igdb_games (
     release_year integer,
     category     integer,
     cached_at    timestamptz NOT NULL DEFAULT now()
+);
+
+-- On-demand IGDB detail cache. Only populated when a user opens a game page.
+-- Keyed by igdb_id. TTL is enforced in Go (7 days) — stale rows are overwritten,
+-- never deleted, so the page degrades gracefully if IGDB is unavailable.
+CREATE TABLE igdb_game_details (
+    igdb_id            integer     PRIMARY KEY REFERENCES igdb_games(igdb_id) ON DELETE CASCADE,
+    summary            text,
+    screenshots        text[]      NOT NULL DEFAULT '{}',
+    platforms          text[]      NOT NULL DEFAULT '{}',
+    developer          text,
+    publisher          text,
+    trailer_id         text,
+    store_links        jsonb       NOT NULL DEFAULT '{}',
+    aggregated_rating  numeric(5,2),
+    rating             numeric(5,2),
+    cached_at          timestamptz NOT NULL DEFAULT now()
 );
 
 -- Executables the agent must never create a pending journey for, per user.

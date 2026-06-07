@@ -47,6 +47,9 @@ importers:
       react-router:
         specifier: latest
         version: 7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      simple-icons:
+        specifier: ^16.23.0
+        version: 16.23.0
       tailwind-merge:
         specifier: latest
         version: 3.6.0
@@ -1532,6 +1535,10 @@ packages:
   siginfo@2.0.0:
     resolution: {integrity: sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==}
 
+  simple-icons@16.23.0:
+    resolution: {integrity: sha512-08MaTpxj9zGYUIe38tfELYkaHiGE1YgbrbXmTBf+GPxi5mEqLSORQqOXrP0QKPdaFuzEDSmW5o4xkbLlFhmdCw==}
+    engines: {node: '>=0.12.18'}
+
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
@@ -2992,6 +2999,8 @@ snapshots:
       '@img/sharp-win32-x64': 0.34.5
 
   siginfo@2.0.0: {}
+
+  simple-icons@16.23.0: {}
 
   source-map-js@1.2.1: {}
 
