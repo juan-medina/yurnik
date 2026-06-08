@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import { getJourney, getComments, getLikers, getJourneyPlayers, postComment, deleteJourney, deleteComment, updateJourney } from "@/services/journeys";
 import { toggleLike } from "@/services/journeys";
 import { followPlayer, unfollowPlayer, getIsFollowing } from "@/services/players";
-import { getCurrentPlayer, MY_PLAYER_ID } from "@/services/auth";
+import { getCurrentPlayer } from "@/services/auth";
 import { avatarSrc, playerHref } from "@/lib/display";
 import FollowListModal from "@/components/FollowListModal";
 import { GameSelector } from "@/components/GameSelector";
@@ -45,7 +45,7 @@ function JourneyPlayerRow({ entry, currentPlayerId }: { entry: JourneyPlayer; cu
 
   return (
     <div className="flex items-center gap-3 py-2">
-      <Link to={playerHref(entry.player, MY_PLAYER_ID)} className="flex items-center gap-3 min-w-0 flex-1">
+      <Link to={playerHref(entry.player)} className="flex items-center gap-3 min-w-0 flex-1">
         <PlayerAvatar player={entry.player} size="md" />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-1.5">
@@ -100,7 +100,7 @@ function CommentRow({ comment, journeyId, currentPlayerId }: { comment: Comment;
   return (
     <div className="py-3">
       <div className="mb-1 flex items-center gap-2">
-        <Link to={playerHref(comment.player, MY_PLAYER_ID)} className="flex items-center gap-2">
+        <Link to={playerHref(comment.player)} className="flex items-center gap-2">
           <PlayerAvatar player={comment.player} size="sm" />
           <span className="text-sm font-semibold">{comment.player.name}</span>
         </Link>
@@ -260,7 +260,7 @@ export default function JourneyDetail() {
             <ChevronLeft size={20} />
           </button>
           <Link
-            to={playerHref(journey.player, MY_PLAYER_ID)}
+            to={playerHref(journey.player)}
             className="flex min-w-0 items-center gap-2"
           >
             <PlayerAvatar player={journey.player} size="sm" />

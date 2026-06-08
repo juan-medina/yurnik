@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -33,12 +35,38 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/me/avatar", h.uploadAvatar)
 	mux.HandleFunc("DELETE /api/me/avatar", h.deleteAvatar)
 	mux.HandleFunc("GET /api/feed", h.getFeed)
-	mux.HandleFunc("GET /api/players/{id}", h.getPlayer)
-	mux.HandleFunc("GET /api/players/{id}/profile", h.getPlayerProfile)
-	mux.HandleFunc("GET /api/players/{id}/followers", h.getFollowers)
-	mux.HandleFunc("GET /api/players/{id}/following", h.getFollowing)
-	mux.HandleFunc("POST /api/players/{id}/follow", h.followPlayer)
-	mux.HandleFunc("DELETE /api/players/{id}/follow", h.unfollowPlayer)
+	mux.HandleFunc("GET /api/players/{handle}", h.getPlayer)
+	mux.HandleFunc("GET /api/players/{handle}/profile", h.getPlayerProfile)
+	mux.HandleFunc("GET /api/players/{handle}/followers", h.getFollowers)
+	mux.HandleFunc("GET /api/players/{handle}/following", h.getFollowing)
+	mux.HandleFunc("POST /api/players/{handle}/follow", h.followPlayer)
+	mux.HandleFunc("DELETE /api/players/{handle}/follow", h.unfollowPlayer)
+}
+
+// uuidRe matches the UUID-shaped path segments that legacy /player/{id} links
+// use. Such requests are redirected to the canonical handle-based URL.
+var uuidRe = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
+// resolvePlayer resolves the {handle} path segment to a user. UUID-shaped
+// segments (legacy links) are 302-redirected to the canonical handle URL.
+// Returns ok=false if a redirect or error response has already been written.
+func (h *Handler) resolvePlayer(w http.ResponseWriter, r *http.Request) (db.User, bool) {
+	value := r.PathValue("handle")
+	if uuidRe.MatchString(value) {
+		user, err := db.GetUser(r.Context(), h.pool, value)
+		if err != nil {
+			http.Error(w, `{"error":"not_found"}`, http.StatusNotFound)
+			return db.User{}, false
+		}
+		http.Redirect(w, r, strings.Replace(r.URL.Path, value, user.Handle, 1), http.StatusFound)
+		return db.User{}, false
+	}
+	user, err := db.GetUserByHandle(r.Context(), h.pool, value)
+	if err != nil {
+		http.Error(w, `{"error":"not_found"}`, http.StatusNotFound)
+		return db.User{}, false
+	}
+	return user, true
 }
 
 func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
@@ -95,12 +123,11 @@ func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getPlayer(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	user, err := db.GetUser(r.Context(), h.pool, id)
-	if err != nil {
-		http.Error(w, `{"error":"not_found"}`, http.StatusNotFound)
+	user, ok := h.resolvePlayer(w, r)
+	if !ok {
 		return
 	}
+	id := user.ID
 
 	followers, following, err := db.GetFollowCounts(r.Context(), h.pool, id)
 	if err != nil {
@@ -144,7 +171,11 @@ func (h *Handler) followPlayer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	targetID := r.PathValue("id")
+	target, ok := h.resolvePlayer(w, r)
+	if !ok {
+		return
+	}
+	targetID := target.ID
 	if callerID == targetID {
 		http.Error(w, "cannot follow yourself", http.StatusBadRequest)
 		return
@@ -169,7 +200,11 @@ func (h *Handler) unfollowPlayer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	targetID := r.PathValue("id")
+	target, ok := h.resolvePlayer(w, r)
+	if !ok {
+		return
+	}
+	targetID := target.ID
 	if err := db.UnfollowUser(r.Context(), h.pool, callerID, targetID); err != nil {
 		log.Printf("profile/unfollow: %s -> %s: %v", callerID, targetID, err)
 		http.Error(w, "unfollow failed", http.StatusInternalServerError)
@@ -179,7 +214,11 @@ func (h *Handler) unfollowPlayer(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getFollowers(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+	user, ok := h.resolvePlayer(w, r)
+	if !ok {
+		return
+	}
+	id := user.ID
 	users, err := db.GetFollowers(r.Context(), h.pool, id)
 	if err != nil {
 		log.Printf("profile/followers: %s: %v", id, err)
@@ -191,7 +230,11 @@ func (h *Handler) getFollowers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getFollowing(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+	user, ok := h.resolvePlayer(w, r)
+	if !ok {
+		return
+	}
+	id := user.ID
 	users, err := db.GetFollowing(r.Context(), h.pool, id)
 	if err != nil {
 		log.Printf("profile/following: %s: %v", id, err)
@@ -366,24 +409,28 @@ func (h *Handler) getMeProfile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	h.writeProfileSummary(w, r, userID, false)
-}
-
-func (h *Handler) getPlayerProfile(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	isFollowing := false
-	if callerID, ok := h.authenticate(w, r); ok {
-		isFollowing, _ = db.IsFollowing(r.Context(), h.pool, callerID, id)
-	}
-	h.writeProfileSummary(w, r, id, isFollowing)
-}
-
-func (h *Handler) writeProfileSummary(w http.ResponseWriter, r *http.Request, userID string, isFollowing bool) {
 	user, err := db.GetUser(r.Context(), h.pool, userID)
 	if err != nil {
 		http.Error(w, `{"error":"not_found"}`, http.StatusNotFound)
 		return
 	}
+	h.writeProfileSummary(w, r, user, false)
+}
+
+func (h *Handler) getPlayerProfile(w http.ResponseWriter, r *http.Request) {
+	user, ok := h.resolvePlayer(w, r)
+	if !ok {
+		return
+	}
+	isFollowing := false
+	if callerID, ok := h.authenticate(w, r); ok {
+		isFollowing, _ = db.IsFollowing(r.Context(), h.pool, callerID, user.ID)
+	}
+	h.writeProfileSummary(w, r, user, isFollowing)
+}
+
+func (h *Handler) writeProfileSummary(w http.ResponseWriter, r *http.Request, user db.User, isFollowing bool) {
+	userID := user.ID
 	followers, following, err := db.GetFollowCounts(r.Context(), h.pool, userID)
 	if err != nil {
 		log.Printf("profile/summary: follow counts %s: %v", userID, err)

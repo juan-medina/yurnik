@@ -4,7 +4,10 @@ package db
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -37,22 +40,80 @@ type UserIdentity struct {
 // UpsertUser inserts or updates the user row for the given provider identity
 // and returns the internal UUID. Handle and avatar_url are refreshed on every
 // login; bio, color, and custom_avatar_url are never touched here.
+//
+// Discord handles are unique on Discord but can be reassigned over time, so
+// two Yurnik users can legitimately collide on a handle (one renamed away from
+// it, the other later claimed it on Discord). When the incoming handle would
+// collide with a different existing user, that other user is bumped to
+// "{handle}_{random}" inside the same transaction, freeing the slug for the
+// user logging in now. The bumped user reclaims a clean handle the next time
+// they log in and no longer collide. If the bump itself collides (astronomically
+// unlikely — would require two users to swap into the same handle and the same
+// random suffix at once), the transaction is rolled back and the login fails;
+// the user simply retries and gets a fresh random suffix.
 func UpsertUser(ctx context.Context, pool *pgxpool.Pool, identity UserIdentity) (string, error) {
 	var id string
-	err := pool.QueryRow(ctx, `
-		INSERT INTO users (provider, provider_id, handle, name, avatar_url)
-		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (provider, provider_id) DO UPDATE
-		  SET handle     = EXCLUDED.handle,
-		      name       = EXCLUDED.name,
-		      avatar_url = EXCLUDED.avatar_url,
-		      updated_at = now()
-		RETURNING id
-	`, identity.Provider, identity.ProviderID, identity.Handle, identity.Name, nullableString(identity.AvatarURL)).Scan(&id)
+	err := pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
+		var existingHandle *string
+		err := tx.QueryRow(ctx, `SELECT handle FROM users WHERE provider = $1 AND provider_id = $2`,
+			identity.Provider, identity.ProviderID).Scan(&existingHandle)
+		if err != nil && err != pgx.ErrNoRows {
+			return fmt.Errorf("look up existing user: %w", err)
+		}
+
+		handleChanged := existingHandle == nil || !strings.EqualFold(*existingHandle, identity.Handle)
+		if handleChanged {
+			if err := bumpHandleHolder(ctx, tx, identity.Handle); err != nil {
+				return err
+			}
+		}
+
+		err = tx.QueryRow(ctx, `
+			INSERT INTO users (provider, provider_id, handle, name, avatar_url)
+			VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (provider, provider_id) DO UPDATE
+			  SET handle     = EXCLUDED.handle,
+			      name       = EXCLUDED.name,
+			      avatar_url = EXCLUDED.avatar_url,
+			      updated_at = now()
+			RETURNING id
+		`, identity.Provider, identity.ProviderID, identity.Handle, identity.Name, nullableString(identity.AvatarURL)).Scan(&id)
+		if err != nil {
+			return fmt.Errorf("upsert user: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
 		return "", fmt.Errorf("upsert user: %w", err)
 	}
 	return id, nil
+}
+
+// bumpHandleHolder renames whichever user currently holds handle (case-insensitive,
+// excluding the row matching it exactly) to "{handle}_{random}", freeing the slug.
+// No-op if nobody holds it.
+func bumpHandleHolder(ctx context.Context, tx pgx.Tx, handle string) error {
+	suffix, err := randomHex(4)
+	if err != nil {
+		return fmt.Errorf("generate handle suffix: %w", err)
+	}
+	_, err = tx.Exec(ctx, `
+		UPDATE users SET handle = handle || '_' || $2, updated_at = now()
+		WHERE lower(handle) = lower($1)
+	`, handle, suffix)
+	if err != nil {
+		return fmt.Errorf("bump handle holder: %w", err)
+	}
+	return nil
+}
+
+// randomHex returns a random hex string of n bytes (2n hex characters).
+func randomHex(n int) (string, error) {
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }
 
 // UpdateAvatar sets the custom avatar URL for the given user ID.
@@ -74,6 +135,21 @@ func GetUser(ctx context.Context, pool *pgxpool.Pool, id string) (User, error) {
 	`, id).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.IsAdmin, &u.HasCustomAvatar, &u.HasCustomName)
 	if err == pgx.ErrNoRows {
 		return User{}, fmt.Errorf("user not found: %s", id)
+	}
+	return u, err
+}
+
+// GetUserByHandle returns the user row for the given handle, matched
+// case-insensitively (Discord handles are case-insensitive).
+func GetUserByHandle(ctx context.Context, pool *pgxpool.Pool, handle string) (User, error) {
+	var u User
+	err := pool.QueryRow(ctx, `
+		SELECT id, provider, handle, COALESCE(display_name, name), COALESCE(custom_avatar_url, avatar_url), bio, color, is_admin,
+		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL
+		FROM users WHERE lower(handle) = lower($1)
+	`, handle).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.IsAdmin, &u.HasCustomAvatar, &u.HasCustomName)
+	if err == pgx.ErrNoRows {
+		return User{}, fmt.Errorf("user not found: %s", handle)
 	}
 	return u, err
 }

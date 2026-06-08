@@ -6,7 +6,6 @@ import AuthComplete from "@/pages/AuthComplete";
 import Realm from "@/pages/Realm";
 import Journeys from "@/pages/Journeys";
 import Players from "@/pages/Players";
-import Hero from "@/pages/Hero";
 import Echoes from "@/pages/Echoes";
 import JourneyDetail from "@/pages/JourneyDetail";
 import GameDetail from "@/pages/GameDetail";
@@ -27,10 +26,9 @@ const router = createBrowserRouter([
       { index: true, element: <Realm /> },
       { path: "journeys", element: <Journeys /> },
       { path: "players", element: <Players /> },
-      { path: "hero", element: <Hero /> },
       { path: "journey/:id", element: <JourneyDetail /> },
       { path: "game/:igdbId", element: <GameDetail /> },
-      { path: "player/:id", element: <PlayerProfile /> },
+      { path: "player/:handle", element: <PlayerProfile /> },
       { path: "echoes", element: <Echoes /> },
       { path: "settings", element: <Settings /> },
       { path: "*", element: <NotFound /> },

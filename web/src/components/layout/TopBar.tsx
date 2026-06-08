@@ -52,7 +52,7 @@ export default function TopBar({ onMenuClick = () => {} }: TopBarProps) {
           {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
         </button>
         <NavLink
-          to="/hero"
+          to={player ? `/player/${player.handle}` : "#"}
           aria-label={t("nav_hero")}
           className={({ isActive }) =>
             `block rounded-full transition-opacity ${isActive ? "opacity-100" : "opacity-70 hover:opacity-100"}`

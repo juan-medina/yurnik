@@ -3,7 +3,9 @@
 import { NavLink } from "react-router";
 import { Bell, Globe2, ScrollText, Settings, Shield, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { getCurrentPlayer } from "@/services/auth";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -13,19 +15,20 @@ type NavItem = {
   end?: boolean;
 };
 
-const NAV_ITEMS: NavItem[] = [
-  { to: "/", labelKey: "nav_realm", icon: Globe2, end: true },
-  { to: "/journeys", labelKey: "nav_journeys", icon: ScrollText },
-  { to: "/players", labelKey: "nav_players", icon: Users },
-  { to: "/echoes", labelKey: "nav_echoes", icon: Bell },
-  { to: "/hero", labelKey: "nav_hero", icon: Shield },
-  { to: "/settings", labelKey: "nav_settings", icon: Settings },
-];
-
 type SidebarProps = { isOpen?: boolean; onClose?: () => void };
 
 export default function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
   const { t } = useTranslation();
+  const { data: currentPlayer } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
+
+  const navItems: NavItem[] = [
+    { to: "/", labelKey: "nav_realm", icon: Globe2, end: true },
+    { to: "/journeys", labelKey: "nav_journeys", icon: ScrollText },
+    { to: "/players", labelKey: "nav_players", icon: Users },
+    { to: "/echoes", labelKey: "nav_echoes", icon: Bell },
+    { to: currentPlayer ? `/player/${currentPlayer.handle}` : "#", labelKey: "nav_hero", icon: Shield },
+    { to: "/settings", labelKey: "nav_settings", icon: Settings },
+  ];
 
   return (
     <>
@@ -54,9 +57,9 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }: SidebarP
           yurnik
         </NavLink>
         <nav className="flex flex-1 flex-col gap-1 p-2">
-          {NAV_ITEMS.map(({ to, labelKey, icon: Icon, end }) => (
+          {navItems.map(({ to, labelKey, icon: Icon, end }) => (
             <NavLink
-              key={to}
+              key={labelKey}
               to={to}
               end={end}
               onClick={onClose}

@@ -3,17 +3,16 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { MOCK_FRIENDS_ON_JOURNEY, MY_PLAYER_ID, PLAYERS, JOURNEYS } from "@/test/fixtures";
+import { MOCK_FRIENDS_ON_JOURNEY, MY_PLAYER, MY_PLAYER_ID, PLAYERS, JOURNEYS } from "@/test/fixtures";
 import { _reset as resetPlayers } from "@/services/players";
 import { renderWithProviders } from "@/test/utils";
 import PlayerProfile from "./PlayerProfile";
 
-function renderProfile(id: string) {
+function renderProfile(handle: string) {
   return renderWithProviders(
-    <MemoryRouter initialEntries={[`/player/${id}`]}>
+    <MemoryRouter initialEntries={[`/player/${handle}`]}>
       <Routes>
-        <Route path="/player/:id" element={<PlayerProfile />} />
-        <Route path="/hero" element={<div>Hero</div>} />
+        <Route path="/player/:handle" element={<PlayerProfile />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -32,13 +31,13 @@ beforeEach(() => {
 
 describe("PlayerProfile", () => {
   it("shows Player not found for an unknown handle", async () => {
-    renderProfile("nonexistent-id");
+    renderProfile("nonexistent-handle");
     expect(await screen.findByText("Player not found.")).toBeInTheDocument();
   });
 
   it("shows the player's sessions on their profile", async () => {
     const player = PLAYERS[1]; // Alex Torres — has s2 and s6
-    renderProfile(player.id);
+    renderProfile(player.handle);
     const journeys = JOURNEYS.filter((j) => j.player.id === player.id);
     for (const j of journeys) {
       expect(await screen.findAllByText(j.game)).not.toHaveLength(0);
@@ -46,47 +45,46 @@ describe("PlayerProfile", () => {
   });
 
   it("shows Unfollow for an already-followed player", async () => {
-    renderProfile(followed.id);
+    renderProfile(followed.handle);
     expect(await screen.findByRole("button", { name: "Unfollow" })).toBeInTheDocument();
   });
 
   it("shows Follow for a player not yet followed", async () => {
-    renderProfile(unfollowed.id);
+    renderProfile(unfollowed.handle);
     expect(await screen.findByRole("button", { name: "Follow" })).toBeInTheDocument();
   });
 
   it("Follow toggles to Unfollow after clicking", async () => {
     const user = userEvent.setup();
-    renderProfile(unfollowed.id);
+    renderProfile(unfollowed.handle);
     await user.click(await screen.findByRole("button", { name: "Follow" }));
     expect(await screen.findByRole("button", { name: "Unfollow" })).toBeInTheDocument();
   });
 
   it("Unfollow toggles to Follow after clicking", async () => {
     const user = userEvent.setup();
-    renderProfile(followed.id);
+    renderProfile(followed.handle);
     await user.click(await screen.findByRole("button", { name: "Unfollow" }));
     expect(await screen.findByRole("button", { name: "Follow" })).toBeInTheDocument();
   });
 
-  it("does not show a follow button on your own profile", async () => {
-    renderProfile("p1");
-    // Own profile redirects to /hero — no follow button is ever rendered
-    expect(await screen.findByText("Hero")).toBeInTheDocument();
+  it("shows edit controls instead of a follow button on your own profile", async () => {
+    renderProfile(MY_PLAYER.handle);
+    expect(await screen.findByRole("button", { name: "Edit profile" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Follow" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Unfollow" })).not.toBeInTheDocument();
   });
 
   it("clicking Followers stat opens the follow list modal", async () => {
     const user = userEvent.setup();
-    renderProfile(PLAYERS[1].id);
+    renderProfile(PLAYERS[1].handle);
     await user.click(await screen.findByRole("button", { name: /Followers/ }));
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
   });
 
   it("clicking Following stat opens the follow list modal", async () => {
     const user = userEvent.setup();
-    renderProfile(PLAYERS[1].id);
+    renderProfile(PLAYERS[1].handle);
     await user.click(await screen.findByRole("button", { name: /Following/ }));
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
   });

@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router";
 import { Clock, Heart, Info } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { toggleLike } from "@/services/journeys";
-import { getCurrentPlayer, MY_PLAYER_ID } from "@/services/auth";
+import { getCurrentPlayer } from "@/services/auth";
 import { avatarSrc, playerHref } from "@/lib/display";
 import { formatJourneyDate } from "@/lib/time";
 import type { Journey } from "@/models";
@@ -48,7 +48,7 @@ export default function JourneyCard({ journey, queryKey, showPlayer = false }: J
         {showPlayer && (
           <div className="mb-1.5 flex items-center gap-2">
             <Link
-              to={playerHref(journey.player, MY_PLAYER_ID)}
+              to={playerHref(journey.player)}
               onClick={(e) => e.stopPropagation()}
               className="flex items-center gap-2"
             >

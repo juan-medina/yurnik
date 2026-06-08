@@ -10,7 +10,6 @@ import { getGameDetail, getGameJourneys } from "@/services/games";
 import { followPlayer, unfollowPlayer } from "@/services/players";
 import { avatarSrc, playerHref } from "@/lib/display";
 import { formatJourneyDate } from "@/lib/time";
-import { MY_PLAYER_ID } from "@/services/auth";
 import GenreChip from "@/components/GenreChip";
 import type { JourneyPlayer } from "@/models/game";
 
@@ -149,7 +148,7 @@ function JourneyPlayerRow({ entry }: { entry: JourneyPlayer }) {
       onClick={() => navigate(`/journey/${entry.journeyId}`)}
     >
       <Link
-        to={playerHref(entry.player, MY_PLAYER_ID)}
+        to={playerHref(entry.player)}
         onClick={(e) => e.stopPropagation()}
         className="flex shrink-0 items-center gap-2"
       >
@@ -162,7 +161,7 @@ function JourneyPlayerRow({ entry }: { entry: JourneyPlayer }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-1.5">
           <Link
-            to={playerHref(entry.player, MY_PLAYER_ID)}
+            to={playerHref(entry.player)}
             onClick={(e) => e.stopPropagation()}
             className="text-sm font-semibold hover:underline"
           >

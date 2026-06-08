@@ -4,7 +4,6 @@ import { X } from "lucide-react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { avatarSrc, initials, playerHref } from "@/lib/display";
-import { MY_PLAYER_ID } from "@/services/auth";
 import type { Player } from "@/models";
 
 type Props = {
@@ -44,7 +43,7 @@ export default function FollowListModal({ title, players, onClose }: Props) {
             players.map((player) => (
               <li key={player.id}>
                 <Link
-                  to={playerHref(player, MY_PLAYER_ID)}
+                  to={playerHref(player)}
                   onClick={onClose}
                   className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/50"
                 >

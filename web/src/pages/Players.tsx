@@ -7,7 +7,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { getGameActivity } from "@/services/games";
 import { avatarSrc, playerHref } from "@/lib/display";
-import { MY_PLAYER_ID } from "@/services/auth";
 import { cn } from "@/lib/utils";
 import { genreColor } from "@/lib/genres";
 import GenreChip from "@/components/GenreChip";
@@ -36,7 +35,7 @@ function JourneyRow({ entry }: { entry: JourneyEntry }) {
       onClick={() => navigate(`/journey/${entry.sessionId}`)}
     >
       <Link
-        to={playerHref(entry.player, MY_PLAYER_ID)}
+        to={playerHref(entry.player)}
         onClick={(e) => e.stopPropagation()}
         className="flex items-center gap-3 min-w-0"
       >

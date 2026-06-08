@@ -176,41 +176,51 @@ function makeDefaultFetch() {
       );
     }
 
-    // /api/players/:id/follow (POST or DELETE) — must match before /:id
+    // Players are addressed by handle in URLs (mirrors the real API, which
+    // resolves the {handle} path segment to the internal user before querying).
+    function resolvePlayer(value: string): Player | undefined {
+      if (value === "me") return MY_PLAYER;
+      return ALL_PLAYERS.find((p) => p.id === value || p.handle === value);
+    }
+
+    // /api/players/:handle/follow (POST or DELETE) — must match before /:handle
     const followMatch = url.match(/\/api\/players\/([^/]+)\/follow$/);
     if (followMatch) {
-      const pid = followMatch[1];
-      if (method === "POST") followState[pid] = true;
-      if (method === "DELETE") followState[pid] = false;
+      const target = resolvePlayer(followMatch[1]);
+      if (target) {
+        if (method === "POST") followState[target.id] = true;
+        if (method === "DELETE") followState[target.id] = false;
+      }
       return new Response(null, { status: 200 });
     }
 
-    // GET /api/players/:id/followers
+    // GET /api/players/:handle/followers
     const followersMatch = url.match(/\/api\/players\/([^/]+)\/followers$/);
     if (followersMatch && method === "GET") {
-      const pid = followersMatch[1];
-      const players = MOCK_FOLLOW_LISTS[pid]?.followers ?? [];
+      const target = resolvePlayer(followersMatch[1]);
+      const players = (target && MOCK_FOLLOW_LISTS[target.id]?.followers) ?? [];
       return new Response(
         JSON.stringify({ players: players.map(toRawPlayer) }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }
 
-    // GET /api/players/:id/following
+    // GET /api/players/:handle/following
     const followingMatch = url.match(/\/api\/players\/([^/]+)\/following$/);
     if (followingMatch && method === "GET") {
-      const pid = followingMatch[1];
-      const players = MOCK_FOLLOW_LISTS[pid]?.following ?? [];
+      const target = resolvePlayer(followingMatch[1]);
+      const players = (target && MOCK_FOLLOW_LISTS[target.id]?.following) ?? [];
       return new Response(
         JSON.stringify({ players: players.map(toRawPlayer) }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }
 
-    // GET /api/players/:id/journeys — "me" resolves to MY_PLAYER.id
+    // GET /api/players/:handle/journeys
     const journeysMatch = url.match(/\/api\/players\/([^/]+)\/journeys$/);
     if (journeysMatch && method === "GET") {
-      const pid = journeysMatch[1] === "me" ? MY_PLAYER.id : journeysMatch[1];
+      const target = resolvePlayer(journeysMatch[1]);
+      const pid = target?.id;
       const journeys = JOURNEYS.filter((j) => j.player.id === pid);
       return new Response(
         JSON.stringify({
@@ -229,12 +239,12 @@ function makeDefaultFetch() {
       );
     }
 
-    // GET /api/players/:id/profile
+    // GET /api/players/:handle/profile
     const playerProfileMatch = url.match(/\/api\/players\/([^/]+)\/profile$/);
     if (playerProfileMatch && method === "GET") {
-      const pid = playerProfileMatch[1];
-      const player = ALL_PLAYERS.find((p) => p.id === pid);
+      const player = resolvePlayer(playerProfileMatch[1]);
       if (!player) return new Response("not found", { status: 404 });
+      const pid = player.id;
       const pJourneys = JOURNEYS.filter((j) => j.player.id === pid);
       const genreMap = new Map<string, number>();
       for (const j of pJourneys) {
@@ -258,11 +268,10 @@ function makeDefaultFetch() {
       );
     }
 
-    // GET /api/players/:id
+    // GET /api/players/:handle
     const playerMatch = url.match(/\/api\/players\/([^/]+)$/);
     if (playerMatch && method === "GET") {
-      const pid = playerMatch[1];
-      const player = ALL_PLAYERS.find((p) => p.id === pid);
+      const player = resolvePlayer(playerMatch[1]);
       if (!player) return new Response("not found", { status: 404 });
       return new Response(
         JSON.stringify({
