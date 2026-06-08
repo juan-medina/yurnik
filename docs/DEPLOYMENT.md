@@ -80,9 +80,37 @@ Secrets are never committed to the repository. `.env.example` lists all required
 
 ## Database migrations
 
-Development uses `scripts/db-init.sql` — drops and recreates all tables on every run. Dev data is always throwaway.
+Two separate steps, both exposed as `make` targets:
 
-Production uses numbered migration files (goose or golang-migrate) before first deploy. The migration tool runs as part of the deploy process before the binary starts.
+- **`make db-init`** — drops and recreates the `yurnik` database and the `yurnik_admin` / `yurnik_api` roles (`scripts/db-init.sql`). Schema-free — just the database, roles, and grants. Used in dev to reset to a clean slate, and once on a fresh production box before the first deploy.
+- **`make db-migrate`** — applies versioned migrations (`api/internal/migrations`, embedded in the `api/cmd/migrate` binary, run via `golang-migrate`) to bring whatever schema state exists up to the latest. Connects as `yurnik_admin` via `DATABASE_ADMIN_URL` since applying DDL requires admin rights. Idempotent — re-running it when the schema is already current is a no-op.
+
+Dev flow: `make db-init` then `make db-migrate`.
+
+Migrations are plain numbered SQL files (`000N_description.up.sql` / `.down.sql`). Once a migration has shipped it is never edited — changes are new numbered files. `golang-migrate` runs each migration in a transaction and records the applied version in `schema_migrations`; a failed migration rolls back cleanly and leaves the schema at the last good version.
+
+### Deploy sequencing
+
+Migrations run **after the service is stopped** and **before the new binary is swapped in**:
+
+```
+1. Build the new binary to a temp path
+2. systemctl stop yurnik
+3. Run migrations (make db-migrate / cmd/migrate up)
+4. Swap the binary into place
+5. systemctl start yurnik
+```
+
+This guarantees a binary never runs against a schema it wasn't built for — no old-binary-vs-new-schema or new-binary-vs-old-schema window. The tradeoff is a short downtime during deploy, acceptable for a side project at this scale, and it removes the need for migrations to stay backward-compatible with the previous release.
+
+If the migration step fails, the script restarts the **old** binary — the schema is left at the last successfully-applied version (transactional, see above), so the old binary keeps working and the deploy fails loudly instead of leaving the service down.
+
+### Writing a migration
+
+1. Add `000N_description.up.sql` and `.down.sql` to `api/internal/migrations`.
+2. Run `make db-migrate` locally against the dev database to confirm it applies (and that the down migration reverses it cleanly).
+3. Update Go code/queries and tests to match the new shape.
+4. Push — CI applies the migration against a fresh database as part of the integration test job, then the deploy pipeline applies it to production.
 
 ## Process management
 

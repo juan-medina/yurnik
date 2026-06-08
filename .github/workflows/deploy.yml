@@ -44,12 +44,18 @@ jobs:
         with:
           go-version-file: api/go.mod
 
-      - name: Init database schema
+      - name: Init database roles
         env:
           PGPASSWORD: postgres
         run: |
           psql -h localhost -U postgres -f scripts/db-init.sql
           psql -h localhost -U postgres -c "ALTER ROLE yurnik_admin WITH PASSWORD 'ci'; ALTER ROLE yurnik_api WITH PASSWORD 'ci';"
+
+      - name: Apply migrations
+        working-directory: api
+        env:
+          DATABASE_ADMIN_URL: postgres://yurnik_admin:ci@localhost:5432/yurnik
+        run: go run ./cmd/migrate up
 
       - name: Integration tests
         working-directory: api

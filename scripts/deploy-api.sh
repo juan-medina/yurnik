@@ -3,7 +3,11 @@
 # SPDX-License-Identifier: MIT
 #
 # Safe deploy: builds to a temp path first.
-# The running service is only stopped and replaced if the build succeeds.
+# The running service is only stopped if the build succeeds, and migrations
+# run while the service is stopped so no binary ever runs against a schema
+# it wasn't built for. If migrations fail, the old binary is restarted
+# against the (unchanged) old schema -- migrate only commits a version once
+# its migration's transaction succeeds.
 
 set -euo pipefail
 
@@ -21,6 +25,14 @@ YURNIK_ENV=production go build -o "$TEMP_BINARY" ./cmd/api
 ok "Build succeeded"
 
 systemctl stop yurnik
+
+if ! YURNIK_ENV=production "$REPO_ROOT/scripts/db-migrate.sh"; then
+    err "Migration failed -- restarting previous version"
+    systemctl start yurnik
+    exit 1
+fi
+ok "Migrations applied"
+
 mv "$TEMP_BINARY" /usr/local/bin/yurnik-api
 chmod +x /usr/local/bin/yurnik-api
 systemctl start yurnik
