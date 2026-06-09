@@ -13,6 +13,7 @@ import { avatarSrc, playerHref } from "@/lib/display";
 import { formatJourneyDate } from "@/lib/time";
 import GenreChip from "@/components/GenreChip";
 import SignInPromptModal from "@/components/SignInPromptModal";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import type { JourneyPlayer } from "@/models/game";
 
 // Renders an SVG from a simple-icons path string at a given size.
@@ -286,6 +287,8 @@ export default function GameDetail() {
     queryFn: () => getGameDetail(igdbId!),
     enabled: !!igdbId,
   });
+
+  usePageTitle(game?.name);
 
   const { data: journeyPlayers } = useQuery({
     queryKey: ["game", igdbId, "journeys"],

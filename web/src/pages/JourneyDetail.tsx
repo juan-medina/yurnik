@@ -16,6 +16,7 @@ import FollowListModal from "@/components/FollowListModal";
 import SignInPromptModal from "@/components/SignInPromptModal";
 import { GameSelector } from "@/components/GameSelector";
 import { parseDuration } from "@/lib/duration";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -188,6 +189,8 @@ export default function JourneyDetail() {
     queryFn: () => getJourneyPlayers(id!),
     enabled: !!id,
   });
+
+  usePageTitle(journey ? `${journey.player.name}'s journey in ${journey.game}` : undefined);
 
   const isOwner = !!currentPlayer && journey?.player.id === currentPlayer.id;
 

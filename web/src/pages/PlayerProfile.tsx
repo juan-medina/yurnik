@@ -18,6 +18,7 @@ import ProfileView from "@/components/ProfileView";
 import AvatarEditor from "@/components/AvatarEditor";
 import EditProfileModal from "@/components/EditProfileModal";
 import SignInPromptModal from "@/components/SignInPromptModal";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function PlayerProfile() {
   const { t } = useTranslation();
@@ -76,6 +77,8 @@ export default function PlayerProfile() {
       queryClient.invalidateQueries({ queryKey: ["player-profile", handle] });
     },
   });
+
+  usePageTitle(profile?.player.name);
 
   if (profileLoading) return null;
 
