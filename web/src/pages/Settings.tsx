@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { MonitorDown, Search, ShieldCheck } from "lucide-react";
 import AvatarEditor from "@/components/AvatarEditor";
-import { useNavigate } from "react-router";
+import { useNavigate, Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { getCurrentPlayer, signOut } from "@/services/auth";
+import { getCurrentPlayer, signIn, signOut } from "@/services/auth";
 import { listAdminUsers, impersonateUser } from "@/services/admin";
 import { getExclusions, removeExclusion, getGameHints, removeGameHint, updateGameHint } from "@/services/settings";
 import { searchGames } from "@/services/games";
@@ -25,7 +25,11 @@ export default function Settings() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data: player } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
+  const { data: player, isLoading: playerLoading } = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: getCurrentPlayer,
+    retry: false,
+  });
   const { data: adminUsers } = useQuery({
     queryKey: ["admin", "users"],
     queryFn: listAdminUsers,
@@ -82,7 +86,33 @@ export default function Settings() {
     onSuccess: () => { window.location.href = "/"; },
   });
 
-  if (!player) return null;
+  if (playerLoading) return null;
+
+  if (!player) {
+    return (
+      <div className="mx-auto flex max-w-md flex-col items-center gap-6 px-4 py-24 text-center">
+        <img src="/logo.png" alt="Yurnik" className="h-14 w-14 object-contain" />
+        <div>
+          <h1 className="text-xl font-bold text-foreground">{t("settings_title")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t("settings_signin_hint")}</p>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button
+            onClick={() => signIn()}
+            className="rounded-md bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            {t("lore_cta_primary")}
+          </button>
+          <Link
+            to="/players"
+            className="rounded-md border border-border px-6 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted"
+          >
+            {t("home_explore_cta")}
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">

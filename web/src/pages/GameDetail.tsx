@@ -8,9 +8,11 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { getGameDetail, getGameJourneys } from "@/services/games";
 import { followPlayer, unfollowPlayer } from "@/services/players";
+import { getCurrentPlayer } from "@/services/auth";
 import { avatarSrc, playerHref } from "@/lib/display";
 import { formatJourneyDate } from "@/lib/time";
 import GenreChip from "@/components/GenreChip";
+import SignInPromptModal from "@/components/SignInPromptModal";
 import type { JourneyPlayer } from "@/models/game";
 
 // Renders an SVG from a simple-icons path string at a given size.
@@ -137,6 +139,8 @@ function JourneyPlayerRow({ entry }: { entry: JourneyPlayer }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [following, setFollowing] = useState(entry.isFollowing);
+  const [showSignIn, setShowSignIn] = useState(false);
+  const { data: currentPlayer } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer, retry: false });
   const followMutation = useMutation({
     mutationFn: (follow: boolean) => follow ? followPlayer(entry.player.handle) : unfollowPlayer(entry.player.handle),
     onSuccess: (_data, follow) => setFollowing(follow),
@@ -177,7 +181,7 @@ function JourneyPlayerRow({ entry }: { entry: JourneyPlayer }) {
         <span className="shrink-0 text-xs text-muted-foreground">{t("journey_you")}</span>
       ) : (
         <button
-          onClick={(e) => { e.stopPropagation(); followMutation.mutate(!following); }}
+          onClick={(e) => { e.stopPropagation(); if (!currentPlayer) { setShowSignIn(true); return; } followMutation.mutate(!following); }}
           className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
             following
               ? "border-border bg-muted text-muted-foreground"
@@ -191,6 +195,7 @@ function JourneyPlayerRow({ entry }: { entry: JourneyPlayer }) {
           )}
         </button>
       )}
+      {showSignIn && <SignInPromptModal onClose={() => setShowSignIn(false)} />}
     </div>
   );
 }

@@ -46,6 +46,13 @@
   "lore_auth_cta": "Ir al Reino",
   "lore_footer_open": "Yurnik es código abierto.",
   "lore_footer_signin": "Iniciar sesión",
+  "home_explore_cta": "Explorar el sitio",
+  "settings_signin_hint": "Inicia sesión para gestionar tu perfil, preferencias y ajustes del agente.",
+  "hero_anon_title": "Tu página de héroe",
+  "hero_anon_hint": "Cuando inicies sesión, aquí vivirá tu aventura gaming — tu perfil, tus estadísticas, tu historia.",
+  "home_learn_more": "Saber más sobre Yurnik",
+  "signin_prompt_title": "Inicia sesión para continuar",
+  "signin_prompt_sub": "Únete a Yurnik con tu cuenta de Discord para empezar.",
 
   "agent_connected": "Agente conectado",
   "agent_close_tab": "Puedes cerrar esta pestaña.",

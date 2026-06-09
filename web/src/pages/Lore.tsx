@@ -87,6 +87,12 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
               >
                 {t("lore_cta_primary")}
               </button>
+              <Link
+                to="/players"
+                className="rounded-md border border-border px-6 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted"
+              >
+                {t("home_explore_cta")}
+              </Link>
               <a
                 href="#how-it-works"
                 className="flex items-center justify-center gap-2 rounded-md border border-border px-6 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted"

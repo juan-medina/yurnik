@@ -13,6 +13,7 @@ import { followPlayer, unfollowPlayer, getIsFollowing } from "@/services/players
 import { getCurrentPlayer } from "@/services/auth";
 import { avatarSrc, playerHref } from "@/lib/display";
 import FollowListModal from "@/components/FollowListModal";
+import SignInPromptModal from "@/components/SignInPromptModal";
 import { GameSelector } from "@/components/GameSelector";
 import { parseDuration } from "@/lib/duration";
 import { Calendar } from "@/components/ui/calendar";
@@ -38,6 +39,7 @@ function JourneyPlayerRow({ entry, currentPlayerId }: { entry: JourneyPlayer; cu
   const { t } = useTranslation();
   const isMe = entry.player.id === currentPlayerId;
   const [following, setFollowing] = useState(entry.isFollowing);
+  const [showSignIn, setShowSignIn] = useState(false);
   const followMutation = useMutation({
     mutationFn: (follow: boolean) => follow ? followPlayer(entry.player.handle) : unfollowPlayer(entry.player.handle),
     onSuccess: (_data, follow) => setFollowing(follow),
@@ -64,7 +66,7 @@ function JourneyPlayerRow({ entry, currentPlayerId }: { entry: JourneyPlayer; cu
         <span className="shrink-0 text-xs text-muted-foreground">{t("journey_you")}</span>
       ) : (
         <button
-          onClick={() => followMutation.mutate(!following)}
+          onClick={() => { if (!currentPlayerId) { setShowSignIn(true); return; } followMutation.mutate(!following); }}
           className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
             following
               ? "border-border bg-muted text-muted-foreground"
@@ -84,6 +86,7 @@ function JourneyPlayerRow({ entry, currentPlayerId }: { entry: JourneyPlayer; cu
           )}
         </button>
       )}
+      {showSignIn && <SignInPromptModal onClose={() => setShowSignIn(false)} />}
     </div>
   );
 }
@@ -147,6 +150,7 @@ export default function JourneyDetail() {
   const queryClient = useQueryClient();
   const [commentText, setCommentText] = useState("");
   const [showLikers, setShowLikers] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
   const [confirmDeleteJourney, setConfirmDeleteJourney] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editGame, setEditGame] = useState<Game | null>(null);
@@ -272,7 +276,7 @@ export default function JourneyDetail() {
         <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
           {!isOwner && (
             <button
-              onClick={() => followOwnerMutation.mutate(!ownerIsFollowed)}
+              onClick={() => { if (!currentPlayer) { setShowSignIn(true); return; } followOwnerMutation.mutate(!ownerIsFollowed); }}
               aria-label={ownerIsFollowed ? t("journey_unfollow") : t("journey_follow")}
               className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                 ownerIsFollowed
@@ -476,7 +480,7 @@ export default function JourneyDetail() {
             </div>
           ) : (
             <button
-              onClick={() => likeMutation.mutate({ id: journey.id, liked: journey.liked })}
+              onClick={() => { if (!currentPlayer) { setShowSignIn(true); return; } likeMutation.mutate({ id: journey.id, liked: journey.liked }); }}
               className="flex items-center gap-2 transition-colors"
               aria-label={journey.liked ? t("journey_unlike") : t("journey_like")}
             >
@@ -535,7 +539,7 @@ export default function JourneyDetail() {
             />
             <button
               disabled={!commentText.trim()}
-              onClick={() => postCommentMutation.mutate(commentText)}
+              onClick={() => { if (!currentPlayer) { setShowSignIn(true); return; } postCommentMutation.mutate(commentText); }}
               className="self-end rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-40"
             >
               {t("journey_post")}
@@ -592,6 +596,8 @@ export default function JourneyDetail() {
           onClose={() => setShowLikers(false)}
         />
       )}
+
+      {showSignIn && <SignInPromptModal onClose={() => setShowSignIn(false)} />}
 
     </div>
   );

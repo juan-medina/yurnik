@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
+import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Clock, Heart, Info } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
@@ -9,6 +10,7 @@ import { avatarSrc, playerHref } from "@/lib/display";
 import { formatJourneyDate } from "@/lib/time";
 import type { Journey } from "@/models";
 import GenreChip from "@/components/GenreChip";
+import SignInPromptModal from "@/components/SignInPromptModal";
 
 interface JourneyCardProps {
   journey: Journey;
@@ -19,6 +21,7 @@ interface JourneyCardProps {
 export default function JourneyCard({ journey, queryKey, showPlayer = false }: JourneyCardProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [showSignIn, setShowSignIn] = useState(false);
 
   const { data: currentPlayer } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
   const isOwn = currentPlayer?.id === journey.player.id;
@@ -28,7 +31,14 @@ export default function JourneyCard({ journey, queryKey, showPlayer = false }: J
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 
+  function handleLike(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!currentPlayer) { setShowSignIn(true); return; }
+    likeMutation.mutate({ id: journey.id, liked: journey.liked });
+  }
+
   return (
+    <>
     <article
       className="flex cursor-pointer gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent/5"
       onClick={() => navigate(`/journey/${journey.id}`)}
@@ -108,7 +118,7 @@ export default function JourneyCard({ journey, queryKey, showPlayer = false }: J
           </div>
         ) : (
           <button
-            onClick={(e) => { e.stopPropagation(); likeMutation.mutate({ id: journey.id, liked: journey.liked }); }}
+            onClick={handleLike}
             className="flex items-center gap-1.5 transition-colors"
             aria-label={journey.liked ? "Unlike" : "Like"}
           >
@@ -125,5 +135,7 @@ export default function JourneyCard({ journey, queryKey, showPlayer = false }: J
         )}
       </div>
     </article>
+    {showSignIn && <SignInPromptModal onClose={() => setShowSignIn(false)} />}
+  </>
   );
 }

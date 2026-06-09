@@ -5,6 +5,8 @@ import { CalendarDays, Check, Clock, MonitorDown, Plus, Trash2, X } from "lucide
 import GenreChip from "@/components/GenreChip";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { getCurrentPlayer } from "@/services/auth";
+import SignInPromptModal from "@/components/SignInPromptModal";
 import { getUserJourneys, getPendingJourneys, addJourney, confirmPendingJourney, dismissPendingJourney, excludePendingJourney } from "@/services/journeys";
 import { formatCommentAge } from "@/lib/time";
 import { parseDuration, formatParsedDuration } from "@/lib/duration";
@@ -401,6 +403,13 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
 export default function Journeys() {
   const { t } = useTranslation();
   const [adding, setAdding] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
+
+  const { data: currentPlayer } = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: getCurrentPlayer,
+    retry: false,
+  });
 
   const { data: pending = [] } = useQuery({
     queryKey: ["pending-journeys"],
@@ -416,7 +425,7 @@ export default function Journeys() {
         <h1 className="text-2xl font-bold">{t("journeys_title")}</h1>
         {!adding && (
           <button
-            onClick={() => setAdding(true)}
+            onClick={() => currentPlayer ? setAdding(true) : setShowSignIn(true)}
             className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
           >
             <Plus size={14} />
@@ -461,6 +470,7 @@ export default function Journeys() {
       </section>
 
       <div className="h-8" />
+      {showSignIn && <SignInPromptModal onClose={() => setShowSignIn(false)} />}
     </div>
   );
 }

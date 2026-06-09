@@ -15,7 +15,13 @@ export default function TopBar({ onMenuClick = () => {} }: TopBarProps) {
   const { t } = useTranslation();
   const { theme, toggleTheme } = useTheme();
   const { data: echoes = [] } = useQuery({ queryKey: ["echoes"], queryFn: getEchoes });
-  const { data: player } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
+  const { data: player } = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: getCurrentPlayer,
+    retry: false,
+    refetchInterval: (query) => (query.state.data ? 6 * 60 * 60 * 1000 : false),
+    refetchIntervalInBackground: false,
+  });
   const hasUnread = echoes.some((e) => !e.read);
 
   return (

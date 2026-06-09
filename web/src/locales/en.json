@@ -46,6 +46,13 @@
   "lore_auth_cta": "Go to Realm",
   "lore_footer_open": "Yurnik is open source.",
   "lore_footer_signin": "Sign in",
+  "home_explore_cta": "Explore the site",
+  "settings_signin_hint": "Sign in to manage your profile, preferences, and agent settings.",
+  "hero_anon_title": "Your hero page",
+  "hero_anon_hint": "Once you sign in, this is where your gaming journey lives — your profile, your stats, your story.",
+  "home_learn_more": "Learn more about Yurnik",
+  "signin_prompt_title": "Sign in to continue",
+  "signin_prompt_sub": "Join Yurnik with your Discord account to get started.",
 
   "agent_connected": "Agent connected",
   "agent_close_tab": "You can close this tab.",

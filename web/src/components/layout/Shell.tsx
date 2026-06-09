@@ -1,26 +1,23 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
-import { Navigate, Outlet } from "react-router";
+import { Outlet } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { getCurrentPlayer, SessionExpiredError } from "@/services/auth";
+import { getCurrentPlayer } from "@/services/auth";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 
 export default function Shell() {
-  const { data: player, isLoading, error } = useQuery({
+  const { data: _player } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: getCurrentPlayer,
     retry: false,
-    refetchInterval: 30_000,
+    refetchInterval: (query) => (query.state.data ? 6 * 60 * 60 * 1000 : false),
     refetchIntervalInBackground: false,
   });
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  if (isLoading) return null;
-  if (error instanceof SessionExpiredError || !player) return <Navigate to="/lore" replace />;
 
   return (
     <div className="flex h-screen bg-background text-foreground">

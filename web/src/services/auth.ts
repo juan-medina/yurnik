@@ -73,6 +73,6 @@ export async function getAgentToken(): Promise<string> {
 
 export async function signOut(): Promise<void> {
   await apiFetch(`${API_BASE}/auth/logout`, { method: "POST", credentials: "include" });
-  window.location.href = "/login";
+  window.location.href = "/";
 }
 

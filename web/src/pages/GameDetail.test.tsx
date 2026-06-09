@@ -51,6 +51,9 @@ function makeFetch({ withTrailer = true, withStoreLinks = true, withFollowing = 
     const method = init?.method ?? "GET";
     const json = (body: string) => new Response(body, { status: 200, headers: { "Content-Type": "application/json" } });
 
+    if (url.endsWith("/api/me")) {
+      return json(JSON.stringify({ id: "me", handle: "tester", name: "Tester", color: "#ff0000", is_admin: false }));
+    }
     if (url.includes("/api/players/") && url.endsWith("/follow") && method === "POST") {
       return new Response(null, { status: 204 });
     }

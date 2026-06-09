@@ -26,7 +26,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }: SidebarP
     { to: "/journeys", labelKey: "nav_journeys", icon: ScrollText },
     { to: "/players", labelKey: "nav_players", icon: Users },
     { to: "/echoes", labelKey: "nav_echoes", icon: Bell },
-    { to: currentPlayer ? `/player/${currentPlayer.handle}` : "#", labelKey: "nav_hero", icon: Shield },
+    { to: currentPlayer ? `/player/${currentPlayer.handle}` : "/hero", labelKey: "nav_hero", icon: Shield },
     { to: "/settings", labelKey: "nav_settings", icon: Settings },
   ];
 

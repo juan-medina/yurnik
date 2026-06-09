@@ -17,6 +17,7 @@ import { getCurrentPlayer, updateProfile } from "@/services/auth";
 import ProfileView from "@/components/ProfileView";
 import AvatarEditor from "@/components/AvatarEditor";
 import EditProfileModal from "@/components/EditProfileModal";
+import SignInPromptModal from "@/components/SignInPromptModal";
 
 export default function PlayerProfile() {
   const { t } = useTranslation();
@@ -24,12 +25,13 @@ export default function PlayerProfile() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data: currentPlayer, isLoading: currentPlayerLoading } = useQuery({
+  const { data: currentPlayer } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: getCurrentPlayer,
+    retry: false,
   });
 
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["player-profile", handle],
     queryFn: () => getPlayerProfile(handle!),
     enabled: !!handle,
@@ -65,6 +67,7 @@ export default function PlayerProfile() {
   });
 
   const [editingProfile, setEditingProfile] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
 
   const updateProfileMutation = useMutation({
     mutationFn: updateProfile,
@@ -74,7 +77,7 @@ export default function PlayerProfile() {
     },
   });
 
-  if (currentPlayerLoading) return null;
+  if (profileLoading) return null;
 
   if (!profile) {
     return (
@@ -107,7 +110,7 @@ export default function PlayerProfile() {
     </button>
   ) : (
     <button
-      onClick={() => followMutation.mutate(!isFollowing)}
+      onClick={() => { if (!currentPlayer) { setShowSignIn(true); return; } followMutation.mutate(!isFollowing); }}
       aria-label={isFollowing ? t("profile_unfollow") : t("profile_follow")}
       className={`flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
         isFollowing
@@ -163,6 +166,7 @@ export default function PlayerProfile() {
           onClose={() => setEditingProfile(false)}
         />
       )}
+      {showSignIn && <SignInPromptModal onClose={() => setShowSignIn(false)} />}
     </>
   );
 }

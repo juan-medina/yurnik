@@ -3,7 +3,7 @@
 import { RouterProvider, createBrowserRouter } from "react-router";
 import Shell from "@/components/layout/Shell";
 import AuthComplete from "@/pages/AuthComplete";
-import Realm from "@/pages/Realm";
+import Home from "@/pages/Home";
 import Journeys from "@/pages/Journeys";
 import Players from "@/pages/Players";
 import Echoes from "@/pages/Echoes";
@@ -11,6 +11,7 @@ import JourneyDetail from "@/pages/JourneyDetail";
 import GameDetail from "@/pages/GameDetail";
 import PlayerProfile from "@/pages/PlayerProfile";
 import Settings from "@/pages/Settings";
+import Hero from "@/pages/Hero";
 import AgentAuth from "@/pages/AgentAuth";
 import Lore from "@/pages/Lore";
 import NotFound from "@/pages/NotFound";
@@ -20,10 +21,9 @@ const router = createBrowserRouter([
   { path: "/auth/complete", element: <AuthComplete /> },
   { path: "/auth/agent", element: <AgentAuth /> },
   {
-    path: "/",
     element: <Shell />,
     children: [
-      { index: true, element: <Realm /> },
+      { path: "/", element: <Home /> },
       { path: "journeys", element: <Journeys /> },
       { path: "players", element: <Players /> },
       { path: "journey/:id", element: <JourneyDetail /> },
@@ -31,6 +31,7 @@ const router = createBrowserRouter([
       { path: "player/:handle", element: <PlayerProfile /> },
       { path: "echoes", element: <Echoes /> },
       { path: "settings", element: <Settings /> },
+      { path: "hero", element: <Hero /> },
       { path: "*", element: <NotFound /> },
     ],
   },

@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { getEchoes, markAllRead } from "@/services/echoes";
+import { getCurrentPlayer } from "@/services/auth";
 import { avatarSrc } from "@/lib/display";
 import { formatCommentAge } from "@/lib/time";
 import FollowListModal from "@/components/FollowListModal";
@@ -139,17 +140,23 @@ export default function Echoes() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<Filter>("all");
 
-  const { data: echoes = [] } = useQuery({ queryKey: ["echoes"], queryFn: getEchoes });
+  const { data: player } = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: getCurrentPlayer,
+    retry: false,
+  });
+
+  const { data: echoes = [] } = useQuery({ queryKey: ["echoes"], queryFn: getEchoes, enabled: !!player });
 
   const markReadMutation = useMutation({
     mutationFn: markAllRead,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["echoes"] }),
   });
 
-  // Mark all read as soon as the panel opens.
+  // Mark all read as soon as the panel opens (only when authenticated).
   useEffect(() => {
-    markReadMutation.mutate();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (player) markReadMutation.mutate();
+  }, [player]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filterLabels: { value: Filter; labelKey: string }[] = [
     { value: "all", labelKey: "echoes_filter_all" },
