@@ -6,24 +6,27 @@ import { buildOgTags, type OgPage } from "../src/lib/og";
 const CRAWLER_UA = /Discordbot|WhatsApp|Twitterbot|LinkedInBot|Slackbot-LinkExpanding|facebookexternalhit|Telegrambot|iframely|Googlebot/i;
 
 interface Env {
+  ASSETS: { fetch: (request: Request) => Promise<Response> };
   API_URL: string;
 }
 
-export const onRequest: PagesFunction<Env> = async (context) => {
-  const ua = context.request.headers.get("user-agent") ?? "";
-  if (!CRAWLER_UA.test(ua)) {
-    return context.next();
-  }
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const ua = request.headers.get("user-agent") ?? "";
+    if (!CRAWLER_UA.test(ua)) {
+      return env.ASSETS.fetch(request);
+    }
 
-  const url = new URL(context.request.url);
-  const apiUrl = context.env.API_URL ?? "https://api.yurnik.social";
+    const url = new URL(request.url);
+    const apiUrl = env.API_URL ?? "https://api.yurnik.social";
 
-  const page = await resolvePage(url.pathname, apiUrl);
-  const tags = buildOgTags(page, url.origin);
+    const page = await resolvePage(url.pathname, apiUrl);
+    const tags = buildOgTags(page, url.origin);
 
-  return new Response(renderOgHtml(tags, url.href), {
-    headers: { "content-type": "text/html;charset=UTF-8" },
-  });
+    return new Response(renderOgHtml(tags, url.href), {
+      headers: { "content-type": "text/html;charset=UTF-8" },
+    });
+  },
 };
 
 async function resolvePage(pathname: string, apiUrl: string): Promise<OgPage> {

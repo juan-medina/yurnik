@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && pnpm exec esbuild functions/_middleware.ts --bundle --outfile=dist/_worker.js --format=esm --platform=browser",
     "preview": "pnpm run build && wrangler dev",
     "test": "vitest run",
     "test:watch": "vitest",
