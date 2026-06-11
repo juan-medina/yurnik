@@ -46,7 +46,7 @@ function HorizonRow({ entry, onRemove, removing }: { entry: HorizonEntry; onRemo
 export default function Horizon() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [selected, setSelected] = useState<Game | null>(null);
+  const [selectorKey, setSelectorKey] = useState(0);
 
   const { data: currentPlayer, isLoading: loadingPlayer } = useQuery({
     queryKey: ["auth", "me"],
@@ -64,7 +64,6 @@ export default function Horizon() {
     mutationFn: (igdbId: number) => addToHorizon(igdbId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["horizon", currentPlayer?.handle] });
-      setSelected(null);
     },
   });
 
@@ -76,9 +75,9 @@ export default function Horizon() {
   });
 
   function handleSelect(game: Game) {
-    setSelected(game);
     const igdbId = parseInt(game.id, 10);
     if (!isNaN(igdbId)) addMutation.mutate(igdbId);
+    setSelectorKey((k) => k + 1);
   }
 
   if (loadingPlayer) return null;
@@ -101,7 +100,7 @@ export default function Horizon() {
       ) : (
         <>
           <div className="mb-6">
-            <GameSelector value={selected} onChange={handleSelect} />
+            <GameSelector key={selectorKey} value={null} onChange={handleSelect} />
           </div>
 
           {entries.length > 0 ? (
