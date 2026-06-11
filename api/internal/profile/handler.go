@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -64,7 +65,6 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, 
 	}
 	return userID, true
 }
-
 
 type meResponse struct {
 	ID              string  `json:"id"`
@@ -243,6 +243,133 @@ func usersToPlayerItems(users []db.User) []playerItem {
 	return items
 }
 
+type playerResp struct {
+	ID        string  `json:"id"`
+	Handle    string  `json:"handle"`
+	Name      string  `json:"name"`
+	AvatarURL *string `json:"avatar_url,omitempty"`
+	Color     string  `json:"color"`
+}
+
+type feedEntry struct {
+	ID              string     `json:"id"`
+	IGDBID          int        `json:"igdb_id"`
+	GameTitle       string     `json:"game"`
+	CoverURL        *string    `json:"cover_url,omitempty"`
+	Genres          []string   `json:"genres"`
+	ReleaseYear     *int       `json:"release_year,omitempty"`
+	DurationSeconds int        `json:"duration_seconds"`
+	Log             *string    `json:"log,omitempty"`
+	PlayedAt        string     `json:"played_at"`
+	Player          playerResp `json:"player"`
+}
+
+type activityResp struct {
+	Type         string     `json:"type"` // "follow" | "comment"
+	CreatedAt    string     `json:"created_at"`
+	Actor        playerResp `json:"actor"`
+	Recipient    playerResp `json:"recipient"`
+	SubjectID    *string    `json:"subject_id,omitempty"`
+	SubjectTitle *string    `json:"subject_title,omitempty"`
+}
+
+type feedItem struct {
+	Kind     string        `json:"kind"` // "journey" | "activity"
+	Journey  *feedEntry    `json:"journey,omitempty"`
+	Activity *activityResp `json:"activity,omitempty"`
+}
+
+func journeyToFeedEntry(j db.JourneyWithPlayer) feedEntry {
+	return feedEntry{
+		ID:              j.ID,
+		IGDBID:          j.IGDBID,
+		GameTitle:       j.GameName,
+		CoverURL:        j.CoverURL,
+		Genres:          j.Genres,
+		ReleaseYear:     j.ReleaseYear,
+		DurationSeconds: j.DurationSeconds,
+		Log:             j.Log,
+		PlayedAt:        j.PlayedAt.UTC().Format(time.RFC3339),
+		Player: playerResp{
+			ID:        j.UserID,
+			Handle:    j.PlayerHandle,
+			Name:      j.PlayerName,
+			AvatarURL: j.PlayerAvatarURL,
+			Color:     j.PlayerColor,
+		},
+	}
+}
+
+func activityToFeedEntry(a db.ActivityEvent) activityResp {
+	t := "comment"
+	if a.Type == "new_follower" {
+		t = "follow"
+	}
+	return activityResp{
+		Type:      t,
+		CreatedAt: a.CreatedAt.UTC().Format(time.RFC3339),
+		Actor: playerResp{
+			ID:        a.ActorID,
+			Handle:    a.ActorHandle,
+			Name:      a.ActorName,
+			AvatarURL: a.ActorAvatarURL,
+			Color:     a.ActorColor,
+		},
+		Recipient: playerResp{
+			ID:        a.RecipientID,
+			Handle:    a.RecipientHandle,
+			Name:      a.RecipientName,
+			AvatarURL: a.RecipientAvatarURL,
+			Color:     a.RecipientColor,
+		},
+		SubjectID:    a.SubjectID,
+		SubjectTitle: a.SubjectTitle,
+	}
+}
+
+// mergeFeedItems interleaves journeys (ordered by PlayedAt desc) and activity
+// events (ordered by CreatedAt desc) into a single feed, most recent first,
+// truncated to limit. It returns the combined items and the next cursor
+// (journeyCursor + "|" + activityCursor), or "" if both sources are
+// exhausted. journeys and activity must each contain at most limit+1 items,
+// as returned by the corresponding Get* DB functions.
+func mergeFeedItems(
+	journeys []db.JourneyWithPlayer, activity []db.ActivityEvent, limit int,
+	journeyCursor, activityCursor string,
+) ([]feedItem, string) {
+	journeyMore := len(journeys) > limit
+	if journeyMore {
+		journeys = journeys[:limit]
+	}
+	activityMore := len(activity) > limit
+	if activityMore {
+		activity = activity[:limit]
+	}
+
+	items := make([]feedItem, 0, limit)
+	ji, ai := 0, 0
+	for len(items) < limit && (ji < len(journeys) || ai < len(activity)) {
+		takeJourney := ji < len(journeys) && (ai >= len(activity) || !journeys[ji].PlayedAt.Before(activity[ai].CreatedAt))
+		if takeJourney {
+			entry := journeyToFeedEntry(journeys[ji])
+			items = append(items, feedItem{Kind: "journey", Journey: &entry})
+			journeyCursor = journeys[ji].PlayedAt.UTC().Format(time.RFC3339)
+			ji++
+		} else {
+			entry := activityToFeedEntry(activity[ai])
+			items = append(items, feedItem{Kind: "activity", Activity: &entry})
+			activityCursor = activity[ai].CreatedAt.UTC().Format(time.RFC3339)
+			ai++
+		}
+	}
+
+	hasMore := journeyMore || activityMore || ji < len(journeys) || ai < len(activity)
+	if !hasMore {
+		return items, ""
+	}
+	return items, journeyCursor + "|" + activityCursor
+}
+
 func (h *Handler) getFeed(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticate(w, r)
 	if !ok {
@@ -255,64 +382,31 @@ func (h *Handler) getFeed(w http.ResponseWriter, r *http.Request) {
 			limit = n
 		}
 	}
-	cursor := r.URL.Query().Get("cursor")
 
-	journeys, err := db.GetFollowingFeed(r.Context(), h.pool, userID, limit+1, cursor)
+	journeyCursor, activityCursor := "", ""
+	if cursor := r.URL.Query().Get("cursor"); cursor != "" {
+		if before, after, found := strings.Cut(cursor, "|"); found {
+			journeyCursor, activityCursor = before, after
+		}
+	}
+
+	journeys, err := db.GetFollowingFeed(r.Context(), h.pool, userID, limit+1, journeyCursor)
 	if err != nil {
 		log.Printf("profile/feed: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
-	var nextCursor string
-	if len(journeys) > limit {
-		nextCursor = journeys[limit].PlayedAt.UTC().Format(time.RFC3339)
-		journeys = journeys[:limit]
+	activity, err := db.GetFollowingActivity(r.Context(), h.pool, userID, limit+1, activityCursor)
+	if err != nil {
+		log.Printf("profile/feed: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
 	}
 
-	type playerResp struct {
-		ID        string  `json:"id"`
-		Handle    string  `json:"handle"`
-		Name      string  `json:"name"`
-		AvatarURL *string `json:"avatar_url,omitempty"`
-		Color     string  `json:"color"`
-	}
-	type feedEntry struct {
-		ID              string     `json:"id"`
-		IGDBID          int        `json:"igdb_id"`
-		GameTitle       string     `json:"game"`
-		CoverURL        *string    `json:"cover_url,omitempty"`
-		Genres          []string   `json:"genres"`
-		ReleaseYear     *int       `json:"release_year,omitempty"`
-		DurationSeconds int        `json:"duration_seconds"`
-		Log             *string    `json:"log,omitempty"`
-		PlayedAt        string     `json:"played_at"`
-		Player          playerResp `json:"player"`
-	}
+	items, nextCursor := mergeFeedItems(journeys, activity, limit, journeyCursor, activityCursor)
 
-	resp := make([]feedEntry, 0, len(journeys))
-	for _, j := range journeys {
-		resp = append(resp, feedEntry{
-			ID:              j.ID,
-			IGDBID:          j.IGDBID,
-			GameTitle:       j.GameName,
-			CoverURL:        j.CoverURL,
-			Genres:          j.Genres,
-			ReleaseYear:     j.ReleaseYear,
-			DurationSeconds: j.DurationSeconds,
-			Log:             j.Log,
-			PlayedAt:        j.PlayedAt.UTC().Format(time.RFC3339),
-			Player: playerResp{
-				ID:        j.UserID,
-				Handle:    j.PlayerHandle,
-				Name:      j.PlayerName,
-				AvatarURL: j.PlayerAvatarURL,
-				Color:     j.PlayerColor,
-			},
-		})
-	}
-
-	result := map[string]any{"journeys": resp}
+	result := map[string]any{"items": items}
 	if nextCursor != "" {
 		result["next_cursor"] = nextCursor
 	}

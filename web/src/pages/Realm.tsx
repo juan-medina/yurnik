@@ -3,21 +3,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { getFeedJourneys } from "@/services/feed";
+import { getFeedItems } from "@/services/feed";
+import { getCurrentPlayer } from "@/services/auth";
 import JourneyCard from "@/components/JourneyCard";
+import ActivityItem from "@/components/ActivityItem";
 
 export default function Realm() {
   const { t } = useTranslation();
-  const { data: journeys = [], isLoading } = useQuery({
+  const { data: items = [], isLoading } = useQuery({
     queryKey: ["feed"],
-    queryFn: getFeedJourneys,
+    queryFn: getFeedItems,
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
   });
+  const { data: currentPlayer } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
 
   if (isLoading) return null;
 
-  if (journeys.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="mx-auto max-w-2xl flex flex-col items-center justify-center py-24 gap-3 text-center">
         <p className="text-base">{t("realm_quiet")}</p>
@@ -35,9 +38,17 @@ export default function Realm() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="flex flex-col gap-3">
-        {journeys.map((journey) => (
-          <JourneyCard key={journey.id} journey={journey} showPlayer />
-        ))}
+        {items.map((item) =>
+          item.kind === "journey" ? (
+            <JourneyCard key={`journey-${item.journey.id}`} journey={item.journey} showPlayer />
+          ) : (
+            <ActivityItem
+              key={`activity-${item.activity.type}-${item.activity.actor.id}-${item.activity.createdAt.toISOString()}`}
+              activity={item.activity}
+              viewerId={currentPlayer?.id}
+            />
+          ),
+        )}
       </div>
     </div>
   );

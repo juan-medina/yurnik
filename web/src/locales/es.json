@@ -132,6 +132,10 @@
   "realm_quiet": "Tu reino está en silencio.",
   "realm_follow_hint": "Sigue a jugadores para ver sus partidas aquí.",
   "realm_discover": "Descubrir jugadores",
+  "realm_activity_followed": "ha empezado a seguir a {{recipient}}",
+  "realm_activity_commented": "ha comentado en la partida de {{game}} de {{recipient}}",
+  "realm_activity_followed_you": "ha empezado a seguirte",
+  "realm_activity_commented_you": "ha comentado en tu partida de {{game}}",
 
   "profile_not_found": "Jugador no encontrado.",
   "profile_back": "Volver",

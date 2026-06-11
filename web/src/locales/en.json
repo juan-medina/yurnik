@@ -132,6 +132,10 @@
   "realm_quiet": "Your realm is quiet.",
   "realm_follow_hint": "Follow some players to see their journeys here.",
   "realm_discover": "Discover players",
+  "realm_activity_followed": "started following {{recipient}}",
+  "realm_activity_commented": "commented on {{recipient}}'s {{game}} journey",
+  "realm_activity_followed_you": "started following you",
+  "realm_activity_commented_you": "commented on your {{game}} journey",
 
   "profile_not_found": "Player not found.",
   "profile_back": "Back",
