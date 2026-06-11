@@ -6,6 +6,7 @@ import type { LucideIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { getCurrentPlayer } from "@/services/auth";
+import { useEchoes } from "@/hooks/useEchoes";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -20,6 +21,8 @@ type SidebarProps = { isOpen?: boolean; onClose?: () => void };
 export default function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
   const { t } = useTranslation();
   const { data: currentPlayer } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
+  const { data: echoes = [] } = useEchoes(!!currentPlayer);
+  const hasUnread = echoes.some((e) => !e.read);
 
   const navItems: NavItem[] = [
     { to: "/", labelKey: "nav_realm", icon: Globe2, end: true },
@@ -73,7 +76,12 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }: SidebarP
                 )
               }
             >
-              <Icon size={18} aria-hidden />
+              <span className="relative flex shrink-0 items-center justify-center">
+                <Icon size={18} aria-hidden />
+                {to === "/echoes" && hasUnread && (
+                  <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive ring-2 ring-sidebar" />
+                )}
+              </span>
               {t(labelKey)}
             </NavLink>
           ))}

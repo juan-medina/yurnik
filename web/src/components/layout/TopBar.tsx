@@ -7,14 +7,13 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import { avatarSrc, initials } from "@/lib/display";
 import { getCurrentPlayer } from "@/services/auth";
-import { getEchoes } from "@/services/echoes";
+import { useEchoes } from "@/hooks/useEchoes";
 
 type TopBarProps = { onMenuClick?: () => void };
 
 export default function TopBar({ onMenuClick = () => {} }: TopBarProps) {
   const { t } = useTranslation();
   const { theme, toggleTheme } = useTheme();
-  const { data: echoes = [] } = useQuery({ queryKey: ["echoes"], queryFn: getEchoes });
   const { data: player } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: getCurrentPlayer,
@@ -22,6 +21,7 @@ export default function TopBar({ onMenuClick = () => {} }: TopBarProps) {
     refetchInterval: (query) => (query.state.data ? 6 * 60 * 60 * 1000 : false),
     refetchIntervalInBackground: false,
   });
+  const { data: echoes = [] } = useEchoes(!!player);
   const hasUnread = echoes.some((e) => !e.read);
 
   return (

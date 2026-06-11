@@ -238,6 +238,14 @@
   "settings_language_auto": "Auto (detected)",
   "settings_language_en": "English",
   "settings_language_es": "Español",
+  "settings_notifications": "Notifications",
+  "settings_desktop_notifications": "Desktop notifications",
+  "settings_desktop_notifications_desc": "Get notified when someone comments on your journeys or follows you.",
+  "settings_desktop_notifications_denied": "Notifications are blocked in your browser settings.",
+
+  "notif_title": "Yurnik",
+  "notif_new_comment_body": "{{actor}} commented on {{title}}",
+  "notif_new_follower_body": "{{actor}} started following you",
 
   "time_today": "Today",
   "time_yesterday": "Yesterday",

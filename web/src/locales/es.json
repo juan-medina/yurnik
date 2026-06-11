@@ -235,6 +235,14 @@
   "settings_language_auto": "Automático (detectado)",
   "settings_language_en": "English",
   "settings_language_es": "Español",
+  "settings_notifications": "Notificaciones",
+  "settings_desktop_notifications": "Notificaciones de escritorio",
+  "settings_desktop_notifications_desc": "Recibe un aviso cuando alguien comente en tus travesías o te siga.",
+  "settings_desktop_notifications_denied": "Las notificaciones están bloqueadas en la configuración del navegador.",
+
+  "notif_title": "Yurnik",
+  "notif_new_comment_body": "{{actor}} comentó en {{title}}",
+  "notif_new_follower_body": "{{actor}} ha empezado a seguirte",
 
   "time_today": "Hoy",
   "time_yesterday": "Ayer",

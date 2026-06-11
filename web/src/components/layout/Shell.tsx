@@ -4,18 +4,23 @@ import { useState } from "react";
 import { Outlet } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getCurrentPlayer } from "@/services/auth";
+import { useEchoes } from "@/hooks/useEchoes";
+import { useEchoNotifications } from "@/hooks/useEchoNotifications";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 
 export default function Shell() {
-  const { data: _player } = useQuery({
+  const { data: player } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: getCurrentPlayer,
     retry: false,
     refetchInterval: (query) => (query.state.data ? 6 * 60 * 60 * 1000 : false),
     refetchIntervalInBackground: false,
   });
+
+  const { data: echoes = [] } = useEchoes(!!player);
+  useEchoNotifications(echoes);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
