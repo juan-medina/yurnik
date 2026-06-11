@@ -17,22 +17,27 @@ export default function ActivityItem({ activity, viewerId }: ActivityItemProps) 
   const { type, actor, recipient, subjectId, subjectTitle, createdAt } = activity;
   const aboutViewer = recipient.id === viewerId;
   const viewerIsActor = actor.id === viewerId;
+  const isSelfComment = type === "comment" && actor.id === recipient.id;
 
   const to =
     type === "comment" ? `/journey/${subjectId}` : playerHref(aboutViewer ? actor : recipient);
   const icon = type === "comment" ? <MessageSquare size={13} /> : <UserPlus size={13} />;
 
-  const text = aboutViewer
-    ? type === "comment"
-      ? t("realm_activity_commented_you", { game: subjectTitle })
-      : t("realm_activity_followed_you")
-    : viewerIsActor
+  const text = isSelfComment
+    ? viewerIsActor
+      ? t("realm_activity_commented_own_you", { game: subjectTitle })
+      : t("realm_activity_commented_own", { game: subjectTitle })
+    : aboutViewer
       ? type === "comment"
-        ? t("realm_activity_commented_by_you", { recipient: recipient.name, game: subjectTitle })
-        : t("realm_activity_followed_by_you", { recipient: recipient.name })
-      : type === "comment"
-        ? t("realm_activity_commented", { recipient: recipient.name, game: subjectTitle })
-        : t("realm_activity_followed", { recipient: recipient.name });
+        ? t("realm_activity_commented_you", { game: subjectTitle })
+        : t("realm_activity_followed_you")
+      : viewerIsActor
+        ? type === "comment"
+          ? t("realm_activity_commented_by_you", { recipient: recipient.name, game: subjectTitle })
+          : t("realm_activity_followed_by_you", { recipient: recipient.name })
+        : type === "comment"
+          ? t("realm_activity_commented", { recipient: recipient.name, game: subjectTitle })
+          : t("realm_activity_followed", { recipient: recipient.name });
 
   return (
     <Link

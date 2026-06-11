@@ -213,10 +213,13 @@ func (h *Handler) postComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Best-effort echo — never block the response on notification failure.
+	// Best-effort echo/activity — never block the response on these failures.
 	if meta, err := db.GetJourneyMeta(r.Context(), h.pool, id); err == nil {
 		if err := db.UpsertCommentEcho(r.Context(), h.pool, meta.OwnerID, userID, id, meta.GameName); err != nil {
 			log.Printf("journeys/postComment: upsert echo: %v", err)
+		}
+		if err := db.RecordActivity(r.Context(), h.pool, userID, meta.OwnerID, "new_comment", &id, &meta.GameName); err != nil {
+			log.Printf("journeys/postComment: record activity: %v", err)
 		}
 	}
 

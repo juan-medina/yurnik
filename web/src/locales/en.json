@@ -136,6 +136,8 @@
   "realm_activity_commented_you": "commented on your {{game}} journey",
   "realm_activity_followed_by_you": "You started following {{recipient}}",
   "realm_activity_commented_by_you": "You commented on {{recipient}}'s {{game}} journey",
+  "realm_activity_commented_own_you": "You commented on your own {{game}} journey",
+  "realm_activity_commented_own": "commented on their own {{game}} journey",
 
   "profile_not_found": "Player not found.",
   "profile_back": "Back",

@@ -121,4 +121,39 @@ describe("ActivityItem", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link")).toHaveAttribute("href", "/journey/j99");
   });
+
+  it("renders 'You commented on your own <game> journey' when the viewer commented on their own journey", () => {
+    const activity: Activity = {
+      type: "comment",
+      createdAt: new Date("2026-06-01T12:00:00Z"),
+      actor: PLAYERS[0],
+      recipient: PLAYERS[0],
+      subjectId: "j99",
+      subjectTitle: "Elden Ring",
+    };
+    render(
+      <MemoryRouter>
+        <ActivityItem activity={activity} viewerId={PLAYERS[0].id} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText(/You commented on your own Elden Ring journey/i)).toBeInTheDocument();
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/journey/j99");
+  });
+
+  it("renders '<actor> commented on their own <game> journey' when viewing another player's self-comment", () => {
+    const activity: Activity = {
+      type: "comment",
+      createdAt: new Date("2026-06-01T12:00:00Z"),
+      actor: PLAYERS[0],
+      recipient: PLAYERS[0],
+      subjectId: "j99",
+      subjectTitle: "Elden Ring",
+    };
+    renderActivity(activity);
+
+    expect(screen.getByText(PLAYERS[0].name, { exact: false })).toBeInTheDocument();
+    expect(screen.getByText(/commented on their own Elden Ring journey/i)).toBeInTheDocument();
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/journey/j99");
+  });
 });

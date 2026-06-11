@@ -58,6 +58,37 @@ CREATE TABLE IF NOT EXISTS pending_journeys (
 CREATE UNIQUE INDEX IF NOT EXISTS pending_journeys_dedup_idx
     ON pending_journeys(user_id, exe_name, started_at, ended_at)
     WHERE ended_at IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS journeys (
+    id               uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id          uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    igdb_id          integer     NOT NULL REFERENCES igdb_games(igdb_id),
+    started_at       timestamptz NOT NULL,
+    ended_at         timestamptz NOT NULL,
+    duration_seconds integer     NOT NULL,
+    log              text,
+    played_at        timestamptz NOT NULL,
+    created_at       timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS follows (
+    follower_id uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    followee_id uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (follower_id, followee_id)
+);
+
+CREATE TABLE IF NOT EXISTS activity_events (
+    id            bigint      PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    actor_id      uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    target_id     uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type          text        NOT NULL CHECK (type IN ('new_comment', 'new_follower')),
+    subject_id    uuid        REFERENCES journeys(id) ON DELETE SET NULL,
+    subject_title text,
+    created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS activity_events_actor_id_created_at_idx ON activity_events(actor_id, created_at DESC);
 `
 
 func connectTestDB(t *testing.T) *pgxpool.Pool {
