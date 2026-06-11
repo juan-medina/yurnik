@@ -253,60 +253,6 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Exclusions */}
-          <div className="rounded-lg border border-border bg-card p-5">
-            <h3 className="font-semibold">{t("settings_excluded_exes")}</h3>
-            <p className="mb-4 mt-1 text-sm text-muted-foreground">
-              {t("settings_excluded_desc")}
-            </p>
-            {exclusions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("settings_no_exclusions")}</p>
-            ) : (
-              <ul className="space-y-2">
-                {exclusions.map((exc) =>
-                  confirmingExe === exc.exeName ? (
-                    <li
-                      key={exc.exeName}
-                      className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2"
-                    >
-                      <span className="text-sm text-muted-foreground">
-                        {t("settings_remove_exe", { exe: exc.exeName })}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setConfirmingExe(null)}
-                          className="rounded-md px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                        >
-                          {t("settings_cancel")}
-                        </button>
-                        <button
-                          onClick={() => removeExclusionMutation.mutate(exc.exeName)}
-                          className="rounded-md bg-destructive px-3 py-1 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
-                        >
-                          {t("settings_remove")}
-                        </button>
-                      </div>
-                    </li>
-                  ) : (
-                    <li
-                      key={exc.exeName}
-                      className="flex items-center justify-between rounded-md border border-border px-3 py-2"
-                    >
-                      <span className="font-mono text-sm">{exc.exeName}</span>
-                      <button
-                        onClick={() => setConfirmingExe(exc.exeName)}
-                        aria-label={t("settings_remove_label", { exe: exc.exeName })}
-                        className="rounded-md px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                      >
-                        {t("settings_remove")}
-                      </button>
-                    </li>
-                  ),
-                )}
-              </ul>
-            )}
-          </div>
-
           {/* Game hints */}
           <div className="rounded-lg border border-border bg-card p-5">
             <h3 className="font-semibold">{t("settings_game_hints")}</h3>
@@ -419,6 +365,60 @@ export default function Settings() {
                           {t("settings_remove")}
                         </button>
                       </div>
+                    </li>
+                  ),
+                )}
+              </ul>
+            )}
+          </div>
+
+          {/* Exclusions */}
+          <div className="rounded-lg border border-border bg-card p-5">
+            <h3 className="font-semibold">{t("settings_excluded_exes")}</h3>
+            <p className="mb-4 mt-1 text-sm text-muted-foreground">
+              {t("settings_excluded_desc")}
+            </p>
+            {exclusions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("settings_no_exclusions")}</p>
+            ) : (
+              <ul className="space-y-2">
+                {exclusions.map((exc) =>
+                  confirmingExe === exc.exeName ? (
+                    <li
+                      key={exc.exeName}
+                      className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2"
+                    >
+                      <span className="text-sm text-muted-foreground">
+                        {t("settings_remove_exe", { exe: exc.exeName })}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setConfirmingExe(null)}
+                          className="rounded-md px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                        >
+                          {t("settings_cancel")}
+                        </button>
+                        <button
+                          onClick={() => removeExclusionMutation.mutate(exc.exeName)}
+                          className="rounded-md bg-destructive px-3 py-1 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
+                        >
+                          {t("settings_remove")}
+                        </button>
+                      </div>
+                    </li>
+                  ) : (
+                    <li
+                      key={exc.exeName}
+                      className="flex items-center justify-between rounded-md border border-border px-3 py-2"
+                    >
+                      <span className="font-mono text-sm">{exc.exeName}</span>
+                      <button
+                        onClick={() => setConfirmingExe(exc.exeName)}
+                        aria-label={t("settings_remove_label", { exe: exc.exeName })}
+                        className="rounded-md px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      >
+                        {t("settings_remove")}
+                      </button>
                     </li>
                   ),
                 )}
