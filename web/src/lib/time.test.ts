@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { formatCommentAge, formatJourneyDate } from "./time";
+import { formatCommentAge, formatJourneyDate, formatLocalDate, parseLocalDate } from "./time";
 
 // May 22, 2026 noon local — a known fixed point for all time tests
 const FIXED_NOW = new Date(2026, 4, 22, 12, 0, 0);
@@ -30,6 +30,30 @@ describe("formatJourneyDate", () => {
 
   it("includes the year for a date in a different year", () => {
     expect(formatJourneyDate(new Date(2025, 2, 15, 12, 0, 0))).toBe("Mar 15, 2025");
+  });
+});
+
+describe("parseLocalDate / formatLocalDate", () => {
+  it("parses a date-only string as local midnight", () => {
+    const d = parseLocalDate("2026-06-12");
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(5);
+    expect(d.getDate()).toBe(12);
+    expect(d.getHours()).toBe(0);
+  });
+
+  it("formats a Date back to YYYY-MM-DD using local parts", () => {
+    expect(formatLocalDate(new Date(2026, 5, 12))).toBe("2026-06-12");
+  });
+
+  it("round-trips across the year boundary", () => {
+    const s = "2026-01-01";
+    expect(formatLocalDate(parseLocalDate(s))).toBe(s);
+  });
+
+  it("round-trips near midnight without shifting the date", () => {
+    const d = parseLocalDate("2026-12-31");
+    expect(formatLocalDate(d)).toBe("2026-12-31");
   });
 });
 

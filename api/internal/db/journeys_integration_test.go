@@ -67,9 +67,11 @@ CREATE TABLE IF NOT EXISTS journeys (
     ended_at         timestamptz NOT NULL,
     duration_seconds integer     NOT NULL,
     log              text,
-    played_at        timestamptz NOT NULL,
+    played_at        date        NOT NULL,
     created_at       timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE journeys ALTER COLUMN played_at TYPE date USING played_at::date;
 
 CREATE TABLE IF NOT EXISTS comments (
     id         uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -314,5 +316,51 @@ func TestUpsertPendingJourney_DoesNotMergeActiveSession(t *testing.T) {
 
 	if countPending(t, pool, userID, "game.exe") != 2 {
 		t.Fatal("expected two rows — active sessions must not be merged")
+	}
+}
+
+func TestListJourneysByUser_SameDayTiebreaksByCreatedAt(t *testing.T) {
+	pool := connectTestDB(t)
+	ctx := context.Background()
+	userID := createTestUser(t, pool)
+
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO igdb_games (igdb_id, name) VALUES (90101, 'Tiebreak Game')
+		ON CONFLICT (igdb_id) DO NOTHING
+	`); err != nil {
+		t.Fatalf("insert igdb_games: %v", err)
+	}
+	t.Cleanup(func() { pool.Exec(ctx, "DELETE FROM igdb_games WHERE igdb_id = 90101") })
+
+	playedAt := time.Now().UTC().Truncate(24 * time.Hour)
+	older := playedAt.Add(8 * time.Hour)
+	newer := playedAt.Add(9 * time.Hour)
+
+	var olderID, newerID string
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO journeys (user_id, igdb_id, started_at, ended_at, duration_seconds, played_at, created_at)
+		VALUES ($1, 90101, $2, $2, 3600, $3, $2)
+		RETURNING id
+	`, userID, older, playedAt).Scan(&olderID); err != nil {
+		t.Fatalf("insert older journey: %v", err)
+	}
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO journeys (user_id, igdb_id, started_at, ended_at, duration_seconds, played_at, created_at)
+		VALUES ($1, 90101, $2, $2, 3600, $3, $2)
+		RETURNING id
+	`, userID, newer, playedAt).Scan(&newerID); err != nil {
+		t.Fatalf("insert newer journey: %v", err)
+	}
+
+	journeys, err := db.ListJourneysByUser(ctx, pool, userID, 10, "")
+	if err != nil {
+		t.Fatalf("list journeys: %v", err)
+	}
+	if len(journeys) != 2 {
+		t.Fatalf("expected 2 journeys, got %d", len(journeys))
+	}
+	// Same played_at — most-recently-created (newerID) sorts first.
+	if journeys[0].ID != newerID || journeys[1].ID != olderID {
+		t.Fatalf("expected [%s, %s], got [%s, %s]", newerID, olderID, journeys[0].ID, journeys[1].ID)
 	}
 }

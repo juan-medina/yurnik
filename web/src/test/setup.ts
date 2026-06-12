@@ -15,6 +15,7 @@ import {
   MOCK_HORIZON,
 } from "@/test/fixtures";
 import type { Player } from "@/models/player";
+import { formatLocalDate } from "@/lib/time";
 
 const playerMap = new Map<string, Player>();
 for (const p of PLAYERS) playerMap.set(p.id, p);
@@ -94,7 +95,7 @@ function makeDefaultFetch() {
             igdb_id: j.igdbId ?? 0,
             name: j.game,
             cover_url: j.coverUrl ?? null,
-            last_played: j.playedAt.toISOString(),
+            last_played: formatLocalDate(j.playedAt),
           })),
           genre_hours: [...genreMap.entries()].map(([genre, seconds]) => ({ genre, seconds })),
           horizon: (horizonState[MY_PLAYER.id] ?? []).map(toRawHorizonEntry),
@@ -137,7 +138,7 @@ function makeDefaultFetch() {
                 color: e.player.color,
               },
               duration_seconds: 0,
-              played_at: e.playedAt.toISOString(),
+              played_at: formatLocalDate(e.playedAt),
               log: e.log ?? null,
             })),
           })),
@@ -250,7 +251,7 @@ function makeDefaultFetch() {
               cover_url: j.coverUrl ?? null,
               genres: j.genres,
               duration_seconds: 0,
-              played_at: j.playedAt.toISOString(),
+              played_at: formatLocalDate(j.playedAt),
               log: j.log ?? null,
               player: target ? toRawPlayer(target) : { id: pid, handle: "", name: "", color: "#000000" },
             },
@@ -274,7 +275,7 @@ function makeDefaultFetch() {
             game: j.game,
             cover_url: j.coverUrl ?? null,
             genres: j.genres,
-            played_at: j.playedAt.toISOString(),
+            played_at: formatLocalDate(j.playedAt),
             duration_seconds: 0,
             log: j.log ?? null,
           })),
@@ -304,7 +305,7 @@ function makeDefaultFetch() {
             igdb_id: j.igdbId ?? 0,
             name: j.game,
             cover_url: j.coverUrl ?? null,
-            last_played: j.playedAt.toISOString(),
+            last_played: formatLocalDate(j.playedAt),
           })),
           genre_hours: [...genreMap.entries()].map(([genre, seconds]) => ({ genre, seconds })),
           horizon: (horizonState[pid] ?? []).map(toRawHorizonEntry),

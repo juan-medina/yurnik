@@ -21,7 +21,7 @@ describe("getFeedItems", () => {
             game: "Hollow Knight",
             genres: ["Metroidvania"],
             duration_seconds: 3600,
-            played_at: "2026-06-01T12:00:00Z",
+            played_at: "2026-06-01",
             player: { id: "p1", handle: "maria", name: "Maria", color: "#7c3aed" },
           },
         },
@@ -38,7 +38,7 @@ describe("getFeedItems", () => {
         igdbId: 42,
         game: "Hollow Knight",
         player: expect.objectContaining({ id: "p1", handle: "maria", name: "Maria" }),
-        playedAt: new Date("2026-06-01T12:00:00Z"),
+        playedAt: new Date(2026, 5, 1),
       }),
     });
   });

@@ -111,7 +111,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		ReleaseYear:     j.ReleaseYear,
 		DurationSeconds: j.DurationSeconds,
 		Log:             j.Log,
-		PlayedAt:        j.PlayedAt.UTC().Format(time.RFC3339),
+		PlayedAt:        j.PlayedAt.Format(db.DateFormat),
 		Player: playerResp{
 			ID:        j.UserID,
 			Handle:    j.PlayerHandle,
@@ -164,7 +164,7 @@ func (h *Handler) players(w http.ResponseWriter, r *http.Request) {
 				IsFollowing: followingIDs[p.UserID],
 			},
 			DurationSeconds: p.DurationSeconds,
-			PlayedAt:        p.PlayedAt.UTC().Format(time.RFC3339),
+			PlayedAt:        p.PlayedAt.Format(db.DateFormat),
 		})
 	}
 
@@ -368,6 +368,13 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
 		endedAt = *pending.EndedAt
 	}
 	duration := int(endedAt.Sub(pending.StartedAt).Seconds())
+	if duration < 60 {
+		http.Error(w, `{"error":"invalid_request","message":"duration_seconds must be at least 60"}`, http.StatusBadRequest)
+		return
+	}
+
+	startedAtUTC := pending.StartedAt.UTC()
+	playedAt := time.Date(startedAtUTC.Year(), startedAtUTC.Month(), startedAtUTC.Day(), 0, 0, 0, 0, time.UTC)
 
 	journeyID, err := db.InsertJourney(r.Context(), h.pool, db.Journey{
 		UserID:          userID,
@@ -376,7 +383,7 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
 		EndedAt:         endedAt,
 		DurationSeconds: duration,
 		Log:             body.Log,
-		PlayedAt:        pending.StartedAt,
+		PlayedAt:        playedAt,
 	})
 	if err != nil {
 		log.Printf("journeys/confirm: insert journey: %v", err)
@@ -469,12 +476,13 @@ func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	endedAt := time.Now().UTC()
-	if body.PlayedAt != "" {
-		if t, err := time.Parse(time.RFC3339, body.PlayedAt); err == nil {
-			endedAt = t.UTC()
-		}
+	playedAt, err := parsePlayedAt(body.PlayedAt)
+	if err != nil {
+		http.Error(w, `{"error":"invalid_request","message":"played_at must be a valid date"}`, http.StatusBadRequest)
+		return
 	}
+
+	endedAt := time.Now().UTC()
 	startedAt := endedAt.Add(-time.Duration(body.DurationSeconds) * time.Second)
 	duration := body.DurationSeconds
 
@@ -485,7 +493,7 @@ func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
 		EndedAt:         endedAt,
 		DurationSeconds: duration,
 		Log:             body.Log,
-		PlayedAt:        startedAt,
+		PlayedAt:        playedAt,
 	})
 	if err != nil {
 		log.Printf("journeys/add: %v", err)
@@ -525,14 +533,15 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	endedAt := time.Now().UTC()
-	if body.PlayedAt != "" {
-		if t, err := time.Parse(time.RFC3339, body.PlayedAt); err == nil {
-			endedAt = t.UTC()
-		}
+	playedAt, err := parsePlayedAt(body.PlayedAt)
+	if err != nil {
+		http.Error(w, `{"error":"invalid_request","message":"played_at must be a valid date"}`, http.StatusBadRequest)
+		return
 	}
 
-	if err := db.UpdateJourney(r.Context(), h.pool, id, userID, body.IGDBID, body.DurationSeconds, endedAt, body.Log); err != nil {
+	endedAt := time.Now().UTC()
+
+	if err := db.UpdateJourney(r.Context(), h.pool, id, userID, body.IGDBID, body.DurationSeconds, endedAt, playedAt, body.Log); err != nil {
 		log.Printf("journeys/update: %v", err)
 		http.Error(w, `{"error":"not_found"}`, http.StatusNotFound)
 		return
@@ -579,7 +588,7 @@ func (h *Handler) listMine(w http.ResponseWriter, r *http.Request) {
 
 	var nextCursor string
 	if len(journeys) > limit {
-		nextCursor = journeys[limit].PlayedAt.UTC().Format(time.RFC3339)
+		nextCursor = db.EncodeJourneyCursor(journeys[limit].PlayedAt, journeys[limit].CreatedAt)
 		journeys = journeys[:limit]
 	}
 
@@ -596,7 +605,7 @@ func (h *Handler) listMine(w http.ResponseWriter, r *http.Request) {
 			EndedAt:         j.EndedAt.UTC().Format(time.RFC3339),
 			DurationSeconds: j.DurationSeconds,
 			Log:             j.Log,
-			PlayedAt:        j.PlayedAt.UTC().Format(time.RFC3339),
+			PlayedAt:        j.PlayedAt.Format(db.DateFormat),
 		}
 		resp = append(resp, item)
 	}
@@ -637,7 +646,7 @@ func (h *Handler) listByPlayer(w http.ResponseWriter, r *http.Request) {
 
 	var nextCursor string
 	if len(journeys) > limit {
-		nextCursor = journeys[limit].PlayedAt.UTC().Format(time.RFC3339)
+		nextCursor = db.EncodeJourneyCursor(journeys[limit].PlayedAt, journeys[limit].CreatedAt)
 		journeys = journeys[:limit]
 	}
 
@@ -654,7 +663,7 @@ func (h *Handler) listByPlayer(w http.ResponseWriter, r *http.Request) {
 			EndedAt:         j.EndedAt.UTC().Format(time.RFC3339),
 			DurationSeconds: j.DurationSeconds,
 			Log:             j.Log,
-			PlayedAt:        j.PlayedAt.UTC().Format(time.RFC3339),
+			PlayedAt:        j.PlayedAt.Format(db.DateFormat),
 		}
 		resp = append(resp, item)
 	}
@@ -666,6 +675,16 @@ func (h *Handler) listByPlayer(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(result)
+}
+
+// parsePlayedAt parses a played_at date string (db.DateFormat). An empty
+// string defaults to today (UTC).
+func parsePlayedAt(s string) (time.Time, error) {
+	if s == "" {
+		now := time.Now().UTC()
+		return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC), nil
+	}
+	return time.Parse(db.DateFormat, s)
 }
 
 func formatDuration(d time.Duration) string {

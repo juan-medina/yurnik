@@ -9,8 +9,8 @@ import (
 	"github.com/juan-medina/yurnik/internal/db"
 )
 
-func mkJourney(id string, playedAt time.Time) db.JourneyWithPlayer {
-	return db.JourneyWithPlayer{ID: id, PlayedAt: playedAt}
+func mkJourney(id string, playedAt, createdAt time.Time) db.JourneyWithPlayer {
+	return db.JourneyWithPlayer{ID: id, PlayedAt: playedAt, CreatedAt: createdAt}
 }
 
 func mkActivity(typ string, createdAt time.Time) db.ActivityEvent {
@@ -19,9 +19,10 @@ func mkActivity(typ string, createdAt time.Time) db.ActivityEvent {
 
 func TestMergeFeedItems_interleavesByTime(t *testing.T) {
 	now := time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC)
+	playedAt := time.Date(2026, 6, 10, 0, 0, 0, 0, time.UTC)
 	journeys := []db.JourneyWithPlayer{
-		mkJourney("j1", now),                   // 12:00
-		mkJourney("j2", now.Add(-2*time.Hour)), // 10:00
+		mkJourney("j1", playedAt, now),                   // created 12:00
+		mkJourney("j2", playedAt, now.Add(-2*time.Hour)), // created 10:00
 	}
 	activity := []db.ActivityEvent{
 		mkActivity("new_follower", now.Add(-1*time.Hour)), // 11:00
@@ -46,11 +47,12 @@ func TestMergeFeedItems_interleavesByTime(t *testing.T) {
 
 func TestMergeFeedItems_truncatesAndSetsNextCursor(t *testing.T) {
 	now := time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC)
+	playedAt := time.Date(2026, 6, 10, 0, 0, 0, 0, time.UTC)
 	// 3 journeys (limit+1 = 3 fetched for limit=2), no activity.
 	journeys := []db.JourneyWithPlayer{
-		mkJourney("j1", now),
-		mkJourney("j2", now.Add(-1*time.Hour)),
-		mkJourney("j3", now.Add(-2*time.Hour)),
+		mkJourney("j1", playedAt, now),
+		mkJourney("j2", playedAt, now.Add(-1*time.Hour)),
+		mkJourney("j3", playedAt, now.Add(-2*time.Hour)),
 	}
 	var activity []db.ActivityEvent
 
@@ -62,7 +64,7 @@ func TestMergeFeedItems_truncatesAndSetsNextCursor(t *testing.T) {
 	if items[0].Journey.ID != "j1" || items[1].Journey.ID != "j2" {
 		t.Fatalf("unexpected items: %+v", items)
 	}
-	wantJourneyCursor := now.Add(-1 * time.Hour).UTC().Format(time.RFC3339)
+	wantJourneyCursor := db.EncodeJourneyCursor(playedAt, now.Add(-1*time.Hour))
 	wantCursor := wantJourneyCursor + "|"
 	if cursor != wantCursor {
 		t.Errorf("got cursor %q, want %q", cursor, wantCursor)
@@ -72,8 +74,9 @@ func TestMergeFeedItems_truncatesAndSetsNextCursor(t *testing.T) {
 func TestMergeFeedItems_oneSourceExhaustedKeepsItsCursor(t *testing.T) {
 	now := time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC)
 	// Journeys exhausted (only 1, <= limit), activity has more (limit+1 = 3).
+	playedAt := time.Date(2026, 6, 10, 0, 0, 0, 0, time.UTC)
 	journeys := []db.JourneyWithPlayer{
-		mkJourney("j1", now.Add(-10*time.Hour)),
+		mkJourney("j1", playedAt, now.Add(-10*time.Hour)),
 	}
 	activity := []db.ActivityEvent{
 		mkActivity("new_follower", now),

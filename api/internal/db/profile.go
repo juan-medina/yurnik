@@ -49,7 +49,7 @@ func GetProfileSummary(ctx context.Context, pool *pgxpool.Pool, userID string) (
 			FROM journeys j
 			JOIN igdb_games g ON g.igdb_id = j.igdb_id
 			WHERE j.user_id = $1
-			ORDER BY j.igdb_id, j.played_at DESC
+			ORDER BY j.igdb_id, j.played_at DESC, j.created_at DESC
 		) sub
 		ORDER BY last_played DESC
 		LIMIT 5

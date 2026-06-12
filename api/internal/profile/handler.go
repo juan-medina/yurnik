@@ -294,7 +294,7 @@ func journeyToFeedEntry(j db.JourneyWithPlayer) feedEntry {
 		ReleaseYear:     j.ReleaseYear,
 		DurationSeconds: j.DurationSeconds,
 		Log:             j.Log,
-		PlayedAt:        j.PlayedAt.UTC().Format(time.RFC3339),
+		PlayedAt:        j.PlayedAt.Format(db.DateFormat),
 		Player: playerResp{
 			ID:        j.UserID,
 			Handle:    j.PlayerHandle,
@@ -336,9 +336,10 @@ func activityToFeedEntry(a db.ActivityEvent) activityResp {
 	}
 }
 
-// mergeFeedItems interleaves journeys (ordered by PlayedAt desc) and activity
-// events (ordered by CreatedAt desc) into a single feed, most recent first,
-// truncated to limit. It returns the combined items and the next cursor
+// mergeFeedItems interleaves journeys (ordered by CreatedAt desc — when they
+// were logged, not the day they represent) and activity events (ordered by
+// CreatedAt desc) into a single feed, most recent first, truncated to limit.
+// It returns the combined items and the next cursor
 // (journeyCursor + "|" + activityCursor), or "" if both sources are
 // exhausted. journeys and activity must each contain at most limit+1 items,
 // as returned by the corresponding Get* DB functions.
@@ -358,11 +359,11 @@ func mergeFeedItems(
 	items := make([]feedItem, 0, limit)
 	ji, ai := 0, 0
 	for len(items) < limit && (ji < len(journeys) || ai < len(activity)) {
-		takeJourney := ji < len(journeys) && (ai >= len(activity) || !journeys[ji].PlayedAt.Before(activity[ai].CreatedAt))
+		takeJourney := ji < len(journeys) && (ai >= len(activity) || !journeys[ji].CreatedAt.Before(activity[ai].CreatedAt))
 		if takeJourney {
 			entry := journeyToFeedEntry(journeys[ji])
 			items = append(items, feedItem{Kind: "journey", Journey: &entry})
-			journeyCursor = journeys[ji].PlayedAt.UTC().Format(time.RFC3339)
+			journeyCursor = db.EncodeJourneyCursor(journeys[ji].PlayedAt, journeys[ji].CreatedAt)
 			ji++
 		} else {
 			entry := activityToFeedEntry(activity[ai])
@@ -438,6 +439,7 @@ func journeyWithPlayer(j db.Journey, user db.User) db.JourneyWithPlayer {
 		DurationSeconds: j.DurationSeconds,
 		Log:             j.Log,
 		PlayedAt:        j.PlayedAt,
+		CreatedAt:       j.CreatedAt,
 		PlayerHandle:    user.Handle,
 		PlayerName:      user.Name,
 		PlayerAvatarURL: user.AvatarURL,

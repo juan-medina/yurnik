@@ -3,7 +3,7 @@
 
 import type { Game, GameActivity, GameDetail, JourneyPlayer } from "@/models/game";
 import { API_BASE, apiFetch } from "@/lib/api";
-import { formatDuration } from "@/lib/time";
+import { formatDuration, parseLocalDate } from "@/lib/time";
 
 type RawJourneyPlayer = {
   journey_id: string;
@@ -66,7 +66,7 @@ export async function getGameJourneys(igdbId: string): Promise<{
       journeyId: p.journey_id,
       player: { id: p.player.id, handle: p.player.handle, name: p.player.name, avatarUrl: p.player.avatar_url, color: p.player.color },
       duration: formatDuration(p.duration_seconds),
-      playedAt: new Date(p.played_at),
+      playedAt: parseLocalDate(p.played_at),
       isFollowing: p.player.is_following,
       isSelf: p.player.is_self,
     };
@@ -133,7 +133,7 @@ export async function getGameActivity(): Promise<GameActivity[]> {
         color: e.player.color,
       },
       duration: formatDuration(e.duration_seconds),
-      playedAt: new Date(e.played_at),
+      playedAt: parseLocalDate(e.played_at),
       log: e.log,
     })),
   }));

@@ -5,11 +5,16 @@ package db
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// DateFormat is the wire format for played_at, which represents a calendar
+// day (not a point in time).
+const DateFormat = "2006-01-02"
 
 // PendingJourney is a row from the pending_journeys table joined with igdb_games.
 type PendingJourney struct {
@@ -207,13 +212,15 @@ func InsertJourney(ctx context.Context, pool *pgxpool.Pool, j Journey) (string, 
 }
 
 // UpdateJourney updates mutable fields of a confirmed journey owned by userID.
-func UpdateJourney(ctx context.Context, pool *pgxpool.Pool, id, userID string, igdbID, durationSeconds int, endedAt time.Time, log *string) error {
+// playedAt is the calendar day the journey is logged against, independent of
+// started_at/ended_at (which only track duration bookkeeping).
+func UpdateJourney(ctx context.Context, pool *pgxpool.Pool, id, userID string, igdbID, durationSeconds int, endedAt, playedAt time.Time, log *string) error {
 	startedAt := endedAt.Add(-time.Duration(durationSeconds) * time.Second)
 	tag, err := pool.Exec(ctx, `
 		UPDATE journeys
-		SET igdb_id = $3, duration_seconds = $4, started_at = $5, ended_at = $6, played_at = $5, log = $7
+		SET igdb_id = $3, duration_seconds = $4, started_at = $5, ended_at = $6, played_at = $7, log = $8
 		WHERE id = $1 AND user_id = $2
-	`, id, userID, igdbID, durationSeconds, startedAt, endedAt, log)
+	`, id, userID, igdbID, durationSeconds, startedAt, endedAt, playedAt, log)
 	if err != nil {
 		return fmt.Errorf("update journey: %w", err)
 	}
@@ -249,6 +256,7 @@ type JourneyWithPlayer struct {
 	DurationSeconds int
 	Log             *string
 	PlayedAt        time.Time
+	CreatedAt       time.Time
 	PlayerHandle    string
 	PlayerName      string
 	PlayerAvatarURL *string
@@ -298,7 +306,7 @@ func ListOthersOnJourney(ctx context.Context, pool *pgxpool.Pool, journeyID stri
 		FROM journeys j
 		JOIN users u ON u.id = j.user_id
 		JOIN src ON j.igdb_id = src.igdb_id AND j.user_id != src.user_id
-		ORDER BY j.played_at DESC
+		ORDER BY j.played_at DESC, j.created_at DESC
 		LIMIT 50
 	`, journeyID)
 	if err != nil {
@@ -324,17 +332,17 @@ func ListOthersOnJourney(ctx context.Context, pool *pgxpool.Pool, journeyID stri
 // ordered by played_at desc. The caller uses GetFollowingIDs to split following/others/self.
 func ListJourneysByIGDBID(ctx context.Context, pool *pgxpool.Pool, igdbID int) ([]PlayerOnJourney, error) {
 	rows, err := pool.Query(ctx, `
-		SELECT * FROM (
+		SELECT journey_id, duration_seconds, played_at, user_id, handle, name, avatar_url, color FROM (
 			SELECT DISTINCT ON (j.user_id)
-			       j.id, j.duration_seconds, j.played_at,
-			       u.id, u.handle, COALESCE(u.display_name, u.name),
-			       COALESCE(u.custom_avatar_url, u.avatar_url), u.color
+			       j.id AS journey_id, j.duration_seconds, j.played_at, j.created_at,
+			       u.id AS user_id, u.handle, COALESCE(u.display_name, u.name) AS name,
+			       COALESCE(u.custom_avatar_url, u.avatar_url) AS avatar_url, u.color
 			FROM journeys j
 			JOIN users u ON u.id = j.user_id
 			WHERE j.igdb_id = $1
-			ORDER BY j.user_id, j.played_at DESC
+			ORDER BY j.user_id, j.played_at DESC, j.created_at DESC
 		) sub
-		ORDER BY played_at DESC
+		ORDER BY played_at DESC, created_at DESC
 		LIMIT 50
 	`, igdbID)
 	if err != nil {
@@ -380,13 +388,13 @@ func GetGameActivity(ctx context.Context, pool *pgxpool.Pool) ([]ActivityEntry, 
 	rows, err := pool.Query(ctx, `
 		WITH latest_per_player_game AS (
 			SELECT DISTINCT ON (j.user_id, j.igdb_id)
-				j.id, j.user_id, j.igdb_id, j.duration_seconds, j.log, j.played_at,
+				j.id, j.user_id, j.igdb_id, j.duration_seconds, j.log, j.played_at, j.created_at,
 				g.name AS game_name, g.cover_url, g.genres, g.release_year,
 				u.handle, COALESCE(u.display_name, u.name) AS player_name, COALESCE(u.custom_avatar_url, u.avatar_url) AS avatar_url, u.color
 			FROM journeys j
 			JOIN igdb_games g ON g.igdb_id = j.igdb_id
 			JOIN users u ON u.id = j.user_id
-			ORDER BY j.user_id, j.igdb_id, j.played_at DESC
+			ORDER BY j.user_id, j.igdb_id, j.played_at DESC, j.created_at DESC
 		),
 		game_stats AS (
 			SELECT igdb_id, COUNT(*) AS unique_players, MAX(played_at) AS last_played
@@ -400,11 +408,11 @@ func GetGameActivity(ctx context.Context, pool *pgxpool.Pool) ([]ActivityEntry, 
 			LIMIT 12
 		),
 		ranked_entries AS (
-			SELECT l.id, l.user_id, l.igdb_id, l.duration_seconds, l.log, l.played_at,
+			SELECT l.id, l.user_id, l.igdb_id, l.duration_seconds, l.log, l.played_at, l.created_at,
 			       l.game_name, l.cover_url, l.genres, l.release_year,
 			       l.handle, l.player_name, l.avatar_url, l.color,
 			       t.game_rank,
-			       ROW_NUMBER() OVER (PARTITION BY l.igdb_id ORDER BY l.played_at DESC) AS entry_rank
+			       ROW_NUMBER() OVER (PARTITION BY l.igdb_id ORDER BY l.played_at DESC, l.created_at DESC) AS entry_rank
 			FROM latest_per_player_game l
 			JOIN top_games t ON t.igdb_id = l.igdb_id
 		)
@@ -413,7 +421,7 @@ func GetGameActivity(ctx context.Context, pool *pgxpool.Pool) ([]ActivityEntry, 
 		       handle, player_name, avatar_url, color
 		FROM ranked_entries
 		WHERE entry_rank <= 4
-		ORDER BY game_rank, played_at DESC
+		ORDER BY game_rank, played_at DESC, created_at DESC
 	`)
 	if err != nil {
 		return nil, err
@@ -436,11 +444,13 @@ func GetGameActivity(ctx context.Context, pool *pgxpool.Pool) ([]ActivityEntry, 
 }
 
 // GetFollowingFeed returns journeys from users that userID follows, joined with
-// game and player info, ordered by played_at descending with optional cursor pagination.
+// game and player info, ordered by played_at then created_at descending with
+// optional cursor pagination. cursor, if non-empty, is "<played_at>,<created_at>"
+// as produced by DateFormat and RFC3339 respectively.
 func GetFollowingFeed(ctx context.Context, pool *pgxpool.Pool, userID string, limit int, cursor string) ([]JourneyWithPlayer, error) {
 	const cols = `
 		j.id, j.user_id, j.igdb_id, g.name, g.cover_url, g.genres, g.release_year,
-		j.duration_seconds, j.log, j.played_at,
+		j.duration_seconds, j.log, j.played_at, j.created_at,
 		u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.color`
 
 	var rows pgx.Rows
@@ -454,20 +464,24 @@ func GetFollowingFeed(ctx context.Context, pool *pgxpool.Pool, userID string, li
 			JOIN users u ON u.id = j.user_id
 			JOIN follows f ON f.followee_id = j.user_id
 			WHERE f.follower_id = $1
-			ORDER BY j.played_at DESC
+			ORDER BY j.played_at DESC, j.created_at DESC
 			LIMIT $2
 		`, userID, limit)
 	} else {
+		playedAt, createdAt, err2 := splitJourneyCursor(cursor)
+		if err2 != nil {
+			return nil, err2
+		}
 		rows, err = pool.Query(ctx, `
 			SELECT`+cols+`
 			FROM journeys j
 			JOIN igdb_games g ON g.igdb_id = j.igdb_id
 			JOIN users u ON u.id = j.user_id
 			JOIN follows f ON f.followee_id = j.user_id
-			WHERE f.follower_id = $1 AND j.played_at < $2
-			ORDER BY j.played_at DESC
-			LIMIT $3
-		`, userID, cursor, limit)
+			WHERE f.follower_id = $1 AND (j.played_at, j.created_at) < ($2, $3)
+			ORDER BY j.played_at DESC, j.created_at DESC
+			LIMIT $4
+		`, userID, playedAt, createdAt, limit)
 	}
 	if err != nil {
 		return nil, err
@@ -479,7 +493,7 @@ func GetFollowingFeed(ctx context.Context, pool *pgxpool.Pool, userID string, li
 		var j JourneyWithPlayer
 		if err := rows.Scan(
 			&j.ID, &j.UserID, &j.IGDBID, &j.GameName, &j.CoverURL, &j.Genres, &j.ReleaseYear,
-			&j.DurationSeconds, &j.Log, &j.PlayedAt,
+			&j.DurationSeconds, &j.Log, &j.PlayedAt, &j.CreatedAt,
 			&j.PlayerHandle, &j.PlayerName, &j.PlayerAvatarURL, &j.PlayerColor,
 		); err != nil {
 			return nil, err
@@ -487,6 +501,29 @@ func GetFollowingFeed(ctx context.Context, pool *pgxpool.Pool, userID string, li
 		journeys = append(journeys, j)
 	}
 	return journeys, rows.Err()
+}
+
+// splitJourneyCursor parses a composite "<played_at>,<created_at>" cursor
+// into its played_at (date) and created_at (timestamptz) components.
+func splitJourneyCursor(cursor string) (playedAt time.Time, createdAt time.Time, err error) {
+	playedAtStr, createdAtStr, ok := strings.Cut(cursor, ",")
+	if !ok {
+		return time.Time{}, time.Time{}, fmt.Errorf("invalid journey cursor: %q", cursor)
+	}
+	playedAt, err = time.Parse(DateFormat, playedAtStr)
+	if err != nil {
+		return time.Time{}, time.Time{}, fmt.Errorf("invalid journey cursor played_at: %w", err)
+	}
+	createdAt, err = time.Parse(time.RFC3339, createdAtStr)
+	if err != nil {
+		return time.Time{}, time.Time{}, fmt.Errorf("invalid journey cursor created_at: %w", err)
+	}
+	return playedAt, createdAt, nil
+}
+
+// EncodeJourneyCursor builds a composite "<played_at>,<created_at>" cursor value.
+func EncodeJourneyCursor(playedAt, createdAt time.Time) string {
+	return playedAt.Format(DateFormat) + "," + createdAt.UTC().Format(time.RFC3339)
 }
 
 // JourneyComment is a comment row joined with the commenter's user info.
@@ -569,7 +606,9 @@ func DeleteComment(ctx context.Context, pool *pgxpool.Pool, commentID, userID st
 }
 
 // ListJourneysByUser returns confirmed journeys for the given user ID joined
-// with igdb_games, ordered by played_at descending, with optional cursor-based pagination.
+// with igdb_games, ordered by played_at then created_at descending, with
+// optional cursor-based pagination. cursor, if non-empty, is
+// "<played_at>,<created_at>" as produced by EncodeJourneyCursor.
 func ListJourneysByUser(ctx context.Context, pool *pgxpool.Pool, userID string, limit int, cursor string) ([]Journey, error) {
 	const query = `
 		SELECT j.id, j.user_id, j.igdb_id, g.name, g.cover_url, g.genres, g.release_year,
@@ -582,12 +621,16 @@ func ListJourneysByUser(ctx context.Context, pool *pgxpool.Pool, userID string, 
 
 	if cursor == "" {
 		rows, err = pool.Query(ctx, query+`
-			WHERE j.user_id = $1 ORDER BY j.played_at DESC LIMIT $2`,
+			WHERE j.user_id = $1 ORDER BY j.played_at DESC, j.created_at DESC LIMIT $2`,
 			userID, limit)
 	} else {
+		playedAt, createdAt, err2 := splitJourneyCursor(cursor)
+		if err2 != nil {
+			return nil, err2
+		}
 		rows, err = pool.Query(ctx, query+`
-			WHERE j.user_id = $1 AND j.played_at < $2 ORDER BY j.played_at DESC LIMIT $3`,
-			userID, cursor, limit)
+			WHERE j.user_id = $1 AND (j.played_at, j.created_at) < ($2, $3) ORDER BY j.played_at DESC, j.created_at DESC LIMIT $4`,
+			userID, playedAt, createdAt, limit)
 	}
 	if err != nil {
 		return nil, err

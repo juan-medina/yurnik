@@ -76,7 +76,7 @@ function AddJourneyForm({ onAdd, onCancel }: { onAdd: () => void; onCancel: () =
 
   function getPlayedAt(): Date {
     if (whenMode === "pick" && pickedDate) {
-      return new Date(pickedDate.getFullYear(), pickedDate.getMonth(), pickedDate.getDate(), 23, 59, 59);
+      return pickedDate;
     }
     return new Date();
   }

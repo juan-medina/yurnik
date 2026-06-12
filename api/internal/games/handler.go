@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/juan-medina/yurnik/internal/auth"
@@ -211,7 +210,7 @@ func (h *Handler) journeys(w http.ResponseWriter, r *http.Request) {
 				IsSelf:      authed && p.UserID == callerID,
 			},
 			DurationSeconds: p.DurationSeconds,
-			PlayedAt:        p.PlayedAt.UTC().Format(time.RFC3339),
+			PlayedAt:        p.PlayedAt.Format(db.DateFormat),
 		})
 	}
 
@@ -342,7 +341,7 @@ func (h *Handler) activity(w http.ResponseWriter, r *http.Request) {
 				Color:     e.PlayerColor,
 			},
 			DurationSeconds: e.DurationSeconds,
-			PlayedAt:        e.PlayedAt.UTC().Format(time.RFC3339),
+			PlayedAt:        e.PlayedAt.Format(db.DateFormat),
 			Log:             e.Log,
 		})
 	}

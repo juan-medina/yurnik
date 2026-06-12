@@ -3,7 +3,7 @@
 
 import type { FeedItem } from "@/models/feed";
 import { API_BASE, apiFetch } from "@/lib/api";
-import { formatDuration } from "@/lib/time";
+import { formatDuration, parseLocalDate } from "@/lib/time";
 
 type RawPlayer = {
   id: string;
@@ -78,7 +78,7 @@ function toFeedItem(item: RawFeedItem): FeedItem {
       genres: j.genres,
       releaseYear: j.release_year,
       duration: formatDuration(j.duration_seconds),
-      playedAt: new Date(j.played_at),
+      playedAt: parseLocalDate(j.played_at),
       log: j.log,
     },
   };

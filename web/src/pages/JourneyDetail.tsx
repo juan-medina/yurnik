@@ -395,8 +395,7 @@ export default function JourneyDetail() {
                   onClick={() => {
                     if (!editGame || !editParsed || !editPickedDate) return;
                     const durationSeconds = (editParsed.hours * 3600) + (editParsed.minutes * 60);
-                    const playedAt = new Date(editPickedDate.getFullYear(), editPickedDate.getMonth(), editPickedDate.getDate(), 23, 59, 59);
-                    updateJourneyMutation.mutate({ igdbId: parseInt(editGame.id), durationSeconds, playedAt, log: editLog.trim() || undefined });
+                    updateJourneyMutation.mutate({ igdbId: parseInt(editGame.id), durationSeconds, playedAt: editPickedDate, log: editLog.trim() || undefined });
                   }}
                   className="rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity disabled:opacity-40"
                 >

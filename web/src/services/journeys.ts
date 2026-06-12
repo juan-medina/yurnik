@@ -4,7 +4,7 @@
 import type { Journey, PendingJourney, NewJourney, UpdateJourney } from "@/models/journey";
 import type { Comment, JourneyPlayer } from "@/models/game";
 import { API_BASE, apiFetch } from "@/lib/api";
-import { formatDuration } from "@/lib/time";
+import { formatDuration, formatLocalDate, parseLocalDate } from "@/lib/time";
 import { getCurrentPlayer } from "./auth";
 
 type RawJourneyDetail = {
@@ -69,7 +69,7 @@ export async function getUserJourneys(): Promise<Journey[]> {
     genres: j.genres,
     releaseYear: j.release_year,
     duration: formatDuration(j.duration_seconds ?? 0),
-    playedAt: new Date(j.played_at),
+    playedAt: parseLocalDate(j.played_at),
     log: j.log,
   }));
 }
@@ -105,7 +105,7 @@ export async function addJourney(input: NewJourney): Promise<void> {
   const body = {
     igdb_id: input.igdbId,
     duration_seconds: input.durationSeconds,
-    played_at: input.playedAt.toISOString(),
+    played_at: formatLocalDate(input.playedAt),
     log: input.log ?? null,
   };
   console.log("[addJourney] posting:", JSON.stringify(body));
@@ -132,7 +132,7 @@ export async function updateJourney(id: string, input: UpdateJourney): Promise<v
     body: JSON.stringify({
       igdb_id: input.igdbId,
       duration_seconds: input.durationSeconds,
-      played_at: input.playedAt.toISOString(),
+      played_at: formatLocalDate(input.playedAt),
       log: input.log ?? null,
     }),
   });
@@ -199,7 +199,7 @@ export async function getJourney(id: string): Promise<Journey | undefined> {
     genres: j.genres,
     releaseYear: j.release_year,
     duration: formatDuration(j.duration_seconds),
-    playedAt: new Date(j.played_at),
+    playedAt: parseLocalDate(j.played_at),
     log: j.log,
   };
 }
@@ -250,7 +250,7 @@ export async function getJourneyPlayers(journeyId: string): Promise<{
       color: p.player.color,
     },
     duration: formatDuration(p.duration_seconds),
-    playedAt: new Date(p.played_at),
+    playedAt: parseLocalDate(p.played_at),
     isFollowing: p.player.is_following,
     isSelf: false,
     journeyId: p.journey_id,

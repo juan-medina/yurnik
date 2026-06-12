@@ -4,6 +4,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { MOCK_COMMENTS, MOCK_OTHERS_ON_JOURNEY, MY_PLAYER_ID, MY_PLAYER, JOURNEYS, PLAYERS } from "@/test/fixtures";
+import { formatLocalDate } from "@/lib/time";
 import { _reset as resetPlayers } from "@/services/players";
 import { renderWithProviders } from "@/test/utils";
 import JourneyDetail from "./JourneyDetail";
@@ -21,7 +22,7 @@ function journeyResponse(j: typeof s1, igdbId: number, durationSeconds: number) 
     id: j.id, igdb_id: igdbId, game: j.game,
     cover_url: j.coverUrl ?? null, genres: j.genres,
     duration_seconds: durationSeconds, log: j.log ?? null,
-    played_at: j.playedAt.toISOString(),
+    played_at: formatLocalDate(j.playedAt),
     player: { id: j.player.id, handle: j.player.handle, name: j.player.name, avatar_url: null, color: j.player.color },
   });
 }
@@ -96,7 +97,7 @@ function makeFetch() {
           journey_id: `j_${p.player.id}`,
           player: { id: p.player.id, handle: p.player.handle, name: p.player.name, avatar_url: null, color: p.player.color, is_following: followedIds.has(p.player.id) },
           duration_seconds: 3600,
-          played_at: new Date().toISOString(),
+          played_at: formatLocalDate(new Date()),
         })),
       }));
     }

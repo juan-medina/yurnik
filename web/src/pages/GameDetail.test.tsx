@@ -4,6 +4,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { MOCK_GAME_DETAIL, MOCK_FRIENDS_ON_JOURNEY, MOCK_OTHERS_ON_JOURNEY } from "@/test/fixtures";
+import { formatLocalDate } from "@/lib/time";
 import { _reset as resetPlayers } from "@/services/players";
 import { renderWithProviders } from "@/test/utils";
 import GameDetail from "./GameDetail";
@@ -34,13 +35,13 @@ function journeyPlayersResponse(withFollowing: boolean) {
         journey_id: `j_${jp.player.id}`,
         player: { id: jp.player.id, handle: jp.player.handle, name: jp.player.name, avatar_url: null, color: jp.player.color, is_following: true, is_self: false },
         duration_seconds: 9840,
-        played_at: jp.playedAt.toISOString(),
+        played_at: formatLocalDate(jp.playedAt),
       })),
       ...MOCK_OTHERS_ON_JOURNEY.map((jp) => ({
         journey_id: `j_${jp.player.id}`,
         player: { id: jp.player.id, handle: jp.player.handle, name: jp.player.name, avatar_url: null, color: jp.player.color, is_following: false, is_self: false },
         duration_seconds: 3600,
-        played_at: jp.playedAt.toISOString(),
+        played_at: formatLocalDate(jp.playedAt),
       })),
     ],
   });
