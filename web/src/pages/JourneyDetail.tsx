@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import GenreChip from "@/components/GenreChip";
-import { CalendarDays, Check, ChevronLeft, Clock, Pencil, Trash2, UserPlus } from "lucide-react";
+import { Check, ChevronLeft, Clock, Pencil, Trash2, UserPlus } from "lucide-react";
 import { Info } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -15,10 +15,7 @@ import SignInPromptModal from "@/components/SignInPromptModal";
 import { GameSelector } from "@/components/GameSelector";
 import { parseDuration } from "@/lib/duration";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { DurationField, JourneyLogField, PlayedAtField } from "@/components/JourneyFormFields";
 import { formatCommentAge, formatJourneyDate } from "@/lib/time";
 import type { Comment, JourneyPlayer, Player } from "@/models";
 import type { Game } from "@/models/game";
@@ -331,56 +328,32 @@ export default function JourneyDetail() {
                 <GameSelector value={editGame} onChange={setEditGame} />
               </div>
               <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                    {t("journey_duration_label")}
-                  </label>
-                  <input
-                    type="text"
-                    value={editDuration}
-                    onChange={(e) => setEditDuration(e.target.value)}
-                    placeholder={t("journey_duration_placeholder")}
-                    className={`w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary ${durationInvalid ? "border-destructive" : "border-border"}`}
-                  />
-                  {durationInvalid && <p className="mt-1 text-xs text-destructive">{t("journey_duration_error")}</p>}
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                    {t("journey_when_label")}
-                  </label>
-                  <Popover open={editCalendarOpen} onOpenChange={setEditCalendarOpen}>
-                    <PopoverTrigger asChild>
-                      <Button type="button" variant="outline" className="w-full justify-start gap-1.5">
-                        <CalendarDays size={14} />
-                        {editPickedDate ? format(editPickedDate, "MMM d, yyyy") : t("journey_pick_date")}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto">
-                      <Calendar
-                        mode="single"
-                        selected={editPickedDate}
-                        onSelect={(date) => {
-                          setEditPickedDate(date);
-                          setEditCalendarOpen(false);
-                        }}
-                        disabled={{ after: new Date() }}
-                        defaultMonth={editPickedDate ?? new Date()}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                <DurationField
+                  value={editDuration}
+                  onChange={setEditDuration}
+                  invalid={durationInvalid}
+                  label={t("journey_duration_label")}
+                  placeholder={t("journey_duration_placeholder")}
+                  errorText={t("journey_duration_error")}
+                />
+                <PlayedAtField
+                  mode="pick-required"
+                  label={t("journey_when_label")}
+                  pickedDate={editPickedDate}
+                  onPickedDateChange={setEditPickedDate}
+                  open={editCalendarOpen}
+                  onOpenChange={setEditCalendarOpen}
+                  pickLabel={t("journey_pick_date")}
+                  dateFormat="MMM d, yyyy"
+                />
               </div>
               <div className="mb-4">
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                  {t("journey_log_label")}{" "}
-                  <span className="font-normal text-muted-foreground/60">{t("journey_log_optional")}</span>
-                </label>
-                <textarea
+                <JourneyLogField
                   value={editLog}
-                  onChange={(e) => setEditLog(e.target.value)}
+                  onChange={setEditLog}
+                  label={t("journey_log_label")}
+                  optionalLabel={t("journey_log_optional")}
                   placeholder={t("journey_log_placeholder")}
-                  rows={3}
-                  className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
               <div className="flex items-center justify-end gap-2">

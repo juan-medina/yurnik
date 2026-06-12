@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
-import { CalendarDays, Check, Clock, MonitorDown, Plus, Trash2, X } from "lucide-react";
+import { Check, Clock, MonitorDown, Plus, Trash2, X } from "lucide-react";
 import GenreChip from "@/components/GenreChip";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -10,12 +10,9 @@ import SignInPromptModal from "@/components/SignInPromptModal";
 import { getUserJourneys, getPendingJourneys, addJourney, confirmPendingJourney, dismissPendingJourney, excludePendingJourney } from "@/services/journeys";
 import { formatCommentAge } from "@/lib/time";
 import { parseDuration, formatParsedDuration } from "@/lib/duration";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
 import JourneyCard from "@/components/JourneyCard";
 import { GameSelector, GameCover } from "@/components/GameSelector";
+import { DurationField, JourneyLogField, PlayedAtField } from "@/components/JourneyFormFields";
 import type { PendingJourney, NewJourney } from "@/models/journey";
 import type { Game } from "@/models/game";
 
@@ -111,74 +108,36 @@ function AddJourneyForm({ onAdd, onCancel }: { onAdd: () => void; onCancel: () =
       </div>
 
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-            {t("journeys_duration_label")}
-          </label>
-          <input
-            aria-label={t("journeys_duration_label")}
-            type="text"
-            value={durationInput}
-            onChange={(e) => setDurationInput(e.target.value)}
-            placeholder={t("journeys_duration_placeholder")}
-            className={`w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary ${durationInvalid ? "border-destructive" : "border-border"}`}
-          />
-          {durationInvalid && <p className="mt-1 text-xs text-destructive">{t("journeys_duration_error")}</p>}
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-            {t("journeys_when_label")}
-          </label>
-          <div className="flex gap-1.5">
-            <Button
-              type="button"
-              variant={whenMode === "now" ? "default" : "outline"}
-              className="flex-1"
-              onClick={() => { setWhenMode("now"); setPickedDate(undefined); }}
-            >
-              {t("journeys_just_now")}
-            </Button>
-            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant={whenMode === "pick" ? "default" : "outline"}
-                  className="flex flex-1 items-center gap-1.5"
-                  onClick={() => setWhenMode("pick")}
-                >
-                  <CalendarDays size={14} />
-                  {whenMode === "pick" && pickedDate ? format(pickedDate, "MMM d") : t("journeys_pick_date")}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto">
-                <Calendar
-                  mode="single"
-                  selected={pickedDate}
-                  onSelect={(date) => {
-                    setPickedDate(date);
-                    setWhenMode("pick");
-                    setCalendarOpen(false);
-                  }}
-                  disabled={{ after: new Date() }}
-                  defaultMonth={pickedDate ?? new Date()}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
+        <DurationField
+          value={durationInput}
+          onChange={setDurationInput}
+          invalid={durationInvalid}
+          label={t("journeys_duration_label")}
+          placeholder={t("journeys_duration_placeholder")}
+          errorText={t("journeys_duration_error")}
+        />
+        <PlayedAtField
+          mode="now-or-pick"
+          label={t("journeys_when_label")}
+          whenMode={whenMode}
+          onWhenModeChange={setWhenMode}
+          pickedDate={pickedDate}
+          onPickedDateChange={setPickedDate}
+          open={calendarOpen}
+          onOpenChange={setCalendarOpen}
+          nowLabel={t("journeys_just_now")}
+          pickLabel={t("journeys_pick_date")}
+          dateFormat="MMM d"
+        />
       </div>
 
       <div className="mb-5">
-        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-          {t("journeys_log_label")}{" "}
-          <span className="font-normal text-muted-foreground/60">{t("journeys_log_optional")}</span>
-        </label>
-        <textarea
+        <JourneyLogField
           value={log}
-          onChange={(e) => setLog(e.target.value)}
+          onChange={setLog}
+          label={t("journeys_log_label")}
+          optionalLabel={t("journeys_log_optional")}
           placeholder={t("journeys_log_placeholder")}
-          rows={3}
-          className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
         />
       </div>
 
@@ -290,11 +249,11 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
           <span className="mx-1 opacity-40">·</span>
           <span>{t("journeys_ended", { time: formatCommentAge(journey.endedAt) })}</span>
         </div>
-        <textarea
+        <JourneyLogField
           value={log}
-          onChange={(e) => setLog(e.target.value)}
+          onChange={setLog}
+          label=""
           placeholder={t("journeys_add_log_placeholder")}
-          rows={3}
           className="mt-3 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
         />
         <div className="mt-3 flex items-center justify-end gap-2">
