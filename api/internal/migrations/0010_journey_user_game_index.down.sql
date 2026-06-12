@@ -1,0 +1,2 @@
+DROP INDEX journeys_user_id_igdb_id_played_at_idx;
+DROP INDEX pending_journeys_merge_idx;
