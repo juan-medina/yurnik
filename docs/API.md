@@ -42,7 +42,7 @@ Invalidates the current session token. Returns `204 No Content`.
 | Layer | Scope | Limit |
 |---|---|---|
 | Cloudflare | Per IP | 100 req / minute |
-| API server | Global | 200 req / second |
+| API server | Global | Configurable via `RATE_LIMIT_RPS` |
 | IGDB proxy | Upstream calls | 4 req / second |
 
 Exceeded limits return `429 Too Many Requests` with a `Retry-After` header.

@@ -7,7 +7,7 @@ Operational decisions and the reasoning behind them. Architecture decisions live
 ```
 Cloudflare Pages          React SPA — static assets, global CDN, free
     │
-    │  API calls (api.yurnik.gg)
+    │  API calls (api.yurnik.social)
     ▼
 Cloudflare proxy          DNS, SSL termination, DDoS absorption, rate limiting
     │
@@ -19,7 +19,7 @@ Hetzner VPS               Go API binary + Postgres on the same instance
 
 The React SPA is deployed directly from Git. Cloudflare Pages rebuilds and deploys on every push to `main`. Pull requests get preview URLs automatically. Static assets are served from Cloudflare's edge globally at no bandwidth cost.
 
-No server is involved in serving the frontend. The SPA communicates with the API at `api.yurnik.gg`.
+No server is involved in serving the frontend. The SPA communicates with the API at `api.yurnik.social`.
 
 ## API and database — Hetzner VPS
 
