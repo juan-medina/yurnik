@@ -11,12 +11,27 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/juan-medina/yurnik/internal/auth"
 	"github.com/juan-medina/yurnik/internal/db"
 )
+
+// maxTextLength is the maximum number of characters allowed in the journey
+// log and comment text fields. Mirrored on the frontend in
+// web/src/lib/constants.ts and enforced at the database level by a CHECK
+// constraint.
+const maxTextLength = 400
+
+// maxRequestBodyBytes caps the size of JSON request bodies accepted by this
+// handler. It is generous for the largest expected payload (a few hundred
+// characters of text plus a handful of other fields) so it never rejects a
+// legitimate request, while still rejecting wildly oversized bodies before
+// they are decoded.
+const maxRequestBodyBytes = 16 * 1024
 
 // Handler handles journey routes.
 type Handler struct {
@@ -202,8 +217,13 @@ func (h *Handler) postComment(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Text string `json:"text"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Text == "" {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)).Decode(&body); err != nil {
 		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
+		return
+	}
+	body.Text = strings.TrimSpace(body.Text)
+	if body.Text == "" || !withinMaxTextLength(body.Text) {
+		http.Error(w, `{"error":"invalid_request","message":"text must be between 1 and 400 characters"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -357,7 +377,7 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
 		PlayedAt        *string `json:"played_at"`
 		Log             *string `json:"log"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)).Decode(&body); err != nil {
 		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
 		return
 	}
@@ -372,13 +392,19 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	normalizedLog, ok := normalizeLog(body.Log)
+	if !ok {
+		http.Error(w, `{"error":"invalid_request","message":"log must be at most 400 characters"}`, http.StatusBadRequest)
+		return
+	}
+
 	journeyID, err := db.InsertJourney(r.Context(), h.pool, db.Journey{
 		UserID:          userID,
 		IGDBID:          *body.IGDBID,
 		StartedAt:       startedAt,
 		EndedAt:         endedAt,
 		DurationSeconds: duration,
-		Log:             body.Log,
+		Log:             normalizedLog,
 		PlayedAt:        playedAt,
 	})
 	if err != nil {
@@ -459,7 +485,7 @@ func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
 		PlayedAt        string  `json:"played_at"`
 		Log             *string `json:"log"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)).Decode(&body); err != nil {
 		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
 		return
 	}
@@ -477,6 +503,13 @@ func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"invalid_request","message":"played_at must be a valid date"}`, http.StatusBadRequest)
 		return
 	}
+
+	normalizedLog, ok := normalizeLog(body.Log)
+	if !ok {
+		http.Error(w, `{"error":"invalid_request","message":"log must be at most 400 characters"}`, http.StatusBadRequest)
+		return
+	}
+	body.Log = normalizedLog
 
 	endedAt := time.Now().UTC()
 	startedAt := endedAt.Add(-time.Duration(body.DurationSeconds) * time.Second)
@@ -516,7 +549,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		PlayedAt        string  `json:"played_at"`
 		Log             *string `json:"log"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)).Decode(&body); err != nil {
 		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
 		return
 	}
@@ -535,9 +568,15 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	normalizedLog, ok := normalizeLog(body.Log)
+	if !ok {
+		http.Error(w, `{"error":"invalid_request","message":"log must be at most 400 characters"}`, http.StatusBadRequest)
+		return
+	}
+
 	endedAt := time.Now().UTC()
 
-	if err := db.UpdateJourney(r.Context(), h.pool, id, userID, body.IGDBID, body.DurationSeconds, endedAt, playedAt, body.Log); err != nil {
+	if err := db.UpdateJourney(r.Context(), h.pool, id, userID, body.IGDBID, body.DurationSeconds, endedAt, playedAt, normalizedLog); err != nil {
 		log.Printf("journeys/update: %v", err)
 		http.Error(w, `{"error":"not_found"}`, http.StatusNotFound)
 		return
@@ -671,6 +710,28 @@ func (h *Handler) listByPlayer(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(result)
+}
+
+// withinMaxTextLength reports whether s is at most maxTextLength characters.
+func withinMaxTextLength(s string) bool {
+	return utf8.RuneCountInString(s) <= maxTextLength
+}
+
+// normalizeLog trims s and returns nil if the result is empty, so a
+// whitespace-only log is stored the same as an absent one. ok is false if
+// the trimmed text exceeds maxTextLength.
+func normalizeLog(s *string) (*string, bool) {
+	if s == nil {
+		return nil, true
+	}
+	trimmed := strings.TrimSpace(*s)
+	if trimmed == "" {
+		return nil, true
+	}
+	if !withinMaxTextLength(trimmed) {
+		return nil, false
+	}
+	return &trimmed, true
 }
 
 // parsePlayedAt parses a played_at date string (db.DateFormat). An empty

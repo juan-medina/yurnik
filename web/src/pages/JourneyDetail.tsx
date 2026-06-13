@@ -14,7 +14,9 @@ import { avatarSrc, playerHref } from "@/lib/display";
 import SignInPromptModal from "@/components/SignInPromptModal";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { JourneyForm } from "@/components/JourneyForm";
+import { CharCounter } from "@/components/JourneyFormFields";
 import { formatCommentAge, formatJourneyDate } from "@/lib/time";
+import { MAX_TEXT_LENGTH } from "@/lib/constants";
 import type { Comment, JourneyPlayer, Player } from "@/models";
 
 function PlayerAvatar({ player, size = "md" }: { player: Player; size?: "sm" | "md" | "lg" }) {
@@ -131,7 +133,7 @@ function CommentRow({ comment, journeyId, currentPlayerId }: { comment: Comment;
           </>
         )}
       </div>
-      <p className="pl-8 text-sm text-foreground/80">{comment.text}</p>
+      <p className="pl-8 text-sm whitespace-pre-wrap text-foreground/80">{comment.text}</p>
     </div>
   );
 }
@@ -379,7 +381,7 @@ export default function JourneyDetail() {
             </div>
 
             {journey.log && (
-              <blockquote className="mt-4 border-l-2 border-border pl-4 text-sm italic text-muted-foreground">
+              <blockquote className="mt-4 whitespace-pre-wrap border-l-2 border-border pl-4 text-sm italic text-muted-foreground">
                 &ldquo;{journey.log}&rdquo;
               </blockquote>
             )}
@@ -404,6 +406,7 @@ export default function JourneyDetail() {
               onChange={(e) => setCommentText(e.target.value)}
               placeholder={t("journey_comment_placeholder")}
               rows={2}
+              maxLength={MAX_TEXT_LENGTH}
               className="flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             />
             <button
@@ -413,6 +416,9 @@ export default function JourneyDetail() {
             >
               {t("journey_post")}
             </button>
+          </div>
+          <div className="mt-1 text-right">
+            <CharCounter value={commentText} />
           </div>
         </div>
       </div>

@@ -268,6 +268,55 @@ func TestResolveConfirmFields(t *testing.T) {
 	})
 }
 
+func TestNormalizeLog(t *testing.T) {
+	t.Run("nil stays nil", func(t *testing.T) {
+		got, ok := normalizeLog(nil)
+		if !ok || got != nil {
+			t.Errorf("got (%v, %v), want (nil, true)", got, ok)
+		}
+	})
+
+	t.Run("whitespace-only collapses to nil", func(t *testing.T) {
+		s := "   \n\t  "
+		got, ok := normalizeLog(&s)
+		if !ok || got != nil {
+			t.Errorf("got (%v, %v), want (nil, true)", got, ok)
+		}
+	})
+
+	t.Run("trims surrounding whitespace", func(t *testing.T) {
+		s := "  great session  "
+		got, ok := normalizeLog(&s)
+		if !ok || got == nil || *got != "great session" {
+			t.Errorf("got (%v, %v), want (\"great session\", true)", got, ok)
+		}
+	})
+
+	t.Run("accepts exactly maxTextLength characters", func(t *testing.T) {
+		s := strings.Repeat("a", maxTextLength)
+		got, ok := normalizeLog(&s)
+		if !ok || got == nil || *got != s {
+			t.Errorf("got ok=%v, want true for a %d-character log", ok, maxTextLength)
+		}
+	})
+
+	t.Run("rejects more than maxTextLength characters", func(t *testing.T) {
+		s := strings.Repeat("a", maxTextLength+1)
+		_, ok := normalizeLog(&s)
+		if ok {
+			t.Errorf("got ok=true, want false for a %d-character log", maxTextLength+1)
+		}
+	})
+
+	t.Run("counts runes, not bytes, for multi-byte characters", func(t *testing.T) {
+		s := strings.Repeat("é", maxTextLength)
+		_, ok := normalizeLog(&s)
+		if !ok {
+			t.Errorf("got ok=false, want true for %d multi-byte characters", maxTextLength)
+		}
+	})
+}
+
 func TestExclude_unauthenticated(t *testing.T) {
 	h := &Handler{}
 	mux := http.NewServeMux()
