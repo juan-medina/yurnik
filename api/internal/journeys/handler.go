@@ -7,6 +7,7 @@ package journeys
 import (
 	"crypto/ed25519"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -351,8 +352,10 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
-		IGDBID *int    `json:"igdb_id"`
-		Log    *string `json:"log"`
+		IGDBID          *int    `json:"igdb_id"`
+		DurationSeconds *int    `json:"duration_seconds"`
+		PlayedAt        *string `json:"played_at"`
+		Log             *string `json:"log"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
@@ -363,23 +366,16 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	endedAt := time.Now().UTC()
-	if pending.EndedAt != nil {
-		endedAt = *pending.EndedAt
-	}
-	duration := int(endedAt.Sub(pending.StartedAt).Seconds())
-	if duration < 60 {
-		http.Error(w, `{"error":"invalid_request","message":"duration_seconds must be at least 60"}`, http.StatusBadRequest)
+	startedAt, endedAt, playedAt, duration, err := resolveConfirmFields(pending, body.DurationSeconds, body.PlayedAt)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"invalid_request","message":%q}`, err.Error()), http.StatusBadRequest)
 		return
 	}
-
-	startedAtUTC := pending.StartedAt.UTC()
-	playedAt := time.Date(startedAtUTC.Year(), startedAtUTC.Month(), startedAtUTC.Day(), 0, 0, 0, 0, time.UTC)
 
 	journeyID, err := db.InsertJourney(r.Context(), h.pool, db.Journey{
 		UserID:          userID,
 		IGDBID:          *body.IGDBID,
-		StartedAt:       pending.StartedAt,
+		StartedAt:       startedAt,
 		EndedAt:         endedAt,
 		DurationSeconds: duration,
 		Log:             body.Log,
@@ -685,6 +681,40 @@ func parsePlayedAt(s string) (time.Time, error) {
 		return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC), nil
 	}
 	return time.Parse(db.DateFormat, s)
+}
+
+// resolveConfirmFields computes the duration and played date for a journey
+// being confirmed from a pending journey, applying the user's overrides if
+// given. startedAt/endedAt are bookkeeping derived from the duration the same
+// way the manual "add journey" flow derives them — confirm is otherwise just
+// add, pre-populated from the pending capture.
+func resolveConfirmFields(pending db.PendingJourney, overrideDuration *int, overridePlayedAt *string) (startedAt, endedAt, playedAt time.Time, durationSeconds int, err error) {
+	if overrideDuration != nil {
+		durationSeconds = *overrideDuration
+	} else {
+		capturedEnd := time.Now().UTC()
+		if pending.EndedAt != nil {
+			capturedEnd = *pending.EndedAt
+		}
+		durationSeconds = int(capturedEnd.Sub(pending.StartedAt).Seconds())
+	}
+	if durationSeconds < 60 {
+		return time.Time{}, time.Time{}, time.Time{}, 0, fmt.Errorf("duration_seconds must be at least 60")
+	}
+
+	if overridePlayedAt != nil && *overridePlayedAt != "" {
+		playedAt, err = parsePlayedAt(*overridePlayedAt)
+		if err != nil {
+			return time.Time{}, time.Time{}, time.Time{}, 0, fmt.Errorf("played_at must be a valid date")
+		}
+	} else {
+		s := pending.StartedAt.UTC()
+		playedAt = time.Date(s.Year(), s.Month(), s.Day(), 0, 0, 0, 0, time.UTC)
+	}
+
+	endedAt = time.Now().UTC()
+	startedAt = endedAt.Add(-time.Duration(durationSeconds) * time.Second)
+	return startedAt, endedAt, playedAt, durationSeconds, nil
 }
 
 func formatDuration(d time.Duration) string {

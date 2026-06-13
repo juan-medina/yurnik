@@ -31,6 +31,8 @@ export type PendingJourney = {
   genres: string[];
   releaseYear?: number;
   duration: string;
+  durationSeconds: number;
+  startedAt: Date;
   endedAt: Date;
   exeName?: string;
   windowTitle?: string;
@@ -42,7 +44,6 @@ export type NewJourney = {
   game: string;
   coverUrl?: string;
   genres: string[];
-  duration: string;
   playedAt: Date;
   log?: string;
 };

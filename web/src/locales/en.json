@@ -79,7 +79,6 @@
   "journeys_duration_placeholder": "e.g. 2h 30m, 90m, 1:30",
   "journeys_duration_error": "Try 2h, 90m, or 1:30",
   "journeys_when_label": "When",
-  "journeys_just_now": "Just now",
   "journeys_pick_date": "Pick date",
   "journeys_log_label": "Log",
   "journeys_log_optional": "(optional)",

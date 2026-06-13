@@ -8,12 +8,12 @@ import { useTranslation } from "react-i18next";
 import { getCurrentPlayer } from "@/services/auth";
 import SignInPromptModal from "@/components/SignInPromptModal";
 import { getUserJourneys, getPendingJourneys, addJourney, confirmPendingJourney, dismissPendingJourney, excludePendingJourney } from "@/services/journeys";
-import { formatCommentAge } from "@/lib/time";
-import { parseDuration, formatParsedDuration } from "@/lib/duration";
+import { formatJourneyDate } from "@/lib/time";
 import JourneyCard from "@/components/JourneyCard";
-import { GameSelector, GameCover } from "@/components/GameSelector";
-import { DurationField, JourneyLogField, PlayedAtField } from "@/components/JourneyFormFields";
-import type { PendingJourney, NewJourney } from "@/models/journey";
+import { GameCover } from "@/components/GameSelector";
+import { JourneyForm } from "@/components/JourneyForm";
+import type { JourneyFormValue } from "@/components/JourneyForm";
+import type { PendingJourney } from "@/models/journey";
 import type { Game } from "@/models/game";
 
 function ClientHint() {
@@ -49,12 +49,6 @@ function ClientHint() {
 function AddJourneyForm({ onAdd, onCancel }: { onAdd: () => void; onCancel: () => void }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [selected, setSelected] = useState<Game | null>(null);
-  const [durationInput, setDurationInput] = useState("");
-  const [log, setLog] = useState("");
-  const [whenMode, setWhenMode] = useState<"now" | "pick">("now");
-  const [pickedDate, setPickedDate] = useState<Date | undefined>(undefined);
-  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const addMutation = useMutation({
     mutationFn: addJourney,
@@ -67,33 +61,6 @@ function AddJourneyForm({ onAdd, onCancel }: { onAdd: () => void; onCancel: () =
     },
   });
 
-  const parsedDuration = parseDuration(durationInput);
-  const durationInvalid = durationInput.trim() !== "" && parsedDuration === null;
-  const canSubmit = selected !== null && parsedDuration !== null && (whenMode === "now" || pickedDate !== undefined);
-
-  function getPlayedAt(): Date {
-    if (whenMode === "pick" && pickedDate) {
-      return pickedDate;
-    }
-    return new Date();
-  }
-
-  function handleAdd() {
-    if (!selected || !parsedDuration) return;
-    const durationSeconds = (parsedDuration.hours * 3600) + (parsedDuration.minutes * 60);
-    const input: NewJourney = {
-      igdbId: selected.id ? parseInt(selected.id) : undefined,
-      durationSeconds,
-      game: selected.game,
-      coverUrl: selected.coverUrl,
-      genres: selected.genres,
-      duration: formatParsedDuration(parsedDuration),
-      playedAt: getPlayedAt(),
-      log: log.trim() || undefined,
-    };
-    addMutation.mutate(input);
-  }
-
   return (
     <div className="mb-6 rounded-lg border border-border bg-card p-5">
       <div className="mb-5 flex items-center justify-between">
@@ -103,59 +70,28 @@ function AddJourneyForm({ onAdd, onCancel }: { onAdd: () => void; onCancel: () =
         </button>
       </div>
 
-      <div className="mb-5">
-        <GameSelector value={selected} onChange={setSelected} />
-      </div>
-
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <DurationField
-          value={durationInput}
-          onChange={setDurationInput}
-          invalid={durationInvalid}
-          label={t("journeys_duration_label")}
-          placeholder={t("journeys_duration_placeholder")}
-          errorText={t("journeys_duration_error")}
-        />
-        <PlayedAtField
-          mode="now-or-pick"
-          label={t("journeys_when_label")}
-          whenMode={whenMode}
-          onWhenModeChange={setWhenMode}
-          pickedDate={pickedDate}
-          onPickedDateChange={setPickedDate}
-          open={calendarOpen}
-          onOpenChange={setCalendarOpen}
-          nowLabel={t("journeys_just_now")}
-          pickLabel={t("journeys_pick_date")}
-          dateFormat="MMM d"
-        />
-      </div>
-
-      <div className="mb-5">
-        <JourneyLogField
-          value={log}
-          onChange={setLog}
-          label={t("journeys_log_label")}
-          optionalLabel={t("journeys_log_optional")}
-          placeholder={t("journeys_log_placeholder")}
-        />
-      </div>
-
-      <div className="flex items-center justify-end gap-2">
-        <button onClick={onCancel} className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
-          {t("journeys_cancel")}
-        </button>
-        <button
-          disabled={!canSubmit || addMutation.isPending}
-          onClick={handleAdd}
-          className="rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity disabled:opacity-40"
-        >
-          {t("journeys_submit")}
-        </button>
-      </div>
-      {addMutation.isError && (
-        <p className="mt-2 text-xs text-destructive">{t("journeys_error")}</p>
-      )}
+      <JourneyForm
+        initialGame={null}
+        dateFormat="MMM d"
+        labels={{
+          durationLabel: t("journeys_duration_label"),
+          durationPlaceholder: t("journeys_duration_placeholder"),
+          durationError: t("journeys_duration_error"),
+          whenLabel: t("journeys_when_label"),
+          todayLabel: t("time_today"),
+          pickLabel: t("journeys_pick_date"),
+          logLabel: t("journeys_log_label"),
+          logOptional: t("journeys_log_optional"),
+          logPlaceholder: t("journeys_log_placeholder"),
+          cancel: t("journeys_cancel"),
+          submit: t("journeys_submit"),
+          error: t("journeys_error"),
+        }}
+        onCancel={onCancel}
+        onSubmit={(value) => addMutation.mutate(value)}
+        submitting={addMutation.isPending}
+        submitError={addMutation.isError}
+      />
     </div>
   );
 }
@@ -173,9 +109,8 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [cardState, setCardState] = useState<"collapsed" | "confirming" | "excluding">("collapsed");
-  const [game, setGame] = useState<Game | null>(gameToGame(journey));
-  const [searchQuery, setSearchQuery] = useState("");
-  const [log, setLog] = useState("");
+  const [initialGame, setInitialGame] = useState<Game | null>(gameToGame(journey));
+  const [initialSearchQuery, setInitialSearchQuery] = useState("");
 
   const dismissMutation = useMutation({
     mutationFn: () => dismissPendingJourney(journey.id),
@@ -188,8 +123,7 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
   });
 
   const confirmMutation = useMutation({
-    mutationFn: (input: { igdbId?: number; game: string; coverUrl?: string; genres: string[]; log?: string }) =>
-      confirmPendingJourney(journey.id, input),
+    mutationFn: (input: JourneyFormValue) => confirmPendingJourney(journey.id, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pending-journeys"] });
       queryClient.invalidateQueries({ queryKey: ["journeys", "user"] });
@@ -204,75 +138,58 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
   function openConfirm(searchMode = false) {
     const hasGame = !!journey.game;
     if (searchMode || !hasGame) {
-      setGame(null);
-      setSearchQuery(hintQuery);
+      setInitialGame(null);
+      setInitialSearchQuery(hintQuery);
     } else {
-      setGame(gameToGame(journey));
-      setSearchQuery("");
+      setInitialGame(gameToGame(journey));
+      setInitialSearchQuery("");
     }
     setCardState("confirming");
-  }
-
-  function cancelConfirm() {
-    setCardState("collapsed");
-    setGame(gameToGame(journey));
-    setLog("");
-  }
-
-  function handlePublish() {
-    if (!game?.game) return;
-    confirmMutation.mutate({
-      igdbId: game.id ? parseInt(game.id) : undefined,
-      game: game.game,
-      coverUrl: game.coverUrl,
-      genres: game.genres,
-      log: log.trim() || undefined,
-    });
   }
 
   if (cardState === "confirming") {
     return (
       <div className="rounded-lg border border-primary/30 bg-card p-4">
-        <div className="mb-3">
-          <GameSelector value={game} onChange={setGame} initialQuery={searchQuery} />
-        </div>
-        {(journey.exeName || journey.windowTitle) && (
-          <div className="mb-2 text-xs text-muted-foreground">
-            {journey.exeName}
-            {journey.exeName && journey.windowTitle && " · "}
-            {journey.windowTitle && `"${journey.windowTitle}"`}
-          </div>
-        )}
-        <div className="mb-1 flex items-center gap-1 text-xs text-muted-foreground">
-          <Clock size={12} />
-          <span>{journey.duration}</span>
-          <span className="mx-1 opacity-40">·</span>
-          <span>{t("journeys_ended", { time: formatCommentAge(journey.endedAt) })}</span>
-        </div>
-        <JourneyLogField
-          value={log}
-          onChange={setLog}
-          label=""
-          placeholder={t("journeys_add_log_placeholder")}
-          className="mt-3 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+        <JourneyForm
+          initialGame={initialGame}
+          initialSearchQuery={initialSearchQuery}
+          initialDuration={journey.duration}
+          initialDate={journey.startedAt}
+          dateFormat="MMM d, yyyy"
+          labels={{
+            durationLabel: t("journeys_duration_label"),
+            durationPlaceholder: t("journeys_duration_placeholder"),
+            durationError: t("journeys_duration_error"),
+            whenLabel: t("journeys_when_label"),
+            todayLabel: t("time_today"),
+            pickLabel: t("journeys_pick_date"),
+            logLabel: t("journeys_log_label"),
+            logOptional: t("journeys_log_optional"),
+            logPlaceholder: t("journeys_add_log_placeholder"),
+            cancel: t("journeys_cancel"),
+            submit: t("journeys_publish"),
+            error: t("journeys_error"),
+          }}
+          onCancel={() => setCardState("collapsed")}
+          onSubmit={(value) => confirmMutation.mutate(value)}
+          submitting={confirmMutation.isPending}
+          submitError={confirmMutation.isError}
+          extra={
+            <div className="mb-4 text-xs text-muted-foreground">
+              {(journey.exeName || journey.windowTitle) && (
+                <div className="mb-1">
+                  {journey.exeName}
+                  {journey.exeName && journey.windowTitle && " · "}
+                  {journey.windowTitle && `"${journey.windowTitle}"`}
+                </div>
+              )}
+              <div className="flex items-center gap-1">
+                <Clock size={12} />
+                <span>{t("journeys_ended", { time: formatJourneyDate(journey.endedAt) })}</span>
+              </div>
+            </div>
+          }
         />
-        <div className="mt-3 flex items-center justify-end gap-2">
-          <button onClick={cancelConfirm} className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
-            {t("journeys_cancel")}
-          </button>
-          <button
-            type="button"
-            onClick={handlePublish}
-            disabled={!game?.game || confirmMutation.isPending}
-            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
-          >
-            <Check size={14} />
-            {t("journeys_publish")}
-          </button>
-        </div>
-        {confirmMutation.isError && (
-          <p className="mt-2 text-xs text-destructive">{t("journeys_error")}</p>
-        )}
       </div>
     );
   }
@@ -335,7 +252,7 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
             <Clock size={12} />
             <span>{journey.duration}</span>
             <span className="mx-1 opacity-40">·</span>
-            <span>{t("journeys_ended", { time: formatCommentAge(journey.endedAt) })}</span>
+            <span>{t("journeys_ended", { time: formatJourneyDate(journey.endedAt) })}</span>
           </div>
         </div>
       </div>

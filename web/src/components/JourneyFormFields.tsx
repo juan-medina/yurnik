@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { CalendarDays } from "lucide-react";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -65,71 +65,61 @@ export function JourneyLogField({ value, onChange, label, optionalLabel, placeho
   );
 }
 
-type PlayedAtFieldCommon = {
+type PlayedAtFieldProps = {
   label: string;
-  pickedDate: Date | undefined;
-  onPickedDateChange: (date: Date | undefined) => void;
+  pickedDate: Date;
+  onPickedDateChange: (date: Date) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  todayLabel: string;
   pickLabel: string;
   dateFormat: string;
 };
 
-type PlayedAtFieldProps = PlayedAtFieldCommon & (
-  | { mode: "now-or-pick"; whenMode: "now" | "pick"; onWhenModeChange: (mode: "now" | "pick") => void; nowLabel: string }
-  | { mode: "pick-required" }
-);
-
-export function PlayedAtField(props: PlayedAtFieldProps) {
-  const { label, pickedDate, onPickedDateChange, open, onOpenChange, pickLabel, dateFormat } = props;
-
-  const calendar = (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant={props.mode === "now-or-pick" ? (props.whenMode === "pick" ? "default" : "outline") : "outline"}
-          className={props.mode === "now-or-pick" ? "flex flex-1 items-center gap-1.5" : "w-full justify-start gap-1.5"}
-          onClick={() => { if (props.mode === "now-or-pick") props.onWhenModeChange("pick"); }}
-        >
-          <CalendarDays size={14} />
-          {pickedDate && (props.mode === "pick-required" || props.whenMode === "pick") ? format(pickedDate, dateFormat) : pickLabel}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto">
-        <Calendar
-          mode="single"
-          selected={pickedDate}
-          onSelect={(date) => {
-            onPickedDateChange(date);
-            if (props.mode === "now-or-pick") props.onWhenModeChange("pick");
-            onOpenChange(false);
-          }}
-          disabled={{ after: new Date() }}
-          defaultMonth={pickedDate ?? new Date()}
-        />
-      </PopoverContent>
-    </Popover>
-  );
+// PlayedAtField is a single "when was this played" control used by add, edit,
+// and confirm alike: a "Today" quick-pick and a date picker. Whichever one
+// matches the current value is highlighted; the picker shows the actual date
+// once a non-today date is selected.
+export function PlayedAtField({ label, pickedDate, onPickedDateChange, open, onOpenChange, todayLabel, pickLabel, dateFormat }: PlayedAtFieldProps) {
+  const isToday = isSameDay(pickedDate, new Date());
 
   return (
     <div>
       <label className="mb-1.5 block text-xs font-medium text-muted-foreground">{label}</label>
-      {props.mode === "now-or-pick" ? (
-        <div className="flex gap-1.5">
-          <Button
-            type="button"
-            variant={props.whenMode === "now" ? "default" : "outline"}
-            className="flex-1"
-            onClick={() => { props.onWhenModeChange("now"); onPickedDateChange(undefined); }}
-          >
-            {props.nowLabel}
-          </Button>
-          {calendar}
-        </div>
-      ) : (
-        calendar
-      )}
+      <div className="flex gap-1.5">
+        <Button
+          type="button"
+          variant={isToday ? "default" : "outline"}
+          className="flex-1"
+          onClick={() => onPickedDateChange(new Date())}
+        >
+          {todayLabel}
+        </Button>
+        <Popover open={open} onOpenChange={onOpenChange}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant={isToday ? "outline" : "default"}
+              className="flex flex-1 items-center gap-1.5"
+            >
+              <CalendarDays size={14} />
+              {isToday ? pickLabel : format(pickedDate, dateFormat)}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto">
+            <Calendar
+              mode="single"
+              selected={pickedDate}
+              onSelect={(date) => {
+                if (date) onPickedDateChange(date);
+                onOpenChange(false);
+              }}
+              disabled={{ after: new Date() }}
+              defaultMonth={pickedDate}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
     </div>
   );
 }

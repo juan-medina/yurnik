@@ -92,6 +92,8 @@ export async function getPendingJourneys(): Promise<PendingJourney[]> {
       coverUrl: p.cover_url,
       genres: p.genres ?? [],
       duration: formatDuration(durationSeconds),
+      durationSeconds,
+      startedAt,
       endedAt,
       exeName: p.exe_name,
       windowTitle: p.window_title,
@@ -141,7 +143,7 @@ export async function updateJourney(id: string, input: UpdateJourney): Promise<v
 
 export async function confirmPendingJourney(
   pendingId: string,
-  input: { igdbId?: number; game: string; coverUrl?: string; genres: string[]; log?: string },
+  input: { igdbId?: number; game: string; coverUrl?: string; genres: string[]; durationSeconds?: number; playedAt?: Date; log?: string },
 ): Promise<void> {
   if (!input.igdbId) throw new Error("confirmPendingJourney: igdbId is required");
   const resp = await apiFetch(`${API_BASE}/api/players/me/journeys/pending/${pendingId}/confirm`, {
@@ -150,6 +152,8 @@ export async function confirmPendingJourney(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       igdb_id: input.igdbId,
+      duration_seconds: input.durationSeconds,
+      played_at: input.playedAt ? formatLocalDate(input.playedAt) : undefined,
       log: input.log ?? null,
     }),
   });

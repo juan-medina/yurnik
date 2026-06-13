@@ -212,16 +212,14 @@ describe("Journeys — add journey", () => {
     expect(screen.getByText("Celeste")).toBeInTheDocument();
   });
 
-  it("Log journey is disabled when Pick date is selected but no date is picked", async () => {
+  it("clicking Pick date opens the calendar", async () => {
     const user = userEvent.setup();
     renderJourneys();
     await user.click(screen.getByRole("button", { name: "Add journey" }));
-    await user.type(screen.getByPlaceholderText("Search for a game…"), "Celeste");
-    await user.click(await screen.findByRole("button", { name: /Celeste/ }));
-    await user.type(screen.getByRole("textbox", { name: "Duration" }), "2h");
 
+    expect(screen.queryByRole("grid")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Pick date/ }));
-    expect(screen.getByRole("button", { name: "Log journey" })).toBeDisabled();
+    expect(screen.getByRole("grid")).toBeInTheDocument();
   });
 
   it("adding a journey places it in History", async () => {

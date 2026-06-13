@@ -12,13 +12,10 @@ import { followPlayer, unfollowPlayer, getIsFollowing } from "@/services/players
 import { getCurrentPlayer } from "@/services/auth";
 import { avatarSrc, playerHref } from "@/lib/display";
 import SignInPromptModal from "@/components/SignInPromptModal";
-import { GameSelector } from "@/components/GameSelector";
-import { parseDuration } from "@/lib/duration";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { DurationField, JourneyLogField, PlayedAtField } from "@/components/JourneyFormFields";
+import { JourneyForm } from "@/components/JourneyForm";
 import { formatCommentAge, formatJourneyDate } from "@/lib/time";
 import type { Comment, JourneyPlayer, Player } from "@/models";
-import type { Game } from "@/models/game";
 
 function PlayerAvatar({ player, size = "md" }: { player: Player; size?: "sm" | "md" | "lg" }) {
   const dims = size === "sm" ? "h-6 w-6" : size === "lg" ? "h-10 w-10" : "h-8 w-8";
@@ -148,11 +145,6 @@ export default function JourneyDetail() {
   const [showSignIn, setShowSignIn] = useState(false);
   const [confirmDeleteJourney, setConfirmDeleteJourney] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editGame, setEditGame] = useState<Game | null>(null);
-  const [editDuration, setEditDuration] = useState("");
-  const [editPickedDate, setEditPickedDate] = useState<Date | undefined>(undefined);
-  const [editCalendarOpen, setEditCalendarOpen] = useState(false);
-  const [editLog, setEditLog] = useState("");
 
   const { data: currentPlayer } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
 
@@ -215,16 +207,6 @@ export default function JourneyDetail() {
   });
 
   function startEditing() {
-    if (!journey) return;
-    setEditGame({
-      id: journey.igdbId.toString(),
-      game: journey.game,
-      coverUrl: journey.coverUrl,
-      genres: journey.genres,
-    });
-    setEditDuration(journey.duration);
-    setEditPickedDate(journey.playedAt);
-    setEditLog(journey.log ?? "");
     setIsEditing(true);
   }
 
@@ -318,69 +300,43 @@ export default function JourneyDetail() {
 
       {/* Hero */}
       <div className="rounded-lg border border-border bg-card p-4">
-        {isEditing ? (() => {
-          const editParsed = parseDuration(editDuration);
-          const durationInvalid = editDuration.trim() !== "" && editParsed === null;
-          const canSave = editGame !== null && editParsed !== null && editPickedDate !== undefined;
-          return (
-            <div>
-              <div className="mb-4">
-                <GameSelector value={editGame} onChange={setEditGame} />
-              </div>
-              <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <DurationField
-                  value={editDuration}
-                  onChange={setEditDuration}
-                  invalid={durationInvalid}
-                  label={t("journey_duration_label")}
-                  placeholder={t("journey_duration_placeholder")}
-                  errorText={t("journey_duration_error")}
-                />
-                <PlayedAtField
-                  mode="pick-required"
-                  label={t("journey_when_label")}
-                  pickedDate={editPickedDate}
-                  onPickedDateChange={setEditPickedDate}
-                  open={editCalendarOpen}
-                  onOpenChange={setEditCalendarOpen}
-                  pickLabel={t("journey_pick_date")}
-                  dateFormat="MMM d, yyyy"
-                />
-              </div>
-              <div className="mb-4">
-                <JourneyLogField
-                  value={editLog}
-                  onChange={setEditLog}
-                  label={t("journey_log_label")}
-                  optionalLabel={t("journey_log_optional")}
-                  placeholder={t("journey_log_placeholder")}
-                />
-              </div>
-              <div className="flex items-center justify-end gap-2">
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                >
-                  {t("journey_cancel")}
-                </button>
-                <button
-                  disabled={!canSave || updateJourneyMutation.isPending}
-                  onClick={() => {
-                    if (!editGame || !editParsed || !editPickedDate) return;
-                    const durationSeconds = (editParsed.hours * 3600) + (editParsed.minutes * 60);
-                    updateJourneyMutation.mutate({ igdbId: parseInt(editGame.id), durationSeconds, playedAt: editPickedDate, log: editLog.trim() || undefined });
-                  }}
-                  className="rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity disabled:opacity-40"
-                >
-                  {t("journey_save")}
-                </button>
-              </div>
-              {updateJourneyMutation.isError && (
-                <p className="mt-2 text-xs text-destructive">{t("journey_error")}</p>
-              )}
-            </div>
-          );
-        })() : (
+        {isEditing ? (
+          <JourneyForm
+            initialGame={{
+              id: journey.igdbId.toString(),
+              game: journey.game,
+              coverUrl: journey.coverUrl,
+              genres: journey.genres,
+            }}
+            initialDuration={journey.duration}
+            initialDate={journey.playedAt}
+            initialLog={journey.log ?? ""}
+            dateFormat="MMM d, yyyy"
+            labels={{
+              durationLabel: t("journey_duration_label"),
+              durationPlaceholder: t("journey_duration_placeholder"),
+              durationError: t("journey_duration_error"),
+              whenLabel: t("journey_when_label"),
+              todayLabel: t("time_today"),
+              pickLabel: t("journey_pick_date"),
+              logLabel: t("journey_log_label"),
+              logOptional: t("journey_log_optional"),
+              logPlaceholder: t("journey_log_placeholder"),
+              cancel: t("journey_cancel"),
+              submit: t("journey_save"),
+              error: t("journey_error"),
+            }}
+            onCancel={() => setIsEditing(false)}
+            onSubmit={(value) => updateJourneyMutation.mutate({
+              igdbId: value.igdbId ?? journey.igdbId,
+              durationSeconds: value.durationSeconds,
+              playedAt: value.playedAt,
+              log: value.log,
+            })}
+            submitting={updateJourneyMutation.isPending}
+            submitError={updateJourneyMutation.isError}
+          />
+        ) : (
           <>
             <div className="flex gap-4">
               <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-md bg-slate-800">
