@@ -42,6 +42,20 @@ func TestDiscard_unauthenticated(t *testing.T) {
 	}
 }
 
+func TestPendingCount_unauthenticated(t *testing.T) {
+	h := &Handler{}
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	r := httptest.NewRequest(http.MethodGet, "/api/players/me/journeys/pending/count", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, r)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
+	}
+}
+
 func TestConfirm_unauthenticated(t *testing.T) {
 	h := &Handler{}
 	mux := http.NewServeMux()

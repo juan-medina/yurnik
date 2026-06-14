@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { getCurrentPlayer } from "@/services/auth";
 import { useEchoes } from "@/hooks/useEchoes";
+import { usePendingJourneysCount } from "@/hooks/usePendingJourneysCount";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -23,6 +24,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }: SidebarP
   const { data: currentPlayer } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
   const { data: echoes = [] } = useEchoes(!!currentPlayer);
   const hasUnread = echoes.some((e) => !e.read);
+  const { data: pendingCount = 0 } = usePendingJourneysCount(!!currentPlayer);
 
   const navItems: NavItem[] = [
     { to: "/", labelKey: "nav_realm", icon: Globe2, end: true },
@@ -83,6 +85,11 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }: SidebarP
                 )}
               </span>
               {t(labelKey)}
+              {to === "/journeys" && pendingCount > 0 && (
+                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+                  {pendingCount > 9 ? "9+" : pendingCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

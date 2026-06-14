@@ -97,6 +97,17 @@ func ListPendingJourneys(ctx context.Context, pool *pgxpool.Pool, userID string)
 	return journeys, rows.Err()
 }
 
+// CountPendingJourneys returns the number of pending journeys with status
+// 'ended' for the given user.
+func CountPendingJourneys(ctx context.Context, pool *pgxpool.Pool, userID string) (int, error) {
+	var count int
+	err := pool.QueryRow(ctx, `
+		SELECT COUNT(*)::int FROM pending_journeys
+		WHERE user_id = $1 AND status = 'ended'
+	`, userID).Scan(&count)
+	return count, err
+}
+
 // Journey is a confirmed journey row joined with igdb_games.
 type Journey struct {
 	ID              string

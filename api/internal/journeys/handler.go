@@ -124,6 +124,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/players/me/journeys/{id}", h.delete)
 	mux.HandleFunc("GET /api/players/me/journeys", h.listMine)
 	mux.HandleFunc("GET /api/players/me/journeys/pending", h.listPending)
+	mux.HandleFunc("GET /api/players/me/journeys/pending/count", h.pendingCount)
 	mux.HandleFunc("GET /api/players/{id}/journeys", h.listByPlayer)
 	mux.HandleFunc("POST /api/players/me/journeys/pending/{id}/confirm", h.confirm)
 	mux.HandleFunc("POST /api/players/me/journeys/pending/{id}/discard", h.discard)
@@ -408,6 +409,23 @@ func (h *Handler) listPending(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"journeys": resp})
+}
+
+func (h *Handler) pendingCount(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.authenticate(w, r)
+	if !ok {
+		return
+	}
+
+	count, err := db.CountPendingJourneys(r.Context(), h.pool, userID)
+	if err != nil {
+		log.Printf("journeys/pendingCount: %v", err)
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"count": count})
 }
 
 func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {

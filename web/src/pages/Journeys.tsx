@@ -120,12 +120,18 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
 
   const dismissMutation = useMutation({
     mutationFn: () => dismissPendingJourney(journey.id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pending-journeys"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pending-journeys"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-journeys-count"] });
+    },
   });
 
   const excludeMutation = useMutation({
     mutationFn: () => excludePendingJourney(journey.id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pending-journeys"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pending-journeys"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-journeys-count"] });
+    },
   });
 
   const confirmCooldown = useCooldown();
@@ -133,6 +139,7 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
     mutationFn: (input: JourneyFormValue) => confirmPendingJourney(journey.id, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pending-journeys"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-journeys-count"] });
       queryClient.invalidateQueries({ queryKey: ["journeys", "user"] });
     },
     onError: (err) => {

@@ -101,6 +101,15 @@ export async function getPendingJourneys(): Promise<PendingJourney[]> {
   });
 }
 
+export async function getPendingJourneysCount(): Promise<number> {
+  const resp = await apiFetch(`${API_BASE}/api/players/me/journeys/pending/count`, {
+    credentials: "include",
+  });
+  if (!resp.ok) throw new Error(`get pending journeys count: ${resp.status}`);
+  const data: { count: number } = await resp.json();
+  return data.count ?? 0;
+}
+
 export async function addJourney(input: NewJourney): Promise<void> {
   console.log("[addJourney] input:", JSON.stringify(input));
   if (!input.igdbId) throw new Error("addJourney: igdbId is required");
