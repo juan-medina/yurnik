@@ -43,6 +43,7 @@ Invalidates the current session token. Returns `204 No Content`.
 |---|---|---|
 | Cloudflare | Per IP | 100 req / minute |
 | API server | Global | Configurable via `RATE_LIMIT_RPS` |
+| API server | Per user, journey/comment writes | 20s minimum interval, escalating cooldown up to 5min for repeat violations |
 | IGDB proxy | Upstream calls | 4 req / second |
 
 Exceeded limits return `429 Too Many Requests` with a `Retry-After` header.
@@ -64,8 +65,11 @@ All errors return a JSON body:
 | 401 | `unauthorized` | Missing or invalid bearer token |
 | 403 | `forbidden` | Token valid, action not permitted |
 | 404 | `not_found` | Resource does not exist |
+| 400 | `duplicate_content` | Journey log or comment is identical to the author's immediately previous one |
+| 400 | `disallowed_content` | Journey log or comment contains a URL |
 | 409 | `conflict` | Resource already exists (duplicate like, duplicate exclusion) |
-| 429 | `rate_limited` | Too many requests |
+| 429 | `rate_limited` | Too many requests (global or IGDB rate limit) |
+| 429 | `too_many_requests` | Per-user write velocity limit hit — see `Retry-After` header |
 | 500 | `internal_error` | Server fault |
 
 ---
@@ -320,7 +324,7 @@ Creates a confirmed journey directly. No pending step.
 }
 ```
 
-`log` is optional.
+`log` is optional, plain text up to 400 characters, must not contain a URL, and must not be identical to the author's immediately previous journey log. Violations return `invalid_request`, `disallowed_content`, or `duplicate_content` respectively (see [Error Responses](#error-responses)). Writes are also subject to the per-user write velocity limit.
 
 **Response** — `Journey`
 
@@ -371,7 +375,7 @@ User confirms the journey. Writes the confirmed journey row and deletes the pend
 }
 ```
 
-`log` is optional. `igdb_id` is required — the user must confirm or correct the game match.
+`log` is optional, plain text up to 400 characters, must not contain a URL, and must not be identical to the author's immediately previous journey log. `igdb_id` is required — the user must confirm or correct the game match. Writes are also subject to the per-user write velocity limit.
 
 **Response** — `Journey`
 
@@ -487,6 +491,8 @@ POST /journeys/:id/comments
   "body": "Great run!"
 }
 ```
+
+`body` is plain text up to 400 characters, must not contain a URL, and must not be identical to the author's immediately previous comment. Writes are also subject to the per-user write velocity limit.
 
 **Response**
 

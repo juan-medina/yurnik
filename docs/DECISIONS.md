@@ -99,3 +99,21 @@ Postgres is the single source of truth for all data. There is no external record
 ## IGDB for game metadata
 
 IGDB (owned by Twitch) is free for non-commercial use and is the most comprehensive game database available. The Twitch client secret lives server-side only — the frontend and agent never touch it. IGDB responses are cached in Postgres with a TTL to stay within rate limits and avoid redundant upstream calls.
+
+---
+
+## Spam prevention without CAPTCHA or a word list
+
+Before opening journey logs and comments up to more users, two spam vectors needed addressing: automated bots and manual abuse, without building out moderation/admin tooling (reporting, review queues) — that's a much larger feature deferred until it's actually needed.
+
+**CAPTCHA (e.g. Cloudflare Turnstile) was considered and rejected.** If our own code decides when to challenge a user, we're already doing the accounting a CAPTCHA would otherwise replace — at that point a CAPTCHA adds friction without adding information we don't already have.
+
+**A banned-word list was considered and rejected.** Profanity and even slurs are too context-dependent for a static list — "this shit game is glorious" is not abusive, and gaming culture means casual profanity is normal, not something this product should police. A list also can't be meaningfully maintained without admin tooling we don't have, and is trivially evaded.
+
+What was built instead, all enforced server-side in `api/internal/journeys/handler.go`:
+
+- **Per-user write velocity limiter** (`api/internal/middleware/velocity.go`) — a minimum interval between journey/comment writes, with an escalating cooldown for repeat violations. A single account spamming gets throttled into uselessness; scaling an attack requires many Discord accounts, which runs into Discord's own anti-abuse controls on mass account creation from one IP.
+- **Duplicate-content rejection** — a submission identical to the author's immediately previous journey log or comment is rejected, the simplest possible defence against copy-paste bots.
+- **URL rejection** (`mvdan.cc/xurls`) — journey logs and comments are plain text, never rendered as links, so a URL serves no legitimate purpose and is rejected outright. Deliberately does not try to catch obfuscated URLs (`example . com`, `example[.]com`) — that requires the same kind of context-sensitive normalisation as a word list, with the same false-positive risk, for a trick that mostly defeats itself (a human has to retype it).
+
+Cloudflare's per-IP rate limit (see [DEPLOYMENT.md](DEPLOYMENT.md#rate-limiting)) remains the outermost, blanket DDoS floor and is configured generously — it is not part of the app-level spam strategy.

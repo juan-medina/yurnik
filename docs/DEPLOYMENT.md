@@ -63,6 +63,10 @@ A global token bucket limiter in the Go server caps total throughput regardless 
 
 Configured via `RATE_LIMIT_RPS` at startup. Requests over the limit receive `429 Too Many Requests` immediately — no queuing, no retry.
 
+### Go API — per-user write velocity
+
+Journey and comment writes are additionally limited per user, independent of the global RPS ceiling above — this targets account-level spam rather than raw throughput. A user must wait a minimum interval (currently 20s) between writes; each write attempted before that interval elapses doubles the cooldown, up to a 5-minute cap. Exceeding it returns `429 Too Many Requests` with `Retry-After`, exposed via CORS so the frontend can disable the submit button and show a countdown. State is held in memory per process — appropriate for the single-process deployment described above.
+
 ### Agent — exponential backoff
 
 The agent must never send requests in a tight loop. The session-refresh heartbeat runs every few days. Any retry on API failure must use exponential backoff with a cap. Unbounded retry loops are bugs.

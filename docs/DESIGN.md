@@ -134,6 +134,8 @@ Two distinct concepts for text attached to a journey:
 
 **Comments** — text written by any player (including the journey owner) after the journey is confirmed. Separate rows in the `comments` table referencing the journey by ID. Shown in the journey detail only — never in the Realm feed. Flat and chronological — no threading, no hierarchy, no reply-to chains. Comments cannot be liked. A new comment on your journey by another player triggers an Echo; your own comments on your own journey do not.
 
+Both fields are capped at 400 characters and rendered as plain text (`white-space: pre-wrap` — line breaks preserved, no markdown or HTML). This is a social network about gaming, not a review site, so long-form prose isn't the expectation. See [CLAUDE.md](../.claude/CLAUDE.md#user-generated-text-and-spam-prevention) for the validation and anti-spam rules applied to both fields.
+
 ## Echoes
 
 Echoes are in-app notifications. They use a batched model: one `echoes` row per `(recipient_id, type, subject_id)` that accumulates actors over time, rather than one row per actor. This keeps "Juan and 2 others commented on your journey" as a single notification rather than three.
