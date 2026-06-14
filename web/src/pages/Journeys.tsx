@@ -15,6 +15,8 @@ import { JourneyForm } from "@/components/JourneyForm";
 import type { JourneyFormValue } from "@/components/JourneyForm";
 import type { PendingJourney } from "@/models/journey";
 import type { Game } from "@/models/game";
+import { useCooldown } from "@/hooks/useCooldown";
+import { RateLimitedError } from "@/lib/api";
 
 function ClientHint() {
   const { t } = useTranslation();
@@ -50,13 +52,15 @@ function AddJourneyForm({ onAdd, onCancel }: { onAdd: () => void; onCancel: () =
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
+  const addCooldown = useCooldown();
   const addMutation = useMutation({
     mutationFn: addJourney,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journeys", "user"] });
       onAdd();
     },
-    onError: () => {
+    onError: (err) => {
+      if (err instanceof RateLimitedError) addCooldown.start(err.retryAfterSeconds);
       // form stays open — user can retry
     },
   });
@@ -91,6 +95,8 @@ function AddJourneyForm({ onAdd, onCancel }: { onAdd: () => void; onCancel: () =
         onSubmit={(value) => addMutation.mutate(value)}
         submitting={addMutation.isPending}
         submitError={addMutation.isError}
+        cooldownSeconds={addCooldown.remaining}
+        cooldownLabel={(seconds) => t("journeys_slow_down", { seconds })}
       />
     </div>
   );
@@ -122,13 +128,18 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pending-journeys"] }),
   });
 
+  const confirmCooldown = useCooldown();
   const confirmMutation = useMutation({
     mutationFn: (input: JourneyFormValue) => confirmPendingJourney(journey.id, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pending-journeys"] });
       queryClient.invalidateQueries({ queryKey: ["journeys", "user"] });
     },
-    onError: () => {
+    onError: (err) => {
+      if (err instanceof RateLimitedError) {
+        confirmCooldown.start(err.retryAfterSeconds);
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["pending-journeys"] });
     },
   });
@@ -174,6 +185,8 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
           onSubmit={(value) => confirmMutation.mutate(value)}
           submitting={confirmMutation.isPending}
           submitError={confirmMutation.isError}
+          cooldownSeconds={confirmCooldown.remaining}
+          cooldownLabel={(seconds) => t("journeys_slow_down", { seconds })}
           extra={
             <div className="mb-4 text-xs text-muted-foreground">
               {(journey.exeName || journey.windowTitle) && (

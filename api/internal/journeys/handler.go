@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/juan-medina/yurnik/internal/auth"
 	"github.com/juan-medina/yurnik/internal/db"
+	"github.com/juan-medina/yurnik/internal/middleware"
 )
 
 // maxTextLength is the maximum number of characters allowed in the journey
@@ -33,15 +34,43 @@ const maxTextLength = 400
 // they are decoded.
 const maxRequestBodyBytes = 16 * 1024
 
+// writeVelocityMinInterval is the minimum time a user must wait between
+// journey/comment writes before incurring an escalating cooldown.
+const writeVelocityMinInterval = 20 * time.Second
+
+// writeVelocityMaxPenalty caps how long a repeat offender's cooldown can grow to.
+const writeVelocityMaxPenalty = 5 * time.Minute
+
 // Handler handles journey routes.
 type Handler struct {
-	pool    *pgxpool.Pool
-	jwtPriv ed25519.PrivateKey
+	pool     *pgxpool.Pool
+	jwtPriv  ed25519.PrivateKey
+	velocity *middleware.VelocityLimiter
 }
 
 // NewHandler returns a Handler.
 func NewHandler(pool *pgxpool.Pool, jwtPriv ed25519.PrivateKey) *Handler {
-	return &Handler{pool: pool, jwtPriv: jwtPriv}
+	return &Handler{
+		pool:     pool,
+		jwtPriv:  jwtPriv,
+		velocity: middleware.NewVelocityLimiter(writeVelocityMinInterval, writeVelocityMaxPenalty),
+	}
+}
+
+// checkVelocity enforces the per-user write velocity limit for userID. If
+// the user must slow down, it writes a 429 with a Retry-After header and
+// returns false.
+func (h *Handler) checkVelocity(w http.ResponseWriter, userID string) bool {
+	if ok, retryAfter := h.velocity.Allow(userID); !ok {
+		seconds := int(retryAfter.Round(time.Second) / time.Second)
+		if seconds < 1 {
+			seconds = 1
+		}
+		w.Header().Set("Retry-After", strconv.Itoa(seconds))
+		http.Error(w, `{"error":"too_many_requests","message":"you're posting too fast, please slow down"}`, http.StatusTooManyRequests)
+		return false
+	}
+	return true
 }
 
 // commentResp is the JSON shape for a single comment.
@@ -211,6 +240,9 @@ func (h *Handler) postComment(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !h.checkVelocity(w, userID) {
+		return
+	}
 
 	id := r.PathValue("id")
 
@@ -224,6 +256,11 @@ func (h *Handler) postComment(w http.ResponseWriter, r *http.Request) {
 	body.Text = strings.TrimSpace(body.Text)
 	if body.Text == "" || !withinMaxTextLength(body.Text) {
 		http.Error(w, `{"error":"invalid_request","message":"text must be between 1 and 400 characters"}`, http.StatusBadRequest)
+		return
+	}
+
+	if last, err := db.LastCommentBody(r.Context(), h.pool, userID); err == nil && last == body.Text {
+		http.Error(w, `{"error":"duplicate_content","message":"this is identical to your last comment"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -362,6 +399,9 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !h.checkVelocity(w, userID) {
+		return
+	}
 
 	id := r.PathValue("id")
 
@@ -396,6 +436,12 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		http.Error(w, `{"error":"invalid_request","message":"log must be at most 400 characters"}`, http.StatusBadRequest)
 		return
+	}
+	if normalizedLog != nil {
+		if last, err := db.LastJourneyLog(r.Context(), h.pool, userID); err == nil && last != nil && *last == *normalizedLog {
+			http.Error(w, `{"error":"duplicate_content","message":"this is identical to your last journey log"}`, http.StatusBadRequest)
+			return
+		}
 	}
 
 	journeyID, err := db.InsertJourney(r.Context(), h.pool, db.Journey{
@@ -478,6 +524,9 @@ func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !h.checkVelocity(w, userID) {
+		return
+	}
 
 	var body struct {
 		IGDBID          int     `json:"igdb_id"`
@@ -509,6 +558,12 @@ func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"invalid_request","message":"log must be at most 400 characters"}`, http.StatusBadRequest)
 		return
 	}
+	if normalizedLog != nil {
+		if last, err := db.LastJourneyLog(r.Context(), h.pool, userID); err == nil && last != nil && *last == *normalizedLog {
+			http.Error(w, `{"error":"duplicate_content","message":"this is identical to your last journey log"}`, http.StatusBadRequest)
+			return
+		}
+	}
 	body.Log = normalizedLog
 
 	endedAt := time.Now().UTC()
@@ -538,6 +593,9 @@ func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticate(w, r)
 	if !ok {
+		return
+	}
+	if !h.checkVelocity(w, userID) {
 		return
 	}
 

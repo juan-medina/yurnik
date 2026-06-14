@@ -197,6 +197,23 @@ func EndPendingJourney(ctx context.Context, pool *pgxpool.Pool, id, userID strin
 	return nil
 }
 
+// LastJourneyLog returns the log text of the most recently created journey
+// for userID, or nil if the user has no journeys or their most recent one
+// has no log.
+func LastJourneyLog(ctx context.Context, pool *pgxpool.Pool, userID string) (*string, error) {
+	var log *string
+	err := pool.QueryRow(ctx, `
+		SELECT log FROM journeys WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1
+	`, userID).Scan(&log)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("last journey log: %w", err)
+	}
+	return log, nil
+}
+
 // InsertJourney writes a confirmed journey row and returns the new ID.
 func InsertJourney(ctx context.Context, pool *pgxpool.Pool, j Journey) (string, error) {
 	var id string
@@ -566,6 +583,22 @@ func ListComments(ctx context.Context, pool *pgxpool.Pool, journeyID string) ([]
 		comments = append(comments, c)
 	}
 	return comments, rows.Err()
+}
+
+// LastCommentBody returns the body of the most recently created comment by
+// userID, or "" if the user has not commented before.
+func LastCommentBody(ctx context.Context, pool *pgxpool.Pool, userID string) (string, error) {
+	var body string
+	err := pool.QueryRow(ctx, `
+		SELECT body FROM comments WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1
+	`, userID).Scan(&body)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return "", nil
+		}
+		return "", fmt.Errorf("last comment body: %w", err)
+	}
+	return body, nil
 }
 
 // InsertComment writes a new comment and returns it with the commenter's player info.

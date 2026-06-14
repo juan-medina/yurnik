@@ -13,6 +13,8 @@ import { getCurrentPlayer } from "@/services/auth";
 import { avatarSrc, playerHref } from "@/lib/display";
 import SignInPromptModal from "@/components/SignInPromptModal";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useCooldown } from "@/hooks/useCooldown";
+import { RateLimitedError } from "@/lib/api";
 import { JourneyForm } from "@/components/JourneyForm";
 import { CharCounter } from "@/components/JourneyFormFields";
 import { formatCommentAge, formatJourneyDate } from "@/lib/time";
@@ -187,11 +189,15 @@ export default function JourneyDetail() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["following", journey?.player.id] }),
   });
 
+  const commentCooldown = useCooldown();
   const postCommentMutation = useMutation({
     mutationFn: (text: string) => postComment(id!, text),
     onSuccess: (newComment) => {
       queryClient.setQueryData<Comment[]>(["journey", id, "comments"], (old = []) => [...old, newComment]);
       setCommentText("");
+    },
+    onError: (err) => {
+      if (err instanceof RateLimitedError) commentCooldown.start(err.retryAfterSeconds);
     },
   });
 
@@ -200,11 +206,15 @@ export default function JourneyDetail() {
     onSuccess: () => navigate("/journeys"),
   });
 
+  const updateCooldown = useCooldown();
   const updateJourneyMutation = useMutation({
     mutationFn: (input: Parameters<typeof updateJourney>[1]) => updateJourney(id!, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journey", id] });
       setIsEditing(false);
+    },
+    onError: (err) => {
+      if (err instanceof RateLimitedError) updateCooldown.start(err.retryAfterSeconds);
     },
   });
 
@@ -337,6 +347,8 @@ export default function JourneyDetail() {
             })}
             submitting={updateJourneyMutation.isPending}
             submitError={updateJourneyMutation.isError}
+            cooldownSeconds={updateCooldown.remaining}
+            cooldownLabel={(seconds) => t("journey_slow_down", { seconds })}
           />
         ) : (
           <>
@@ -410,14 +422,21 @@ export default function JourneyDetail() {
               className="flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             />
             <button
-              disabled={!commentText.trim() || postCommentMutation.isPending}
+              disabled={!commentText.trim() || postCommentMutation.isPending || commentCooldown.remaining > 0}
               onClick={() => { if (!currentPlayer) { setShowSignIn(true); return; } postCommentMutation.mutate(commentText); }}
               className="self-end rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-40"
             >
-              {t("journey_post")}
+              {commentCooldown.remaining > 0 ? t("journey_slow_down", { seconds: commentCooldown.remaining }) : t("journey_post")}
             </button>
           </div>
-          <div className="mt-1 text-right">
+          <div className="mt-1 flex items-center justify-between">
+            <div>
+              {commentCooldown.remaining > 0 ? (
+                <p className="text-xs text-destructive">{t("journey_slow_down_message", { seconds: commentCooldown.remaining })}</p>
+              ) : postCommentMutation.isError ? (
+                <p className="text-xs text-destructive">{t("journey_error")}</p>
+              ) : null}
+            </div>
             <CharCounter value={commentText} />
           </div>
         </div>

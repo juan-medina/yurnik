@@ -44,6 +44,9 @@ type JourneyFormProps = {
   onSubmit: (value: JourneyFormValue) => void;
   submitting: boolean;
   submitError: boolean;
+  /** Seconds remaining before the user may submit again, from a 429 Retry-After. */
+  cooldownSeconds?: number;
+  cooldownLabel?: (seconds: number) => string;
   extra?: ReactNode;
 };
 
@@ -63,6 +66,8 @@ export function JourneyForm({
   onSubmit,
   submitting,
   submitError,
+  cooldownSeconds = 0,
+  cooldownLabel,
   extra,
 }: JourneyFormProps) {
   const [game, setGame] = useState<Game | null>(initialGame);
@@ -128,11 +133,11 @@ export function JourneyForm({
           {labels.cancel}
         </button>
         <button
-          disabled={!canSubmit || submitting}
+          disabled={!canSubmit || submitting || cooldownSeconds > 0}
           onClick={handleSubmit}
           className="rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-opacity disabled:opacity-40"
         >
-          {labels.submit}
+          {cooldownSeconds > 0 && cooldownLabel ? cooldownLabel(cooldownSeconds) : labels.submit}
         </button>
       </div>
       {submitError && (
