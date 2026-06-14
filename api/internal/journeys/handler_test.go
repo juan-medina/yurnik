@@ -317,6 +317,28 @@ func TestNormalizeLog(t *testing.T) {
 	})
 }
 
+func TestContainsURL(t *testing.T) {
+	cases := []struct {
+		name string
+		text string
+		want bool
+	}{
+		{"plain text", "this game is glorious", false},
+		{"text with periods but no domain", "10/10. would play again...", false},
+		{"scheme URL", "check out https://example.com for more", true},
+		{"www URL without scheme", "go to www.example.com", true},
+		{"bare domain with common TLD", "found it on example.com", true},
+		{"profanity is not a URL", "this shit game is glorious", false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := containsURL(c.text); got != c.want {
+				t.Errorf("containsURL(%q) = %v, want %v", c.text, got, c.want)
+			}
+		})
+	}
+}
+
 func TestExclude_unauthenticated(t *testing.T) {
 	h := &Handler{}
 	mux := http.NewServeMux()

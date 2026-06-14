@@ -19,7 +19,19 @@ import (
 	"github.com/juan-medina/yurnik/internal/auth"
 	"github.com/juan-medina/yurnik/internal/db"
 	"github.com/juan-medina/yurnik/internal/middleware"
+	"mvdan.cc/xurls/v2"
 )
+
+// urlPattern matches URLs (with or without a scheme, e.g. "example.com" or
+// "https://example.com") so they can be rejected from journey logs and
+// comments. These fields are plain text and never rendered as links, so a
+// URL is either spam or useless to the reader — either way, not allowed.
+var urlPattern = xurls.Relaxed()
+
+// containsURL reports whether s contains anything that looks like a URL.
+func containsURL(s string) bool {
+	return urlPattern.MatchString(s)
+}
 
 // maxTextLength is the maximum number of characters allowed in the journey
 // log and comment text fields. Mirrored on the frontend in
@@ -258,6 +270,10 @@ func (h *Handler) postComment(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"invalid_request","message":"text must be between 1 and 400 characters"}`, http.StatusBadRequest)
 		return
 	}
+	if containsURL(body.Text) {
+		http.Error(w, `{"error":"disallowed_content","message":"links are not allowed in comments"}`, http.StatusBadRequest)
+		return
+	}
 
 	if last, err := db.LastCommentBody(r.Context(), h.pool, userID); err == nil && last == body.Text {
 		http.Error(w, `{"error":"duplicate_content","message":"this is identical to your last comment"}`, http.StatusBadRequest)
@@ -438,6 +454,10 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if normalizedLog != nil {
+		if containsURL(*normalizedLog) {
+			http.Error(w, `{"error":"disallowed_content","message":"links are not allowed in journey logs"}`, http.StatusBadRequest)
+			return
+		}
 		if last, err := db.LastJourneyLog(r.Context(), h.pool, userID); err == nil && last != nil && *last == *normalizedLog {
 			http.Error(w, `{"error":"duplicate_content","message":"this is identical to your last journey log"}`, http.StatusBadRequest)
 			return
@@ -559,6 +579,10 @@ func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if normalizedLog != nil {
+		if containsURL(*normalizedLog) {
+			http.Error(w, `{"error":"disallowed_content","message":"links are not allowed in journey logs"}`, http.StatusBadRequest)
+			return
+		}
 		if last, err := db.LastJourneyLog(r.Context(), h.pool, userID); err == nil && last != nil && *last == *normalizedLog {
 			http.Error(w, `{"error":"duplicate_content","message":"this is identical to your last journey log"}`, http.StatusBadRequest)
 			return
@@ -629,6 +653,10 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	normalizedLog, ok := normalizeLog(body.Log)
 	if !ok {
 		http.Error(w, `{"error":"invalid_request","message":"log must be at most 400 characters"}`, http.StatusBadRequest)
+		return
+	}
+	if normalizedLog != nil && containsURL(*normalizedLog) {
+		http.Error(w, `{"error":"disallowed_content","message":"links are not allowed in journey logs"}`, http.StatusBadRequest)
 		return
 	}
 
