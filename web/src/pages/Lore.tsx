@@ -104,6 +104,19 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
             </>
           )}
         </div>
+        {!authenticated && (
+          <p className="mt-2 text-xs text-muted-foreground/80">
+            {t("legal_agree_prefix")}{" "}
+            <Link to="/terms" className="underline hover:text-foreground">
+              {t("legal_terms")}
+            </Link>{" "}
+            {t("legal_and")}{" "}
+            <Link to="/privacy" className="underline hover:text-foreground">
+              {t("legal_privacy")}
+            </Link>
+            .
+          </p>
+        )}
       </section>
 
       {/* How it works */}
@@ -209,6 +222,14 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
             <GitHubIcon size={13} />
             GitHub
           </a>
+        </p>
+        <p className="mt-2 flex items-center justify-center gap-3">
+          <Link to="/terms" className="transition-colors hover:text-foreground">
+            {t("legal_terms")}
+          </Link>
+          <Link to="/privacy" className="transition-colors hover:text-foreground">
+            {t("legal_privacy")}
+          </Link>
         </p>
       </footer>
     </div>

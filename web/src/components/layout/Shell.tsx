@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
-import { Outlet } from "react-router";
+import { Outlet, Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { getCurrentPlayer } from "@/services/auth";
 import { useEchoes } from "@/hooks/useEchoes";
@@ -23,6 +24,7 @@ export default function Shell() {
   useEchoNotifications(echoes);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { t } = useTranslation();
 
   return (
     <div className="flex h-screen bg-background text-foreground">
@@ -34,6 +36,14 @@ export default function Shell() {
             <Outlet />
           </ErrorBoundary>
         </main>
+        <footer className="flex items-center justify-center gap-3 border-t border-border px-4 py-2 text-xs text-muted-foreground/60">
+          <Link to="/terms" className="transition-colors hover:text-foreground">
+            {t("legal_terms")}
+          </Link>
+          <Link to="/privacy" className="transition-colors hover:text-foreground">
+            {t("legal_privacy")}
+          </Link>
+        </footer>
       </div>
     </div>
   );

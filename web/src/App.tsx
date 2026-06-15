@@ -15,10 +15,14 @@ import Hero from "@/pages/Hero";
 import Horizon from "@/pages/Horizon";
 import AgentAuth from "@/pages/AgentAuth";
 import Lore from "@/pages/Lore";
+import Terms from "@/pages/Terms";
+import Privacy from "@/pages/Privacy";
 import NotFound from "@/pages/NotFound";
 
 const router = createBrowserRouter([
   { path: "/lore", element: <Lore /> },
+  { path: "/terms", element: <Terms /> },
+  { path: "/privacy", element: <Privacy /> },
   { path: "/auth/complete", element: <AuthComplete /> },
   { path: "/auth/agent", element: <AgentAuth /> },
   {
