@@ -17,7 +17,13 @@ static class Program
     static void Main()
     {
         // Must run before anything else — handles Velopack install/uninstall hooks.
-        VelopackApp.Build().Run();
+        VelopackApp.Build()
+            .WithBeforeUninstallFastCallback(_ =>
+            {
+                var config = AgentConfig.Load();
+                UninstallCleanup.Run(new CredentialStore(), config.DbPath);
+            })
+            .Run();
 
         // When the OS routes a yurnik:// URL to this exe it launches a new process
         // with the URL as the first argument. Forward it to the running instance

@@ -75,3 +75,11 @@ export async function signOut(): Promise<void> {
   window.location.href = "/";
 }
 
+// Permanently deletes the caller's account and all owned data. The server
+// clears the session cookie; redirect to the logged-out home afterwards.
+export async function deleteAccount(): Promise<void> {
+  const resp = await apiFetch(`${API_BASE}/api/me`, { method: "DELETE", credentials: "include" });
+  if (!resp.ok) throw new Error(`delete account: ${resp.status}`);
+  window.location.href = "/";
+}
+

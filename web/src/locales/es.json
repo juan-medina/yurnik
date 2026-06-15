@@ -245,6 +245,13 @@
   "settings_desktop_notifications_desc": "Recibe un aviso cuando alguien comente en tus travesías o te siga.",
   "settings_desktop_notifications_denied": "Las notificaciones están bloqueadas en la configuración del navegador.",
 
+  "settings_danger_zone": "Zona de peligro",
+  "settings_delete_account": "Eliminar cuenta",
+  "settings_delete_account_desc": "Elimina permanentemente tu cuenta y todos tus datos: travesías, comentarios, seguidores y tu lista de horizonte. Esta acción no se puede deshacer.",
+  "settings_delete_account_confirm": "Escribe tu identificador ({{handle}}) para confirmar.",
+  "settings_delete_account_button": "Eliminar mi cuenta",
+  "settings_delete_account_error": "Algo salió mal. Inténtalo de nuevo.",
+
   "notif_title": "Yurnik",
   "notif_new_comment_body": "{{actor}} comentó en {{title}}",
   "notif_new_follower_body": "{{actor}} ha empezado a seguirte",

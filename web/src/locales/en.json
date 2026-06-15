@@ -248,6 +248,13 @@
   "settings_desktop_notifications_desc": "Get notified when someone comments on your journeys or follows you.",
   "settings_desktop_notifications_denied": "Notifications are blocked in your browser settings.",
 
+  "settings_danger_zone": "Danger zone",
+  "settings_delete_account": "Delete account",
+  "settings_delete_account_desc": "Permanently delete your account and all of your data — journeys, comments, follows, and your horizon list. This cannot be undone.",
+  "settings_delete_account_confirm": "Type your handle ({{handle}}) to confirm.",
+  "settings_delete_account_button": "Delete my account",
+  "settings_delete_account_error": "Something went wrong. Please try again.",
+
   "notif_title": "Yurnik",
   "notif_new_comment_body": "{{actor}} commented on {{title}}",
   "notif_new_follower_body": "{{actor}} started following you",

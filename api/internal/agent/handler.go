@@ -178,6 +178,9 @@ func (h *Handler) endPending(w http.ResponseWriter, r *http.Request) {
 }
 
 // authenticateBearer parses Authorization: Bearer <token> and returns the user ID.
+// A token can be cryptographically valid yet refer to a deleted account
+// (account deletion does not revoke outstanding JWTs), so the user must still
+// exist in the database.
 func (h *Handler) authenticateBearer(w http.ResponseWriter, r *http.Request) (string, bool) {
 	hdr := r.Header.Get("Authorization")
 	token, ok := strings.CutPrefix(hdr, "Bearer ")
@@ -188,6 +191,10 @@ func (h *Handler) authenticateBearer(w http.ResponseWriter, r *http.Request) (st
 	pub := h.jwtPriv.Public().(ed25519.PublicKey)
 	userID, err := auth.ParseSessionJWT(token, pub)
 	if err != nil {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return "", false
+	}
+	if _, err := db.GetUser(r.Context(), h.pool, userID); err != nil {
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 		return "", false
 	}

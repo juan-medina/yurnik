@@ -6,7 +6,7 @@ import AvatarEditor from "@/components/AvatarEditor";
 import { useNavigate, Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { getCurrentPlayer, signIn, signOut } from "@/services/auth";
+import { getCurrentPlayer, signIn, signOut, deleteAccount } from "@/services/auth";
 import { getExclusions, removeExclusion, getGameHints, removeGameHint, updateGameHint } from "@/services/settings";
 import { searchGames } from "@/services/games";
 import { useLocale, SUPPORTED_LOCALES } from "@/hooks/useLocale";
@@ -37,6 +37,8 @@ export default function Settings() {
   const [editingHintExe, setEditingHintExe] = useState<string | null>(null);
   const [editQuery, setEditQuery] = useState("");
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteHandleInput, setDeleteHandleInput] = useState("");
 
   const { data: editGameResults = [] } = useQuery({
     queryKey: ["games", "search", editQuery],
@@ -73,6 +75,10 @@ export default function Settings() {
   const signOutMutation = useMutation({
     mutationFn: signOut,
     onSuccess: () => navigate("/login", { replace: true }),
+  });
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: deleteAccount,
   });
 
   if (playerLoading) return null;
@@ -426,6 +432,59 @@ export default function Settings() {
             )}
           </div>
 
+        </div>
+      </section>
+
+      {/* Danger zone */}
+      <section>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {t("settings_danger_zone")}
+        </h2>
+        <div className="rounded-lg border border-destructive/30 bg-card p-5">
+          <h3 className="font-semibold">{t("settings_delete_account")}</h3>
+          <p className="mb-4 mt-1 text-sm text-muted-foreground">
+            {t("settings_delete_account_desc")}
+          </p>
+          {confirmingDelete ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {t("settings_delete_account_confirm", { handle: player.handle })}
+              </p>
+              <input
+                type="text"
+                value={deleteHandleInput}
+                onChange={(e) => setDeleteHandleInput(e.target.value)}
+                placeholder={player.handle}
+                autoFocus
+                className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-destructive"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => { setConfirmingDelete(false); setDeleteHandleInput(""); }}
+                  className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  {t("settings_cancel")}
+                </button>
+                <button
+                  onClick={() => deleteAccountMutation.mutate()}
+                  disabled={deleteHandleInput !== player.handle || deleteAccountMutation.isPending}
+                  className="rounded-md bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t("settings_delete_account_button")}
+                </button>
+              </div>
+              {deleteAccountMutation.isError && (
+                <p className="text-sm text-destructive">{t("settings_delete_account_error")}</p>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmingDelete(true)}
+              className="rounded-md border border-destructive/30 px-3 py-1.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+            >
+              {t("settings_delete_account_button")}
+            </button>
+          )}
         </div>
       </section>
     </div>

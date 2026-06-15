@@ -170,6 +170,14 @@ func UpdateDisplayName(ctx context.Context, pool *pgxpool.Pool, id, displayName 
 	return err
 }
 
+// DeleteUser deletes the user row for the given internal UUID. All owned
+// data (journeys, comments, follows, echoes, horizon entries, pending
+// journeys, exclusions, and game hints) is removed via ON DELETE CASCADE.
+func DeleteUser(ctx context.Context, pool *pgxpool.Pool, id string) error {
+	_, err := pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, id)
+	return err
+}
+
 // FollowUser creates a follow relationship. Silently succeeds if already following.
 func FollowUser(ctx context.Context, pool *pgxpool.Pool, followerID, followeeID string) error {
 	_, err := pool.Exec(ctx, `

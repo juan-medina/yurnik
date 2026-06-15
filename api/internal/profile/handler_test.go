@@ -26,6 +26,20 @@ func TestPatchMe_unauthenticated(t *testing.T) {
 	}
 }
 
+func TestDeleteMe_unauthenticated(t *testing.T) {
+	h := &Handler{}
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	r := httptest.NewRequest(http.MethodDelete, "/api/me", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, r)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
+	}
+}
+
 func TestUploadAvatar_unauthenticated(t *testing.T) {
 	h := &Handler{}
 	mux := http.NewServeMux()

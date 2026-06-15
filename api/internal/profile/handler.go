@@ -31,6 +31,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/me", h.getMe)
 	mux.HandleFunc("GET /api/me/profile", h.getMeProfile)
 	mux.HandleFunc("PATCH /api/me", h.patchMe)
+	mux.HandleFunc("DELETE /api/me", h.deleteMe)
 	mux.HandleFunc("POST /api/me/avatar", h.uploadAvatar)
 	mux.HandleFunc("DELETE /api/me/avatar", h.deleteAvatar)
 	mux.HandleFunc("GET /api/feed", h.getFeed)
@@ -660,6 +661,31 @@ func (h *Handler) patchMe(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// deleteMe permanently deletes the caller's account. All owned data is
+// removed via ON DELETE CASCADE on the users row. The session cookie is
+// cleared so the now-stale JWT is dropped by the browser.
+func (h *Handler) deleteMe(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.authenticate(w, r)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if err := db.DeleteUser(r.Context(), h.pool, userID); err != nil {
+		log.Printf("profile/me: delete %s: %v", userID, err)
+		http.Error(w, "delete failed", http.StatusInternalServerError)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:   "yurnik_session",
+		Value:  "",
+		Path:   "/",
+		MaxAge: -1,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
