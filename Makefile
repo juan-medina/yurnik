@@ -1,4 +1,4 @@
-.PHONY: run-api run-agent run-web test test-api test-agent test-web test-integration build build-api build-web build-agent deploy-api release-agent gen-keys lint setup db-init db-migrate db-start db-stop
+.PHONY: run-api run-agent run-web test test-api test-agent test-web test-integration build build-api build-web build-agent deploy-api release-agent gen-keys export-user lint setup db-init db-migrate db-start db-stop
 
 ifeq ($(OS),Windows_NT)
 PLATFORM := windows
@@ -60,6 +60,14 @@ release-agent:
 
 gen-keys:
 	cd api && go run ./cmd/gen-keys
+
+# Usage: make export-user USER=<handle-or-uuid> [OUT=<output-file>]
+export-user:
+ifeq ($(PLATFORM),windows)
+	powershell -ExecutionPolicy Bypass -File scripts/export-user.ps1 $(USER) $(OUT)
+else
+	bash scripts/export-user.sh $(USER) $(OUT)
+endif
 
 lint:
 	cd web && pnpm lint
