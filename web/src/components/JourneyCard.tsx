@@ -83,7 +83,7 @@ export default function JourneyCard({ journey, showPlayer = false }: JourneyCard
         </div>
 
         {journey.log && (
-          <p className="mb-2 text-sm italic text-muted-foreground">&ldquo;{journey.log}&rdquo;</p>
+          <p className="mb-2 break-words whitespace-pre-wrap text-sm italic text-muted-foreground">&ldquo;{journey.log}&rdquo;</p>
         )}
       </div>
     </article>

@@ -646,6 +646,10 @@ func (h *Handler) patchMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if body.Bio != nil {
+		if len([]rune(*body.Bio)) > 400 {
+			http.Error(w, `{"error":"invalid_request","message":"bio must be at most 400 characters"}`, http.StatusBadRequest)
+			return
+		}
 		if err := db.UpdateBio(r.Context(), h.pool, userID, *body.Bio); err != nil {
 			log.Printf("profile/me: update bio %s: %v", userID, err)
 			http.Error(w, "update failed", http.StatusInternalServerError)

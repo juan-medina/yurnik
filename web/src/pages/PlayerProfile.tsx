@@ -161,7 +161,7 @@ export default function PlayerProfile() {
         profileActions={profileActions}
         bioContent={
           profile.player.bio ? (
-            <p className="text-sm text-muted-foreground">{profile.player.bio}</p>
+            <p className="break-words whitespace-pre-wrap text-sm text-muted-foreground">{profile.player.bio}</p>
           ) : undefined
         }
       />

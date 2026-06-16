@@ -5,18 +5,8 @@ import { format, isSameDay } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { MAX_TEXT_LENGTH } from "@/lib/constants";
-
-// CharCounter shows how many characters remain out of MAX_TEXT_LENGTH,
-// warning as the limit approaches.
-export function CharCounter({ value }: { value: string }) {
-  const remaining = MAX_TEXT_LENGTH - value.length;
-  return (
-    <span className={`text-xs ${remaining < 20 ? "text-destructive" : "text-muted-foreground/60"}`}>
-      {remaining}
-    </span>
-  );
-}
+import { LimitedTextarea } from "@/components/LimitedTextarea";
+export { CharCounter } from "@/components/LimitedTextarea";
 
 type DurationFieldProps = {
   value: string;
@@ -44,42 +34,7 @@ export function DurationField({ value, onChange, invalid, label, placeholder, er
   );
 }
 
-type JourneyLogFieldProps = {
-  value: string;
-  onChange: (value: string) => void;
-  label: string;
-  optionalLabel?: string;
-  placeholder: string;
-  className?: string;
-};
-
-export function JourneyLogField({ value, onChange, label, optionalLabel, placeholder, className }: JourneyLogFieldProps) {
-  return (
-    <div>
-      {label && (
-        <label className="mb-1.5 flex items-baseline justify-between text-xs font-medium text-muted-foreground">
-          <span>
-            {label}{optionalLabel && (
-              <>
-                {" "}
-                <span className="font-normal text-muted-foreground/60">{optionalLabel}</span>
-              </>
-            )}
-          </span>
-          <CharCounter value={value} />
-        </label>
-      )}
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={3}
-        maxLength={MAX_TEXT_LENGTH}
-        className={className ?? "w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"}
-      />
-    </div>
-  );
-}
+export const JourneyLogField = LimitedTextarea;
 
 type PlayedAtFieldProps = {
   label: string;

@@ -135,7 +135,7 @@ function CommentRow({ comment, journeyId, currentPlayerId }: { comment: Comment;
           </>
         )}
       </div>
-      <p className="pl-8 text-sm whitespace-pre-wrap text-foreground/80">{comment.text}</p>
+      <p className="pl-8 break-words whitespace-pre-wrap text-sm text-foreground/80">{comment.text}</p>
     </div>
   );
 }
@@ -393,7 +393,7 @@ export default function JourneyDetail() {
             </div>
 
             {journey.log && (
-              <blockquote className="mt-4 whitespace-pre-wrap border-l-2 border-border pl-4 text-sm italic text-muted-foreground">
+              <blockquote className="mt-4 break-words whitespace-pre-wrap border-l-2 border-border pl-4 text-sm italic text-muted-foreground">
                 &ldquo;{journey.log}&rdquo;
               </blockquote>
             )}

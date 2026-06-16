@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { Loader2, RotateCcw, X } from "lucide-react";
 import type { Player } from "@/models/player";
+import { LimitedTextarea } from "@/components/LimitedTextarea";
 
 interface EditProfileModalProps {
   player: Player;
@@ -101,15 +102,12 @@ export default function EditProfileModal({ player, onSave, onClose }: EditProfil
 
         {/* Bio */}
         <div className="mb-5">
-          <label htmlFor="edit-bio" className="mb-1 block text-sm font-medium">Bio</label>
-          <textarea
-            id="edit-bio"
+          <LimitedTextarea
+            label="Bio"
             value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            rows={3}
-            maxLength={160}
+            onChange={setBio}
             placeholder="Tell your story…"
-            className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            rows={4}
           />
         </div>
 
