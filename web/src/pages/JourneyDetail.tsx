@@ -16,9 +16,8 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import { useCooldown } from "@/hooks/useCooldown";
 import { RateLimitedError } from "@/lib/api";
 import { JourneyForm } from "@/components/JourneyForm";
-import { CharCounter } from "@/components/JourneyFormFields";
+import { LimitedTextarea } from "@/components/LimitedTextarea";
 import { formatCommentAge, formatJourneyDate } from "@/lib/time";
-import { MAX_TEXT_LENGTH } from "@/lib/constants";
 import type { Comment, JourneyPlayer, Player } from "@/models";
 
 function PlayerAvatar({ player, size = "md" }: { player: Player; size?: "sm" | "md" | "lg" }) {
@@ -412,33 +411,28 @@ export default function JourneyDetail() {
           ))}
         </div>
         <div className="border-t border-border p-4">
-          <div className="flex gap-3">
-            <textarea
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder={t("journey_comment_placeholder")}
-              rows={2}
-              maxLength={MAX_TEXT_LENGTH}
-              className="flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-            <button
-              disabled={!commentText.trim() || postCommentMutation.isPending || commentCooldown.remaining > 0}
-              onClick={() => { if (!currentPlayer) { setShowSignIn(true); return; } postCommentMutation.mutate(commentText); }}
-              className="self-end rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-40"
-            >
-              {commentCooldown.remaining > 0 ? t("journey_slow_down", { seconds: commentCooldown.remaining }) : t("journey_post")}
-            </button>
-          </div>
-          <div className="mt-1 flex items-center justify-between">
-            <div>
-              {commentCooldown.remaining > 0 ? (
-                <p className="text-xs text-destructive">{t("journey_slow_down_message", { seconds: commentCooldown.remaining })}</p>
-              ) : postCommentMutation.isError ? (
-                <p className="text-xs text-destructive">{t("journey_error")}</p>
-              ) : null}
-            </div>
-            <CharCounter value={commentText} />
-          </div>
+          {(commentCooldown.remaining > 0 || postCommentMutation.isError) && (
+            <p className="mb-2 text-xs text-destructive">
+              {commentCooldown.remaining > 0
+                ? t("journey_slow_down_message", { seconds: commentCooldown.remaining })
+                : t("journey_error")}
+            </p>
+          )}
+          <LimitedTextarea
+            value={commentText}
+            onChange={setCommentText}
+            placeholder={t("journey_comment_placeholder")}
+            rows={2}
+            toolbarRight={
+              <button
+                disabled={!commentText.trim() || postCommentMutation.isPending || commentCooldown.remaining > 0}
+                onClick={() => { if (!currentPlayer) { setShowSignIn(true); return; } postCommentMutation.mutate(commentText); }}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-40"
+              >
+                {commentCooldown.remaining > 0 ? t("journey_slow_down", { seconds: commentCooldown.remaining }) : t("journey_post")}
+              </button>
+            }
+          />
         </div>
       </div>
 
