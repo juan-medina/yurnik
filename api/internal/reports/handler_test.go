@@ -104,3 +104,31 @@ func TestListSuspended_unauthenticated(t *testing.T) {
 		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
 	}
 }
+
+func TestAdminDeleteJourneyLog_unauthenticated(t *testing.T) {
+	h := newTestHandler(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	r := httptest.NewRequest(http.MethodDelete, "/api/admin/journeys/00000000-0000-0000-0000-000000000001/log", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, r)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestAdminDeleteComment_unauthenticated(t *testing.T) {
+	h := newTestHandler(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	r := httptest.NewRequest(http.MethodDelete, "/api/admin/comments/00000000-0000-0000-0000-000000000001", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, r)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
+	}
+}

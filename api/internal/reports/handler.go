@@ -61,6 +61,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/admin/users/{id}/suspend", h.unsuspend)
 	mux.HandleFunc("GET /api/admin/users/suspended", h.listSuspended)
 	mux.HandleFunc("POST /api/admin/users/{id}/reset-profile", h.resetProfile)
+	mux.HandleFunc("DELETE /api/admin/journeys/{id}/log", h.adminDeleteJourneyLog)
+	mux.HandleFunc("DELETE /api/admin/comments/{id}", h.adminDeleteComment)
 }
 
 func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
@@ -281,4 +283,41 @@ func (h *Handler) listSuspended(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"users": items})
+}
+
+func (h *Handler) adminDeleteJourneyLog(w http.ResponseWriter, r *http.Request) {
+	if !h.requireAdmin(w, r) {
+		return
+	}
+	id := r.PathValue("id")
+	tag, err := h.pool.Exec(r.Context(), `UPDATE journeys SET log = NULL WHERE id = $1`, id)
+	if err != nil {
+		log.Printf("admin/delete-journey-log: %v", err)
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		http.Error(w, `{"error":"not_found"}`, http.StatusNotFound)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) adminDeleteComment(w http.ResponseWriter, r *http.Request) {
+	if !h.requireAdmin(w, r) {
+		return
+	}
+	id := r.PathValue("id")
+	var userID string
+	err := h.pool.QueryRow(r.Context(), `SELECT user_id FROM comments WHERE id = $1`, id).Scan(&userID)
+	if err != nil {
+		http.Error(w, `{"error":"not_found"}`, http.StatusNotFound)
+		return
+	}
+	if err := db.DeleteComment(r.Context(), h.pool, id, userID); err != nil {
+		log.Printf("admin/delete-comment: %v", err)
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

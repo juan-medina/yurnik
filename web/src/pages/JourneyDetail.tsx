@@ -88,8 +88,9 @@ function JourneyPlayerRow({ entry, currentPlayerId }: { entry: JourneyPlayer; cu
   );
 }
 
-function CommentRow({ comment, journeyId, currentPlayerId, highlighted }: { comment: Comment; journeyId: string; currentPlayerId?: string; highlighted?: boolean }) {
+function CommentRow({ comment, journeyId, currentPlayerId, isAdmin, highlighted }: { comment: Comment; journeyId: string; currentPlayerId?: string; isAdmin?: boolean; highlighted?: boolean }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
   const [reporting, setReporting] = useState(false);
@@ -144,15 +145,29 @@ function CommentRow({ comment, journeyId, currentPlayerId, highlighted }: { comm
               >
                 <Trash2 size={14} />
               </button>
-            ) : currentPlayerId && (
-              <button
-                onClick={() => setReporting(true)}
-                title={t("report_comment_tooltip")}
-                aria-label={t("report_comment_tooltip")}
-                className="text-muted-foreground/40 transition-colors hover:text-destructive"
-              >
-                <Flag size={14} />
-              </button>
+            ) : (
+              <>
+                {currentPlayerId && (
+                  <button
+                    onClick={() => setReporting(true)}
+                    title={t("report_comment_tooltip")}
+                    aria-label={t("report_comment_tooltip")}
+                    className="text-muted-foreground/40 transition-colors hover:text-destructive"
+                  >
+                    <Flag size={14} />
+                  </button>
+                )}
+                {isAdmin && (
+                  <button
+                    onClick={() => navigate(`/admin?confirm_delete_comment=${comment.id}&from_journey=${journeyId}`)}
+                    title={t("admin_delete_comment_tooltip")}
+                    aria-label={t("admin_delete_comment_tooltip")}
+                    className="text-destructive transition-colors hover:text-destructive/70"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </>
             )}
           </>
         )}
@@ -210,6 +225,7 @@ export default function JourneyDetail() {
   usePageTitle(journey ? `${journey.player.name}'s journey in ${journey.game}` : undefined);
 
   const isOwner = !!currentPlayer && journey?.player.id === currentPlayer.id;
+  const isAdmin = !!currentPlayer?.isAdmin && !isOwner;
 
   const { data: ownerIsFollowed = false } = useQuery({
     queryKey: ["following", journey?.player.id],
@@ -440,6 +456,16 @@ export default function JourneyDetail() {
                     <Flag size={13} />
                   </button>
                 )}
+                {isAdmin && (
+                  <button
+                    onClick={() => navigate(`/admin?confirm_delete_journey_log=${id}`)}
+                    title={t("admin_delete_journey_log_tooltip")}
+                    aria-label={t("admin_delete_journey_log_tooltip")}
+                    className="mt-0.5 shrink-0 text-destructive transition-colors hover:text-destructive/70"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
               </div>
             )}
             {reportingLog && (
@@ -460,7 +486,7 @@ export default function JourneyDetail() {
         </div>
         <div className="divide-y divide-border px-4">
           {comments.map((c) => (
-            <CommentRow key={c.id} comment={c} journeyId={id!} currentPlayerId={currentPlayer?.id} highlighted={c.id === highlightedCommentId} />
+            <CommentRow key={c.id} comment={c} journeyId={id!} currentPlayerId={currentPlayer?.id} isAdmin={isAdmin} highlighted={c.id === highlightedCommentId} />
           ))}
         </div>
         <div className="border-t border-border p-4">

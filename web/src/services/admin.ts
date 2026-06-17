@@ -28,6 +28,22 @@ export async function resetProfile(id: string): Promise<void> {
   if (!resp.ok) throw new Error(`reset profile: ${resp.status}`);
 }
 
+export async function adminDeleteJourneyLog(id: string): Promise<void> {
+  const resp = await apiFetch(`${API_BASE}/api/admin/journeys/${id}/log`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!resp.ok) throw new Error(`admin delete journey log: ${resp.status}`);
+}
+
+export async function adminDeleteComment(id: string): Promise<void> {
+  const resp = await apiFetch(`${API_BASE}/api/admin/comments/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!resp.ok) throw new Error(`admin delete comment: ${resp.status}`);
+}
+
 export async function listSuspendedUsers(): Promise<SuspendedUser[]> {
   const resp = await apiFetch(`${API_BASE}/api/admin/users/suspended`, { credentials: "include" });
   if (!resp.ok) throw new Error(`list suspended: ${resp.status}`);

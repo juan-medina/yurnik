@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ExternalLink } from "lucide-react";
 import { listReports } from "@/services/reports";
-import { suspendUser, unsuspendUser, listSuspendedUsers, resetProfile } from "@/services/admin";
+import { suspendUser, unsuspendUser, listSuspendedUsers, resetProfile, adminDeleteJourneyLog, adminDeleteComment } from "@/services/admin";
 import { getCurrentPlayer } from "@/services/auth";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { initials } from "@/lib/display";
@@ -196,6 +196,9 @@ export default function Admin() {
   const confirmSuspendName = searchParams.get("suspend_name") ?? "";
   const confirmResetId = searchParams.get("confirm_reset");
   const confirmResetName = searchParams.get("reset_name") ?? "";
+  const confirmDeleteJourneyLogId = searchParams.get("confirm_delete_journey_log");
+  const confirmDeleteCommentId = searchParams.get("confirm_delete_comment");
+  const fromJourneyId = searchParams.get("from_journey");
 
   const suspendMutation = useMutation({
     mutationFn: suspendUser,
@@ -209,6 +212,20 @@ export default function Admin() {
     mutationFn: resetProfile,
     onSuccess: () => {
       void navigate("/admin", { replace: true });
+    },
+  });
+
+  const deleteJourneyLogMutation = useMutation({
+    mutationFn: adminDeleteJourneyLog,
+    onSuccess: () => {
+      void navigate("/admin", { replace: true });
+    },
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: adminDeleteComment,
+    onSuccess: () => {
+      void navigate(fromJourneyId ? `/journey/${fromJourneyId}` : "/admin", { replace: true });
     },
   });
 
@@ -285,6 +302,54 @@ export default function Admin() {
                 className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
               >
                 {t("admin_reset_profile")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDeleteJourneyLogId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="mx-4 w-full max-w-sm rounded-lg border border-border bg-card p-6 shadow-lg">
+            <h2 className="mb-2 text-base font-semibold">{t("admin_confirm_delete_journey_log_title")}</h2>
+            <p className="mb-6 text-sm text-muted-foreground">{t("admin_confirm_delete_journey_log_body")}</p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setSearchParams({})}
+                className="rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+              >
+                {t("admin_cancel")}
+              </button>
+              <button
+                onClick={() => deleteJourneyLogMutation.mutate(confirmDeleteJourneyLogId)}
+                disabled={deleteJourneyLogMutation.isPending}
+                className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
+              >
+                {t("admin_delete_journey_log")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDeleteCommentId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="mx-4 w-full max-w-sm rounded-lg border border-border bg-card p-6 shadow-lg">
+            <h2 className="mb-2 text-base font-semibold">{t("admin_confirm_delete_comment_title")}</h2>
+            <p className="mb-6 text-sm text-muted-foreground">{t("admin_confirm_delete_comment_body")}</p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setSearchParams({})}
+                className="rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+              >
+                {t("admin_cancel")}
+              </button>
+              <button
+                onClick={() => deleteCommentMutation.mutate(confirmDeleteCommentId)}
+                disabled={deleteCommentMutation.isPending}
+                className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
+              >
+                {t("admin_delete_comment")}
               </button>
             </div>
           </div>
