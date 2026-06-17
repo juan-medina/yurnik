@@ -23,6 +23,7 @@ import (
 	"github.com/juan-medina/yurnik/internal/middleware"
 	"github.com/juan-medina/yurnik/internal/profile"
 	"github.com/juan-medina/yurnik/internal/r2"
+	"github.com/juan-medina/yurnik/internal/reports"
 	"github.com/juan-medina/yurnik/internal/settings"
 )
 
@@ -76,6 +77,7 @@ func main() {
 	echoes.NewHandler(pool, jwtPriv).Register(mux)
 	horizon.NewHandler(pool, jwtPriv).Register(mux)
 	settings.NewHandler(pool, jwtPriv).Register(mux)
+	reports.NewHandler(pool, jwtPriv).Register(mux)
 
 	log.Printf("listening on %s (frontend: %s, rate limit: %.0f rps)", addr, cfg.FrontendURL, rps)
 	if err := http.ListenAndServe(addr, cors(allowedOrigin, middleware.RateLimit(rps, mux))); err != nil {

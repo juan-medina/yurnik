@@ -3,12 +3,14 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import { Flag } from "lucide-react";
 import GenreChip from "@/components/GenreChip";
+import ReportModal from "@/components/ReportModal";
 import { avatarSrc, initials } from "@/lib/display";
 import { genreBarColor } from "@/lib/genres";
 import FollowListModal from "@/components/FollowListModal";
 import ActivityFeed from "@/components/ActivityFeed";
-import type { FeedItem, Player, PlayerProfile } from "@/models";
+import type { FeedItem, Player, PlayerProfile, ReportTargetType } from "@/models";
 
 function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -49,9 +51,11 @@ export default function ProfileView({
 }: ProfileViewProps) {
   const { t } = useTranslation();
   const [followList, setFollowList] = useState<{ title: string; players: Player[] } | null>(null);
+  const [reporting, setReporting] = useState<ReportTargetType | null>(null);
 
   const { player, journeyCount, totalSeconds, recentGames, genreHours, horizon } = profile;
   const isOwnProfile = player.id === viewerId;
+  const canReport = !!viewerId && !isOwnProfile;
   const maxGenreSeconds = genreHours[0]?.seconds ?? 1;
 
   return (
@@ -99,7 +103,20 @@ export default function ProfileView({
             {bioContent}
           </div>
 
-          {profileActions}
+          {/* Actions: follow button + report button stacked */}
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            {profileActions}
+            {canReport && (
+              <button
+                onClick={() => setReporting("profile")}
+                title={t("report_profile_tooltip")}
+                aria-label={t("report_profile_tooltip")}
+                className="text-muted-foreground/40 transition-colors hover:text-destructive"
+              >
+                <Flag size={15} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -262,6 +279,14 @@ export default function ProfileView({
           title={followList.title}
           players={followList.players}
           onClose={() => setFollowList(null)}
+        />
+      )}
+
+      {reporting && (
+        <ReportModal
+          targetType={reporting}
+          targetId={player.id}
+          onClose={() => setReporting(null)}
         />
       )}
     </div>

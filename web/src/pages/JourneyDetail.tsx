@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { useState, useEffect, useRef } from "react";
+import { Link, useNavigate, useParams, useLocation } from "react-router";
 import GenreChip from "@/components/GenreChip";
-import { Check, ChevronLeft, Clock, Pencil, Trash2, UserPlus } from "lucide-react";
+import { Check, ChevronLeft, Clock, Flag, Pencil, Trash2, UserPlus } from "lucide-react";
 import { Info } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -12,6 +12,7 @@ import { followPlayer, unfollowPlayer, getIsFollowing } from "@/services/players
 import { getCurrentPlayer } from "@/services/auth";
 import { avatarSrc, playerHref } from "@/lib/display";
 import SignInPromptModal from "@/components/SignInPromptModal";
+import ReportModal from "@/components/ReportModal";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useCooldown } from "@/hooks/useCooldown";
 import { RateLimitedError } from "@/lib/api";
@@ -87,17 +88,30 @@ function JourneyPlayerRow({ entry, currentPlayerId }: { entry: JourneyPlayer; cu
   );
 }
 
-function CommentRow({ comment, journeyId, currentPlayerId }: { comment: Comment; journeyId: string; currentPlayerId?: string }) {
+function CommentRow({ comment, journeyId, currentPlayerId, highlighted }: { comment: Comment; journeyId: string; currentPlayerId?: string; highlighted?: boolean }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!highlighted || !ref.current) return;
+    ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    const el = ref.current;
+    el.classList.add("bg-primary/10");
+    const timer = setTimeout(() => el.classList.remove("bg-primary/10"), 2000);
+    return () => clearTimeout(timer);
+  }, [highlighted]);
   const deleteCommentMutation = useMutation({
     mutationFn: () => deleteComment(journeyId, comment.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["journey", journeyId, "comments"] }),
   });
 
+  const isOwn = comment.player.id === currentPlayerId;
+
   return (
-    <div className="py-3">
+    <div ref={ref} id={`comment-${comment.id}`} className="rounded py-3 transition-colors duration-1000">
       <div className="mb-1 flex items-center gap-2">
         <Link to={playerHref(comment.player)} className="flex items-center gap-2">
           <PlayerAvatar player={comment.player} size="sm" />
@@ -122,7 +136,7 @@ function CommentRow({ comment, journeyId, currentPlayerId }: { comment: Comment;
         ) : (
           <>
             <span className="ml-auto text-xs text-muted-foreground">{formatCommentAge(comment.commentedAt)}</span>
-            {comment.player.id === currentPlayerId && (
+            {isOwn ? (
               <button
                 onClick={() => setConfirming(true)}
                 aria-label={t("journey_delete_comment_label")}
@@ -130,11 +144,28 @@ function CommentRow({ comment, journeyId, currentPlayerId }: { comment: Comment;
               >
                 <Trash2 size={14} />
               </button>
+            ) : currentPlayerId && (
+              <button
+                onClick={() => setReporting(true)}
+                title={t("report_comment_tooltip")}
+                aria-label={t("report_comment_tooltip")}
+                className="text-muted-foreground/40 transition-colors hover:text-destructive"
+              >
+                <Flag size={14} />
+              </button>
             )}
           </>
         )}
       </div>
       <p className="pl-8 break-words whitespace-pre-wrap text-sm text-foreground/80">{comment.text}</p>
+      {reporting && (
+        <ReportModal
+          targetType="comment"
+          targetId={comment.id}
+          contextId={journeyId}
+          onClose={() => setReporting(false)}
+        />
+      )}
     </div>
   );
 }
@@ -143,11 +174,14 @@ export default function JourneyDetail() {
   const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
+  const { hash } = useLocation();
+  const highlightedCommentId = hash.startsWith("#comment-") ? hash.slice("#comment-".length) : undefined;
   const queryClient = useQueryClient();
   const [commentText, setCommentText] = useState("");
   const [showSignIn, setShowSignIn] = useState(false);
   const [confirmDeleteJourney, setConfirmDeleteJourney] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [reportingLog, setReportingLog] = useState(false);
 
   const { data: currentPlayer } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
 
@@ -392,9 +426,28 @@ export default function JourneyDetail() {
             </div>
 
             {journey.log && (
-              <blockquote className="mt-4 break-words whitespace-pre-wrap border-l-2 border-border pl-4 text-sm italic text-muted-foreground">
-                &ldquo;{journey.log}&rdquo;
-              </blockquote>
+              <div className="mt-4 flex items-start gap-2">
+                <blockquote className="min-w-0 flex-1 break-words whitespace-pre-wrap border-l-2 border-border pl-4 text-sm italic text-muted-foreground">
+                  &ldquo;{journey.log}&rdquo;
+                </blockquote>
+                {!isOwner && currentPlayer && (
+                  <button
+                    onClick={() => setReportingLog(true)}
+                    title={t("report_journey_log_tooltip")}
+                    aria-label={t("report_journey_log_tooltip")}
+                    className="mt-0.5 shrink-0 text-muted-foreground/40 transition-colors hover:text-destructive"
+                  >
+                    <Flag size={13} />
+                  </button>
+                )}
+              </div>
+            )}
+            {reportingLog && (
+              <ReportModal
+                targetType="journey_log"
+                targetId={id!}
+                onClose={() => setReportingLog(false)}
+              />
             )}
           </>
         )}
@@ -407,7 +460,7 @@ export default function JourneyDetail() {
         </div>
         <div className="divide-y divide-border px-4">
           {comments.map((c) => (
-            <CommentRow key={c.id} comment={c} journeyId={id!} currentPlayerId={currentPlayer?.id} />
+            <CommentRow key={c.id} comment={c} journeyId={id!} currentPlayerId={currentPlayer?.id} highlighted={c.id === highlightedCommentId} />
           ))}
         </div>
         <div className="border-t border-border p-4">
