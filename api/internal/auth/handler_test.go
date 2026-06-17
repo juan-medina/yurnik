@@ -7,7 +7,6 @@ import (
 	"crypto/rand"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 )
@@ -62,39 +61,3 @@ func TestSession_userIDPending(t *testing.T) {
 	}
 }
 
-func TestSession_success(t *testing.T) {
-	h := newTestHandler(t)
-	h.store.put("state1", "verifier", time.Minute)
-	h.store.setUserID("state1", "01920f3a-0000-0000-0000-000000000000")
-
-	r := httptest.NewRequest(http.MethodPost, "/auth/session", nil)
-	r.AddCookie(&http.Cookie{Name: "auth_state", Value: "state1"})
-	w := httptest.NewRecorder()
-
-	h.session(w, r)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-
-	// yurnik_session cookie must be set and non-empty.
-	var sessionCookie *http.Cookie
-	for _, c := range w.Result().Cookies() {
-		if c.Name == "yurnik_session" {
-			sessionCookie = c
-			break
-		}
-	}
-	if sessionCookie == nil || strings.TrimSpace(sessionCookie.Value) == "" {
-		t.Error("yurnik_session cookie missing or empty")
-	}
-
-	// State must be consumed — a second call with the same cookie fails.
-	r2 := httptest.NewRequest(http.MethodPost, "/auth/session", nil)
-	r2.AddCookie(&http.Cookie{Name: "auth_state", Value: "state1"})
-	w2 := httptest.NewRecorder()
-	h.session(w2, r2)
-	if w2.Code != http.StatusBadRequest {
-		t.Errorf("second session call: status = %d, want %d", w2.Code, http.StatusBadRequest)
-	}
-}

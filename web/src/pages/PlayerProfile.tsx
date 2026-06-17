@@ -91,6 +91,7 @@ export default function PlayerProfile() {
   }
 
   const isOwnProfile = currentPlayer?.id === profile.player.id;
+  const canSuspend = !!currentPlayer?.isAdmin && !isOwnProfile;
 
   const avatarContent = isOwnProfile && currentPlayer ? (
     <AvatarEditor
@@ -159,6 +160,14 @@ export default function PlayerProfile() {
         }
         avatarContent={avatarContent}
         profileActions={profileActions}
+        onSuspend={
+          canSuspend
+            ? () =>
+                navigate(
+                  `/admin?confirm_suspend=${profile.player.id}&suspend_name=${encodeURIComponent(profile.player.name)}`
+                )
+            : undefined
+        }
         bioContent={
           profile.player.bio ? (
             <p className="break-words whitespace-pre-wrap text-sm text-muted-foreground">{profile.player.bio}</p>

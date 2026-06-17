@@ -3,22 +3,49 @@
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 
-const CONTACT_EMAIL = "privacy@yurnik.example";
+const PRIVACY_EMAIL = "privacy@yurnik.example";
+export const CONTACT_EMAIL = "contact@yurnik.example";
 
-export function withEmailLink(text: string): React.ReactNode {
-  const parts = text.split(CONTACT_EMAIL);
+/** Replaces occurrences of email in text with a mailto anchor. */
+function makeEmailLink(text: string, email: string): React.ReactNode {
+  const parts = text.split(email);
   if (parts.length === 1) return text;
-
   return parts.flatMap((part, i) =>
     i === 0
       ? [part]
       : [
-          <a key={i} href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">
-            {CONTACT_EMAIL}
+          <a key={i} href={`mailto:${email}`} className="text-primary hover:underline">
+            {email}
           </a>,
           part,
         ],
   );
+}
+
+export function withEmailLink(text: string): React.ReactNode {
+  return makeEmailLink(text, PRIVACY_EMAIL);
+}
+
+export function withContactLink(text: string): React.ReactNode {
+  return makeEmailLink(text, CONTACT_EMAIL);
+}
+
+type Substitution = { match: string; node: React.ReactNode };
+
+/**
+ * Replaces multiple substrings in text with React nodes in a single pass.
+ * Substitutions are applied left-to-right; non-overlapping occurrences only.
+ */
+export function withLinks(text: string, subs: Substitution[]): React.ReactNode {
+  // Build a regex that matches any of the target strings, capturing which one matched.
+  const escaped = subs.map((s) => s.match.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const regex = new RegExp(`(${escaped.join("|")})`, "g");
+  const parts = text.split(regex);
+
+  return parts.map((part, i) => {
+    const sub = subs.find((s) => s.match === part);
+    return sub ? <span key={i}>{sub.node}</span> : part;
+  });
 }
 
 type LegalLayoutProps = { title: string; updated: string; children: React.ReactNode };

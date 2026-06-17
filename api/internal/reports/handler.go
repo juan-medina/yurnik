@@ -57,6 +57,9 @@ func NewHandler(pool *pgxpool.Pool, jwtPriv ed25519.PrivateKey) *Handler {
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/reports", h.create)
 	mux.HandleFunc("GET /api/admin/reports", h.list)
+	mux.HandleFunc("POST /api/admin/users/{id}/suspend", h.suspend)
+	mux.HandleFunc("DELETE /api/admin/users/{id}/suspend", h.unsuspend)
+	mux.HandleFunc("GET /api/admin/users/suspended", h.listSuspended)
 }
 
 func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
@@ -204,4 +207,64 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"reports": items})
+}
+
+func (h *Handler) suspend(w http.ResponseWriter, r *http.Request) {
+	if !h.requireAdmin(w, r) {
+		return
+	}
+	id := r.PathValue("id")
+	if err := db.SuspendUser(r.Context(), h.pool, id); err != nil {
+		log.Printf("admin/suspend: %v", err)
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) unsuspend(w http.ResponseWriter, r *http.Request) {
+	if !h.requireAdmin(w, r) {
+		return
+	}
+	id := r.PathValue("id")
+	if err := db.UnsuspendUser(r.Context(), h.pool, id); err != nil {
+		log.Printf("admin/unsuspend: %v", err)
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) listSuspended(w http.ResponseWriter, r *http.Request) {
+	if !h.requireAdmin(w, r) {
+		return
+	}
+	users, err := db.ListSuspendedUsers(r.Context(), h.pool)
+	if err != nil {
+		log.Printf("admin/list-suspended: %v", err)
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	type suspendedItem struct {
+		ID          string  `json:"id"`
+		Handle      string  `json:"handle"`
+		Name        string  `json:"name"`
+		AvatarURL   *string `json:"avatar_url,omitempty"`
+		Color       string  `json:"color"`
+		SuspendedAt string  `json:"suspended_at"`
+	}
+	items := make([]suspendedItem, 0, len(users))
+	for _, u := range users {
+		items = append(items, suspendedItem{
+			ID:          u.ID,
+			Handle:      u.Handle,
+			Name:        u.Name,
+			AvatarURL:   u.AvatarURL,
+			Color:       u.Color,
+			SuspendedAt: u.SuspendedAt.UTC().Format(time.RFC3339),
+		})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"users": items})
 }

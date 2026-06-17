@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -25,6 +26,17 @@ type User struct {
 	HasCustomAvatar bool
 	HasCustomName   bool
 	IsAdmin         bool
+	SuspendedAt     *time.Time
+}
+
+// SuspendedUser holds the fields needed to display a suspended user in the admin UI.
+type SuspendedUser struct {
+	ID          string
+	Handle      string
+	Name        string
+	AvatarURL   *string
+	Color       string
+	SuspendedAt time.Time
 }
 
 // UserIdentity holds the identity fields returned by the OAuth provider.
@@ -130,9 +142,9 @@ func GetUser(ctx context.Context, pool *pgxpool.Pool, id string) (User, error) {
 	var u User
 	err := pool.QueryRow(ctx, `
 		SELECT id, provider, handle, COALESCE(display_name, name), COALESCE(custom_avatar_url, avatar_url), bio, color,
-		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL, is_admin
+		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL, is_admin, suspended_at
 		FROM users WHERE id = $1
-	`, id).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName, &u.IsAdmin)
+	`, id).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName, &u.IsAdmin, &u.SuspendedAt)
 	if err == pgx.ErrNoRows {
 		return User{}, fmt.Errorf("user not found: %s", id)
 	}
@@ -145,13 +157,48 @@ func GetUserByHandle(ctx context.Context, pool *pgxpool.Pool, handle string) (Us
 	var u User
 	err := pool.QueryRow(ctx, `
 		SELECT id, provider, handle, COALESCE(display_name, name), COALESCE(custom_avatar_url, avatar_url), bio, color,
-		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL, is_admin
+		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL, is_admin, suspended_at
 		FROM users WHERE lower(handle) = lower($1)
-	`, handle).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName, &u.IsAdmin)
+	`, handle).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName, &u.IsAdmin, &u.SuspendedAt)
 	if err == pgx.ErrNoRows {
 		return User{}, fmt.Errorf("user not found: %s", handle)
 	}
 	return u, err
+}
+
+// SuspendUser sets suspended_at on the given user.
+func SuspendUser(ctx context.Context, pool *pgxpool.Pool, id string) error {
+	_, err := pool.Exec(ctx, `UPDATE users SET suspended_at = now() WHERE id = $1`, id)
+	return err
+}
+
+// UnsuspendUser clears suspended_at on the given user.
+func UnsuspendUser(ctx context.Context, pool *pgxpool.Pool, id string) error {
+	_, err := pool.Exec(ctx, `UPDATE users SET suspended_at = NULL WHERE id = $1`, id)
+	return err
+}
+
+// ListSuspendedUsers returns all users with a non-null suspended_at, ordered most recent first.
+func ListSuspendedUsers(ctx context.Context, pool *pgxpool.Pool) ([]SuspendedUser, error) {
+	rows, err := pool.Query(ctx, `
+		SELECT id, handle, COALESCE(display_name, name), COALESCE(custom_avatar_url, avatar_url), color, suspended_at
+		FROM users
+		WHERE suspended_at IS NOT NULL
+		ORDER BY suspended_at DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var users []SuspendedUser
+	for rows.Next() {
+		var u SuspendedUser
+		if err := rows.Scan(&u.ID, &u.Handle, &u.Name, &u.AvatarURL, &u.Color, &u.SuspendedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
 }
 
 // UpdateBio sets the bio for the given user ID.

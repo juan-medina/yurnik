@@ -18,6 +18,15 @@ export type ReportTarget = {
   contextId?: string;
 };
 
+export type SuspendedUser = {
+  id: string;
+  handle: string;
+  name: string;
+  avatarUrl?: string;
+  color: string;
+  suspendedAt: Date;
+};
+
 export type AdminReport = {
   id: string;
   reporterHandle: string;

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Outlet, Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { getCurrentPlayer } from "@/services/auth";
+import { getCurrentPlayer, AccountSuspendedError } from "@/services/auth";
+import { withContactLink } from "@/components/layout/LegalLayout";
 import { useEchoes } from "@/hooks/useEchoes";
 import { useEchoNotifications } from "@/hooks/useEchoNotifications";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -12,19 +13,26 @@ import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 
 export default function Shell() {
-  const { data: player } = useQuery({
+  const { t } = useTranslation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { data: player, error } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: getCurrentPlayer,
     retry: false,
     refetchInterval: (query) => (query.state.data ? 6 * 60 * 60 * 1000 : false),
     refetchIntervalInBackground: false,
   });
-
   const { data: echoes = [] } = useEchoes(!!player);
   useEchoNotifications(echoes);
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { t } = useTranslation();
+  if (error instanceof AccountSuspendedError) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background text-foreground">
+        <p className="text-lg font-semibold">{t("account_suspended_title")}</p>
+        <p className="max-w-sm text-center text-sm text-muted-foreground">{withContactLink(t("account_suspended_body"))}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-background text-foreground">

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import { completeSignIn } from "@/services/auth";
+import { completeSignIn, AccountSuspendedError } from "@/services/auth";
 
 export default function AuthComplete() {
   const { t } = useTranslation();
@@ -25,7 +25,13 @@ export default function AuthComplete() {
           navigate("/", { replace: true });
         }
       })
-      .catch(() => navigate("/login?error=auth_failed", { replace: true }));
+      .catch((err) => {
+        if (err instanceof AccountSuspendedError) {
+          navigate("/?error=suspended", { replace: true });
+        } else {
+          navigate("/?error=auth_failed", { replace: true });
+        }
+      });
   }, [navigate]);
 
   return (

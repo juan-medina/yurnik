@@ -44,6 +44,77 @@ func TestDeleteUser_cascades(t *testing.T) {
 	}
 }
 
+// TestSuspendUser_blocksAndLifts verifies that SuspendUser sets suspended_at,
+// the user appears in ListSuspendedUsers, and UnsuspendUser clears it.
+func TestSuspendUser_blocksAndLifts(t *testing.T) {
+	pool := connectTestDB(t)
+	ctx := context.Background()
+
+	userID := createTestUser(t, pool)
+
+	// Not suspended initially.
+	u, err := db.GetUser(ctx, pool, userID)
+	if err != nil {
+		t.Fatalf("get user: %v", err)
+	}
+	if u.SuspendedAt != nil {
+		t.Error("new user should not be suspended")
+	}
+
+	// Suspend.
+	if err := db.SuspendUser(ctx, pool, userID); err != nil {
+		t.Fatalf("suspend user: %v", err)
+	}
+
+	u, err = db.GetUser(ctx, pool, userID)
+	if err != nil {
+		t.Fatalf("get user after suspend: %v", err)
+	}
+	if u.SuspendedAt == nil {
+		t.Error("suspended_at should be set after SuspendUser")
+	}
+
+	// Appears in the suspended list.
+	suspended, err := db.ListSuspendedUsers(ctx, pool)
+	if err != nil {
+		t.Fatalf("list suspended: %v", err)
+	}
+	found := false
+	for _, su := range suspended {
+		if su.ID == userID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("suspended user should appear in ListSuspendedUsers")
+	}
+
+	// Unsuspend.
+	if err := db.UnsuspendUser(ctx, pool, userID); err != nil {
+		t.Fatalf("unsuspend user: %v", err)
+	}
+
+	u, err = db.GetUser(ctx, pool, userID)
+	if err != nil {
+		t.Fatalf("get user after unsuspend: %v", err)
+	}
+	if u.SuspendedAt != nil {
+		t.Error("suspended_at should be cleared after UnsuspendUser")
+	}
+
+	// No longer in the suspended list.
+	suspended, err = db.ListSuspendedUsers(ctx, pool)
+	if err != nil {
+		t.Fatalf("list suspended after unsuspend: %v", err)
+	}
+	for _, su := range suspended {
+		if su.ID == userID {
+			t.Error("unsuspended user should not appear in ListSuspendedUsers")
+		}
+	}
+}
+
 // createSecondTestUser inserts a second unique user for cascade tests that
 // need two distinct accounts (e.g. follow relationships).
 func createSecondTestUser(t *testing.T, pool *pgxpool.Pool) string {

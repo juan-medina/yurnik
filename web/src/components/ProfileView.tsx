@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Flag } from "lucide-react";
+import { Flag, ShieldOff } from "lucide-react";
 import GenreChip from "@/components/GenreChip";
 import ReportModal from "@/components/ReportModal";
 import { avatarSrc, initials } from "@/lib/display";
@@ -35,6 +35,8 @@ interface ProfileViewProps {
   avatarContent?: ReactNode;
   /** Bio area: editable widget (Hero) or plain text (PlayerProfile) */
   bioContent?: ReactNode;
+  /** Called when admin clicks the suspend button */
+  onSuspend?: () => void;
 }
 
 export default function ProfileView({
@@ -48,6 +50,7 @@ export default function ProfileView({
   profileActions,
   avatarContent,
   bioContent,
+  onSuspend,
 }: ProfileViewProps) {
   const { t } = useTranslation();
   const [followList, setFollowList] = useState<{ title: string; players: Player[] } | null>(null);
@@ -103,18 +106,32 @@ export default function ProfileView({
             {bioContent}
           </div>
 
-          {/* Actions: follow button + report button stacked */}
+          {/* Actions: follow button + icon row stacked */}
           <div className="flex shrink-0 flex-col items-end gap-2">
             {profileActions}
-            {canReport && (
-              <button
-                onClick={() => setReporting("profile")}
-                title={t("report_profile_tooltip")}
-                aria-label={t("report_profile_tooltip")}
-                className="text-muted-foreground/40 transition-colors hover:text-destructive"
-              >
-                <Flag size={15} />
-              </button>
+            {(canReport || onSuspend) && (
+              <div className="flex items-center gap-1">
+                {onSuspend && (
+                  <button
+                    onClick={onSuspend}
+                    title={t("admin_suspend_tooltip")}
+                    aria-label={t("admin_suspend_tooltip")}
+                    className="text-muted-foreground/40 transition-colors hover:text-destructive"
+                  >
+                    <ShieldOff size={15} />
+                  </button>
+                )}
+                {canReport && (
+                  <button
+                    onClick={() => setReporting("profile")}
+                    title={t("report_profile_tooltip")}
+                    aria-label={t("report_profile_tooltip")}
+                    className="text-muted-foreground/40 transition-colors hover:text-destructive"
+                  >
+                    <Flag size={15} />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>

@@ -169,6 +169,17 @@ func (h *Handler) session(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user, err := db.GetUser(r.Context(), h.pool, entry.userID)
+	if err != nil {
+		log.Printf("auth/session: get user: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if user.SuspendedAt != nil {
+		http.Error(w, `{"error":"suspended"}`, http.StatusForbidden)
+		return
+	}
+
 	tokenString, err := CreateSessionJWT(entry.userID, h.jwtPriv)
 	if err != nil {
 		log.Printf("auth/session: create JWT: %v", err)

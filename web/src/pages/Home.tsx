@@ -1,13 +1,15 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { getCurrentPlayer, signIn } from "@/services/auth";
+import { withContactLink } from "@/components/layout/LegalLayout";
 import Realm from "@/pages/Realm";
 
 export default function Home() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
   const { data: player, isLoading } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: getCurrentPlayer,
@@ -16,6 +18,15 @@ export default function Home() {
 
   if (isLoading) return null;
   if (player) return <Realm />;
+
+  if (searchParams.get("error") === "suspended") {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+        <p className="text-lg font-semibold">{t("account_suspended_title")}</p>
+        <p className="max-w-sm text-sm text-muted-foreground">{withContactLink(t("account_suspended_body"))}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center gap-10 px-4 py-20 text-center">

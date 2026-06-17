@@ -8,4 +8,4 @@ export type { Activity, ActivityType } from "./activity";
 export type { FeedItem } from "./feed";
 export type { Game, JourneyEntry, GameActivity, Comment, JourneyPlayer } from "./game";
 export type { Exclusion, GameHint } from "./settings";
-export type { ReportTargetType, ReportReason, ReportTarget, AdminReport } from "./report";
+export type { ReportTargetType, ReportReason, ReportTarget, AdminReport, SuspendedUser } from "./report";

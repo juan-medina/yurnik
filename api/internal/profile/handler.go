@@ -93,6 +93,10 @@ func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
+	if user.SuspendedAt != nil {
+		http.Error(w, `{"error":"suspended"}`, http.StatusForbidden)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(meResponse{

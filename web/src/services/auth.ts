@@ -9,10 +9,12 @@ import { deriveColor } from "@/lib/display";
 export let MY_PLAYER_ID: string = "";
 
 export class SessionExpiredError extends Error {}
+export class AccountSuspendedError extends Error {}
 
 export async function getCurrentPlayer(): Promise<Player> {
   const resp = await apiFetch(`${API_BASE}/api/me`, { credentials: "include" });
   if (resp.status === 401 || resp.status === 404) throw new SessionExpiredError();
+  if (resp.status === 403) throw new AccountSuspendedError();
   if (!resp.ok) throw new Error(`get profile: ${resp.status}`);
   const data = await resp.json();
   MY_PLAYER_ID = data.id;
@@ -56,6 +58,7 @@ export async function completeSignIn(): Promise<void> {
     method: "POST",
     credentials: "include",
   });
+  if (resp.status === 403) throw new AccountSuspendedError();
   if (!resp.ok) throw new Error(`session exchange failed: ${resp.status}`);
 }
 
