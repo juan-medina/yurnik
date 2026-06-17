@@ -168,6 +168,14 @@ export default function PlayerProfile() {
                 )
             : undefined
         }
+        onResetProfile={
+          canSuspend
+            ? () =>
+                navigate(
+                  `/admin?confirm_reset=${profile.player.id}&reset_name=${encodeURIComponent(profile.player.name)}`
+                )
+            : undefined
+        }
         bioContent={
           profile.player.bio ? (
             <p className="break-words whitespace-pre-wrap text-sm text-muted-foreground">{profile.player.bio}</p>

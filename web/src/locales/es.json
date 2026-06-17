@@ -60,6 +60,10 @@
   "admin_confirm_suspend_body": "Esto impedirá que {{name}} inicie sesión. Puedes quitar la suspensión en cualquier momento desde la pestaña Suspendidos.",
   "admin_cancel": "Cancelar",
   "admin_suspend_tooltip": "Suspender esta cuenta",
+  "admin_reset_profile_tooltip": "Restablecer perfil a los valores de Discord",
+  "admin_reset_profile": "Restablecer perfil",
+  "admin_confirm_reset_title": "¿Restablecer perfil?",
+  "admin_confirm_reset_body": "Esto eliminará el avatar personalizado, el nombre y la bio de {{name}}, volviendo a los valores de Discord.",
   "account_suspended_title": "Cuenta suspendida",
   "account_suspended_body": "Tu cuenta ha sido suspendida. Si crees que es un error, contáctanos en contact@yurnik.example.",
 

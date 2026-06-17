@@ -166,6 +166,14 @@ func GetUserByHandle(ctx context.Context, pool *pgxpool.Pool, handle string) (Us
 	return u, err
 }
 
+// ResetProfile clears custom_avatar_url and display_name, reverting to the Discord values.
+func ResetProfile(ctx context.Context, pool *pgxpool.Pool, id string) error {
+	_, err := pool.Exec(ctx, `
+		UPDATE users SET custom_avatar_url = NULL, display_name = NULL, bio = NULL, updated_at = now() WHERE id = $1
+	`, id)
+	return err
+}
+
 // SuspendUser sets suspended_at on the given user.
 func SuspendUser(ctx context.Context, pool *pgxpool.Pool, id string) error {
 	_, err := pool.Exec(ctx, `UPDATE users SET suspended_at = now() WHERE id = $1`, id)

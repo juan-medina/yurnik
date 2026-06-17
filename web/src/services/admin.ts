@@ -20,6 +20,14 @@ export async function unsuspendUser(id: string): Promise<void> {
   if (!resp.ok) throw new Error(`unsuspend user: ${resp.status}`);
 }
 
+export async function resetProfile(id: string): Promise<void> {
+  const resp = await apiFetch(`${API_BASE}/api/admin/users/${id}/reset-profile`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!resp.ok) throw new Error(`reset profile: ${resp.status}`);
+}
+
 export async function listSuspendedUsers(): Promise<SuspendedUser[]> {
   const resp = await apiFetch(`${API_BASE}/api/admin/users/suspended`, { credentials: "include" });
   if (!resp.ok) throw new Error(`list suspended: ${resp.status}`);

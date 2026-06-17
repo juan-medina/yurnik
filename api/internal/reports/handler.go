@@ -60,6 +60,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/admin/users/{id}/suspend", h.suspend)
 	mux.HandleFunc("DELETE /api/admin/users/{id}/suspend", h.unsuspend)
 	mux.HandleFunc("GET /api/admin/users/suspended", h.listSuspended)
+	mux.HandleFunc("POST /api/admin/users/{id}/reset-profile", h.resetProfile)
 }
 
 func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
@@ -229,6 +230,19 @@ func (h *Handler) unsuspend(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if err := db.UnsuspendUser(r.Context(), h.pool, id); err != nil {
 		log.Printf("admin/unsuspend: %v", err)
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) resetProfile(w http.ResponseWriter, r *http.Request) {
+	if !h.requireAdmin(w, r) {
+		return
+	}
+	id := r.PathValue("id")
+	if err := db.ResetProfile(r.Context(), h.pool, id); err != nil {
+		log.Printf("admin/reset-profile: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return
 	}

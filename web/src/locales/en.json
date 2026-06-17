@@ -60,6 +60,10 @@
   "admin_confirm_suspend_body": "This will prevent {{name}} from logging in. You can remove the suspension at any time from the Suspended tab.",
   "admin_cancel": "Cancel",
   "admin_suspend_tooltip": "Suspend this account",
+  "admin_reset_profile_tooltip": "Reset profile to Discord defaults",
+  "admin_reset_profile": "Reset profile",
+  "admin_confirm_reset_title": "Reset profile?",
+  "admin_confirm_reset_body": "This will remove {{name}}'s custom avatar, display name, and bio, reverting them to their Discord defaults.",
   "account_suspended_title": "Account suspended",
   "account_suspended_body": "Your account has been suspended. If you believe this is a mistake, please contact us at contact@yurnik.example.",
 

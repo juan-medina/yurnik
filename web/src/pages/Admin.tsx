@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ExternalLink } from "lucide-react";
 import { listReports } from "@/services/reports";
-import { suspendUser, unsuspendUser, listSuspendedUsers } from "@/services/admin";
+import { suspendUser, unsuspendUser, listSuspendedUsers, resetProfile } from "@/services/admin";
 import { getCurrentPlayer } from "@/services/auth";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { initials } from "@/lib/display";
@@ -194,11 +194,20 @@ export default function Admin() {
 
   const confirmSuspendId = searchParams.get("confirm_suspend");
   const confirmSuspendName = searchParams.get("suspend_name") ?? "";
+  const confirmResetId = searchParams.get("confirm_reset");
+  const confirmResetName = searchParams.get("reset_name") ?? "";
 
   const suspendMutation = useMutation({
     mutationFn: suspendUser,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["admin", "suspended"] });
+      void navigate("/admin", { replace: true });
+    },
+  });
+
+  const resetMutation = useMutation({
+    mutationFn: resetProfile,
+    onSuccess: () => {
       void navigate("/admin", { replace: true });
     },
   });
@@ -250,6 +259,32 @@ export default function Admin() {
                 className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
               >
                 {t("admin_suspend")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmResetId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="mx-4 w-full max-w-sm rounded-lg border border-border bg-card p-6 shadow-lg">
+            <h2 className="mb-2 text-base font-semibold">{t("admin_confirm_reset_title")}</h2>
+            <p className="mb-6 text-sm text-muted-foreground">
+              {t("admin_confirm_reset_body", { name: confirmResetName })}
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setSearchParams({})}
+                className="rounded-md border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+              >
+                {t("admin_cancel")}
+              </button>
+              <button
+                onClick={() => resetMutation.mutate(confirmResetId)}
+                disabled={resetMutation.isPending}
+                className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
+              >
+                {t("admin_reset_profile")}
               </button>
             </div>
           </div>

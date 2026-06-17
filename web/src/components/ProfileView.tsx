@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Flag, ShieldOff } from "lucide-react";
+import { Flag, ShieldOff, RotateCcw } from "lucide-react";
 import GenreChip from "@/components/GenreChip";
 import ReportModal from "@/components/ReportModal";
 import { avatarSrc, initials } from "@/lib/display";
@@ -37,6 +37,8 @@ interface ProfileViewProps {
   bioContent?: ReactNode;
   /** Called when admin clicks the suspend button */
   onSuspend?: () => void;
+  /** Called when admin clicks the reset profile button */
+  onResetProfile?: () => void;
 }
 
 export default function ProfileView({
@@ -51,6 +53,7 @@ export default function ProfileView({
   avatarContent,
   bioContent,
   onSuspend,
+  onResetProfile,
 }: ProfileViewProps) {
   const { t } = useTranslation();
   const [followList, setFollowList] = useState<{ title: string; players: Player[] } | null>(null);
@@ -109,8 +112,18 @@ export default function ProfileView({
           {/* Actions: follow button + icon row stacked */}
           <div className="flex shrink-0 flex-col items-end gap-2">
             {profileActions}
-            {(canReport || onSuspend) && (
+            {(canReport || onSuspend || onResetProfile) && (
               <div className="flex items-center gap-1">
+                {onResetProfile && (
+                  <button
+                    onClick={onResetProfile}
+                    title={t("admin_reset_profile_tooltip")}
+                    aria-label={t("admin_reset_profile_tooltip")}
+                    className="text-muted-foreground/40 transition-colors hover:text-destructive"
+                  >
+                    <RotateCcw size={15} />
+                  </button>
+                )}
                 {onSuspend && (
                   <button
                     onClick={onSuspend}
