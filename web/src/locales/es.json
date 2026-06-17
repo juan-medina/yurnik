@@ -6,6 +6,8 @@
   "nav_hero": "Héroe",
   "nav_horizon": "Horizonte",
   "nav_settings": "Ajustes",
+  "nav_admin": "Admin",
+  "admin_badge": "Admin",
 
   "topbar_menu": "Abrir menú de navegación",
   "topbar_switch_light": "Cambiar a modo claro",

@@ -77,6 +77,7 @@ type meResponse struct {
 	Color           string  `json:"color"`
 	HasCustomAvatar bool    `json:"has_custom_avatar"`
 	HasCustomName   bool    `json:"has_custom_name"`
+	IsAdmin         bool    `json:"is_admin"`
 }
 
 func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
@@ -103,6 +104,7 @@ func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
 		Color:           user.Color,
 		HasCustomAvatar: user.HasCustomAvatar,
 		HasCustomName:   user.HasCustomName,
+		IsAdmin:         user.IsAdmin,
 	})
 }
 
@@ -133,6 +135,7 @@ func (h *Handler) getPlayer(w http.ResponseWriter, r *http.Request) {
 		Followers   int     `json:"followers"`
 		Following   int     `json:"following"`
 		IsFollowing bool    `json:"is_following"`
+		IsAdmin     bool    `json:"is_admin"`
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -146,6 +149,7 @@ func (h *Handler) getPlayer(w http.ResponseWriter, r *http.Request) {
 		Followers:   followers,
 		Following:   following,
 		IsFollowing: isFollowing,
+		IsAdmin:     user.IsAdmin,
 	})
 }
 
@@ -531,6 +535,7 @@ type profileSummaryResponse struct {
 	Followers    int              `json:"followers"`
 	Following    int              `json:"following"`
 	IsFollowing  bool             `json:"is_following"`
+	IsAdmin      bool             `json:"is_admin"`
 	JourneyCount int              `json:"journey_count"`
 	TotalSeconds int              `json:"total_seconds"`
 	RecentGames  []recentGameItem `json:"recent_games"`
@@ -549,6 +554,7 @@ func buildProfileSummaryResponse(user db.User, followers, following int, isFollo
 		Followers:    followers,
 		Following:    following,
 		IsFollowing:  isFollowing,
+		IsAdmin:      user.IsAdmin,
 		JourneyCount: summary.JourneyCount,
 		TotalSeconds: summary.TotalSeconds,
 		RecentGames:  make([]recentGameItem, 0, len(summary.RecentGames)),

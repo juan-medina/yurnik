@@ -13,6 +13,7 @@ export type Player = {
   followers?: number;
   following?: number;
   isFollowing?: boolean;
+  isAdmin?: boolean;
 };
 
 export type RecentGame = {

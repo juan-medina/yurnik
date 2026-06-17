@@ -14,6 +14,7 @@ type RawPlayer = {
   followers?: number;
   following?: number;
   is_following?: boolean;
+  is_admin?: boolean;
 };
 
 function rawToPlayer(p: RawPlayer): Player {
@@ -27,6 +28,7 @@ function rawToPlayer(p: RawPlayer): Player {
     followers: p.followers,
     following: p.following,
     isFollowing: p.is_following,
+    isAdmin: p.is_admin,
   };
 }
 
@@ -40,6 +42,7 @@ type RawProfileSummary = {
   followers: number;
   following: number;
   is_following: boolean;
+  is_admin?: boolean;
   journey_count: number;
   total_seconds: number;
   recent_games: { igdb_id: number; name: string; cover_url?: string; release_year?: number; last_played: string }[];
@@ -59,6 +62,7 @@ function rawToPlayerProfile(r: RawProfileSummary): PlayerProfile {
       followers: r.followers,
       following: r.following,
       isFollowing: r.is_following,
+      isAdmin: r.is_admin,
     },
     journeyCount: r.journey_count,
     totalSeconds: r.total_seconds,

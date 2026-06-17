@@ -87,7 +87,14 @@ export default function ProfileView({
 
           {/* Name, handle, bio */}
           <div className="min-w-0 flex-1">
-            <p className="mb-1 text-xl font-bold leading-tight">{player.name}</p>
+            <div className="mb-1 flex items-center gap-2">
+              <p className="text-xl font-bold leading-tight">{player.name}</p>
+              {player.isAdmin && (
+                <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-primary text-primary-foreground">
+                  {t("admin_badge")}
+                </span>
+              )}
+            </div>
             <p className="mb-3 text-sm text-muted-foreground">@{player.handle}</p>
             {bioContent}
           </div>

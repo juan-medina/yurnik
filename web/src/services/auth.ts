@@ -25,6 +25,7 @@ export async function getCurrentPlayer(): Promise<Player> {
     hasCustomAvatar: data.has_custom_avatar === true,
     hasCustomName: data.has_custom_name === true,
     bio: data.bio ?? undefined,
+    isAdmin: data.is_admin === true,
   };
 }
 

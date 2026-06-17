@@ -17,6 +17,7 @@ import AgentAuth from "@/pages/AgentAuth";
 import Lore from "@/pages/Lore";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
+import Admin from "@/pages/Admin";
 import NotFound from "@/pages/NotFound";
 
 const router = createBrowserRouter([
@@ -38,6 +39,7 @@ const router = createBrowserRouter([
       { path: "settings", element: <Settings /> },
       { path: "hero", element: <Hero /> },
       { path: "horizon", element: <Horizon /> },
+      { path: "admin", element: <Admin /> },
       { path: "*", element: <NotFound /> },
     ],
   },

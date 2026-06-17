@@ -24,6 +24,7 @@ type User struct {
 	Color           string
 	HasCustomAvatar bool
 	HasCustomName   bool
+	IsAdmin         bool
 }
 
 // UserIdentity holds the identity fields returned by the OAuth provider.
@@ -129,9 +130,9 @@ func GetUser(ctx context.Context, pool *pgxpool.Pool, id string) (User, error) {
 	var u User
 	err := pool.QueryRow(ctx, `
 		SELECT id, provider, handle, COALESCE(display_name, name), COALESCE(custom_avatar_url, avatar_url), bio, color,
-		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL
+		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL, is_admin
 		FROM users WHERE id = $1
-	`, id).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName)
+	`, id).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName, &u.IsAdmin)
 	if err == pgx.ErrNoRows {
 		return User{}, fmt.Errorf("user not found: %s", id)
 	}
@@ -144,9 +145,9 @@ func GetUserByHandle(ctx context.Context, pool *pgxpool.Pool, handle string) (Us
 	var u User
 	err := pool.QueryRow(ctx, `
 		SELECT id, provider, handle, COALESCE(display_name, name), COALESCE(custom_avatar_url, avatar_url), bio, color,
-		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL
+		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL, is_admin
 		FROM users WHERE lower(handle) = lower($1)
-	`, handle).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName)
+	`, handle).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName, &u.IsAdmin)
 	if err == pgx.ErrNoRows {
 		return User{}, fmt.Errorf("user not found: %s", handle)
 	}
