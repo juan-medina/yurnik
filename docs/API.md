@@ -76,8 +76,15 @@ Most errors return a JSON body:
 | 400 | `disallowed_content` | Journey log or comment contains a URL |
 | 400 | `duplicate_content` | Journey log or comment is identical to the author's immediately previous one |
 | 400 | `order_mismatch` | Horizon reorder payload doesn't match the player's current Horizon entries |
+| 400 | `invalid_target_type` | Report target type is not one of the accepted values |
+| 400 | `invalid_reason` | Report reason is not one of the accepted values |
+| 400 | `missing_target_id` | Report submitted without a `target_id` |
+| 400 | `note_required_for_other` | Report reason is `other` but no note was provided |
+| 400 | `note_too_long` | Report note exceeds 200 characters |
 | 401 | `unauthorized` | Missing or invalid session cookie (web) or bearer token (agent) |
+| 403 | `forbidden` | Authenticated but not an admin |
 | 404 | `not_found` | Resource does not exist, or does not belong to the caller |
+| 409 | `already_reported` | The authenticated user has already reported this target |
 | 429 | `rate_limited` | Too many requests (global or IGDB rate limit) |
 | 429 | `too_many_requests` | Per-user write velocity limit hit — see `Retry-After` header |
 | 500 | `internal_error` | Server fault |
@@ -1031,6 +1038,152 @@ Recent journeys across all players, grouped by game — backs game discovery.
 ```
 
 `log` is omitted if the journey has none.
+
+---
+
+## Reports
+
+Any authenticated user can file a report on a journey log, a comment, or a profile. Reports are reviewed by admins — see [DESIGN.md](DESIGN.md#moderation).
+
+### Submit a report
+
+```
+POST /api/reports
+```
+
+Requires authentication. Subject to the per-user report velocity limit (20-minute minimum interval, escalating up to 24 hours).
+
+**Body**
+
+```json
+{
+  "target_type": "journey_log",
+  "target_id": "01920f3a-...",
+  "context_id": "01920f3b-...",
+  "reason": "spam",
+  "note": "Optional detail."
+}
+```
+
+`target_type` is one of `journey_log`, `comment`, `profile`. `target_id` is the UUID of the reported resource. `context_id` is the journey UUID when `target_type` is `comment`, otherwise omitted. `reason` is one of `spam`, `harassment`, `hate_speech`, `explicit`, `impersonation`, `private_info`, `other`. `note` is optional plain text (max 200 characters), required when `reason` is `other`.
+
+Returns `409 already_reported` if the caller has already reported this target.
+
+**Response** — `204 No Content`
+
+---
+
+## Admin
+
+Admin routes require the authenticated user to have `is_admin = true`. All routes return `401 unauthorized` if not authenticated and `403 forbidden` if authenticated but not an admin. See [DESIGN.md](DESIGN.md#moderation) for the moderation model.
+
+### List reports
+
+```
+GET /api/admin/reports
+```
+
+Returns all reports, newest first.
+
+**Response**
+
+```json
+{
+  "reports": [
+    {
+      "id": "01920f3a-...",
+      "reporter_handle": "maria",
+      "reporter_name": "Maria Chen",
+      "reporter_avatar": "https://cdn.example.com/...",
+      "reporter_color": "#7c3aed",
+      "target_type": "comment",
+      "target_id": "01920f3b-...",
+      "context_id": "01920f3c-...",
+      "target_handle": null,
+      "reason": "spam",
+      "note": null,
+      "created_at": "2026-06-18T10:00:00Z"
+    }
+  ]
+}
+```
+
+`reporter_avatar` and `note` are omitted if not set. `context_id` is present for `comment` reports. `target_handle` is set for `profile` reports (the reported user's handle) and `null` otherwise.
+
+### Suspend a user
+
+```
+POST /api/admin/users/{id}/suspend
+```
+
+Sets `suspended_at` on the user. Suspended users cannot authenticate.
+
+**Response** — `204 No Content`
+
+### Unsuspend a user
+
+```
+DELETE /api/admin/users/{id}/suspend
+```
+
+Clears `suspended_at`.
+
+**Response** — `204 No Content`
+
+### List suspended users
+
+```
+GET /api/admin/users/suspended
+```
+
+**Response**
+
+```json
+{
+  "users": [
+    {
+      "id": "01920f3a-...",
+      "handle": "maria",
+      "name": "Maria Chen",
+      "avatar_url": "https://cdn.example.com/...",
+      "color": "#7c3aed",
+      "suspended_at": "2026-06-18T10:00:00Z"
+    }
+  ]
+}
+```
+
+`avatar_url` is omitted if not set.
+
+### Reset a user's profile
+
+```
+POST /api/admin/users/{id}/reset-profile
+```
+
+Clears `custom_avatar_url` and `display_name`, reverting the user's avatar and display name to their Discord values.
+
+**Response** — `204 No Content`
+
+### Clear a journey log
+
+```
+DELETE /api/admin/journeys/{id}/log
+```
+
+Sets `log = NULL` on the journey row. The journey itself is preserved.
+
+**Response** — `204 No Content`
+
+### Delete a comment (admin)
+
+```
+DELETE /api/admin/comments/{id}
+```
+
+Deletes the comment regardless of who authored it.
+
+**Response** — `204 No Content`
 
 ---
 

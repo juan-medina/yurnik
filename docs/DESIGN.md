@@ -1,6 +1,6 @@
 # Design
 
-Architecture decisions and the reasoning behind them. This is not a tutorial and not a reference — the code is the reference. Decisions live here so they are not relitigated.
+System structure and how its parts work together. Not a tutorial and not a reference — the code is the reference. For why things are the way they are, see [DECISIONS.md](DECISIONS.md).
 
 ## Terminology
 
@@ -52,7 +52,7 @@ Postgres runs on the same Hetzner VPS as the API server. The `pg_cron` extension
 
 ## Authentication — Discord OAuth
 
-Discord OAuth is the only authentication method. Users log in with their Discord account. Discord was chosen because it has the highest account penetration among the target audience — gamers already have Discord accounts and are used to linking them to third-party services.
+Discord OAuth is the only authentication method. Users log in with their Discord account.
 
 The login flow is standard OAuth 2.0 authorization code grant with PKCE, handled entirely server-side:
 
@@ -68,7 +68,7 @@ The `identify` scope is sufficient — it provides the user's stable numeric ID,
 
 ### Provider-ready identity model
 
-The users table stores `(provider, provider_id)` as the stable external identity alongside an internal UUID. This means adding a second provider (Google, GitHub) requires only a new OAuth handler — no schema changes. Discord's numeric user ID is the `provider_id`; the internal UUID is what the rest of the system uses. The two are only joined at login.
+The users table stores `(provider, provider_id)` as the stable external identity alongside an internal UUID. Discord's numeric user ID is the `provider_id`; the internal UUID is what the rest of the system uses. The two are only joined at login.
 
 The agent receives its session token via the `yurnik://auth?token=…` custom URL scheme after the user logs in on the web app.
 
@@ -91,6 +91,8 @@ Postgres is the single source of truth. There is no external record store.
 ```
 users              — one row per player, keyed on internal UUID
                      provider + provider_id identify the user at login
+                     is_admin flag grants access to admin routes
+                     suspended_at non-null means the account is suspended
 journeys           — confirmed journeys, all data, permanent
 pending_journeys   — unconfirmed journeys, evicted after 7 days
 follows            — follow graph, written on follow, deleted on unfollow
@@ -100,6 +102,7 @@ exe_game_hints     — per user, exe_name → igdb_id, built from confirmed corr
 igdb_cache         — server-side IGDB responses with TTL
 echoes             — per user, batched notifications; one row per (recipient, type, subject)
 echo_actors        — actors who contributed to an echo (commenters, followers)
+reports            — one row per (reporter, target); unique constraint prevents duplicate reports
 ```
 
 ```
@@ -134,11 +137,11 @@ Two distinct concepts for text attached to a journey:
 
 **Comments** — text written by any player (including the journey owner) after the journey is confirmed. Separate rows in the `comments` table referencing the journey by ID. Shown in the journey detail only — never in the Realm feed. Flat and chronological — no threading, no hierarchy, no reply-to chains. Comments cannot be liked. A new comment on your journey by another player triggers an Echo; your own comments on your own journey do not.
 
-Both fields are capped at 400 characters and rendered as plain text (`white-space: pre-wrap` — line breaks preserved, no markdown or HTML). This is a social network about gaming, not a review site, so long-form prose isn't the expectation. See [CLAUDE.md](../.claude/CLAUDE.md#user-generated-text-and-spam-prevention) for the validation and anti-spam rules applied to both fields.
+Both fields are capped at 400 characters and rendered as plain text (`white-space: pre-wrap` — line breaks preserved, no markdown or HTML). See [CLAUDE.md](../.claude/CLAUDE.md#user-generated-text-and-spam-prevention) for the validation and anti-spam rules applied to both fields.
 
 ## Echoes
 
-Echoes are in-app notifications. They use a batched model: one `echoes` row per `(recipient_id, type, subject_id)` that accumulates actors over time, rather than one row per actor. This keeps "Juan and 2 others commented on your journey" as a single notification rather than three.
+Echoes are in-app notifications. They use a batched model: one `echoes` row per `(recipient_id, type, subject_id)` that accumulates actors over time, rather than one row per actor.
 
 ```
 echoes(id, recipient_id, type, subject_id, subject_title, seen_at, created_at, updated_at)
@@ -149,9 +152,9 @@ echo_actors(echo_id, actor_id, created_at)
 
 `subject_id` is the journey ID for `new_comment` echoes; null for `new_follower` echoes.
 
-`subject_title` is snapshotted from the journey's game name at creation time. If the journey is later deleted, the echo still renders — the link is simply omitted. This mirrors the AT-Proto-era denormalisation rationale: data you reference can disappear.
+`subject_title` is snapshotted from the journey's game name at creation time. If the journey is later deleted, the echo still renders — the link is simply omitted.
 
-`seen_at` is null until the user opens the notification panel, at which point `POST /echoes/seen` stamps `seen_at = now()` on all unseen echoes for that user in one query. There is no per-echo read action — opening the panel clears the badge. This matches the Discord interaction model, which is familiar to the target audience.
+`seen_at` is null until the user opens the notification panel, at which point `POST /echoes/seen` stamps `seen_at = now()` on all unseen echoes for that user in one query. There is no per-echo read action — opening the panel clears the badge.
 
 `updated_at` is bumped each time a new actor is added to an existing echo, so the panel can show the time of most recent activity.
 
@@ -167,9 +170,9 @@ Each journey card in the feed is fully renderable from the `journeys` row joined
 
 The player profile (`/hero` for the authenticated user, `/player/:id` for others) is driven by a single aggregated endpoint — `GET /api/players/:id/profile` or `GET /api/me/profile`. The response includes everything the page needs in one round trip: player identity, follow counts, journey count, total playtime, recent games, and genre hours. The frontend renders; it does not aggregate.
 
-**Recent games** — the five most recently played distinct games, ordered by `MAX(played_at)` descending. Recency is the signal, not total time. A player who drops a game they used to grind will stop seeing it here; a player who returns to an old favourite will see it again immediately.
+**Recent games** — the five most recently played distinct games, ordered by `MAX(played_at)` descending.
 
-**Genre hours** — total seconds played in games that have a given genre, top eight by volume. A game with three genres contributes its full duration to each. This overstates time relative to a splitting approach, but it reflects intent: if you played a game tagged Action/Adventure for 10 hours, you spent 10 hours in Action games and 10 hours in Adventure games. The bars are sized relative to the highest genre — absolute hours are shown on the label. Total exceeds 100%; this is expected and correct.
+**Genre hours** — total seconds played in games that have a given genre, top eight by volume. A game with three genres contributes its full duration to each genre. The bars are sized relative to the highest genre — absolute hours are shown on the label. Total exceeds 100%; this is expected and correct.
 
 ## Players page
 
@@ -193,7 +196,7 @@ Tapping a journey card opens the journey detail at `/journey/:id`. It shows:
 
 ## IGDB
 
-IGDB (owned by Twitch) is free for non-commercial use and is the most comprehensive game database available. Used for game metadata, cover art, genres, and similar game relationships. The Twitch client secret lives server-side only — the frontend and clients never touch it.
+IGDB is used for game metadata, cover art, genres, and similar game relationships. The Twitch client secret lives server-side only — the frontend and clients never touch it.
 
 IGDB responses are cached in Postgres with a TTL. Clients read game metadata from the denormalised fields stored on journey rows.
 
@@ -204,6 +207,32 @@ The agent registers `yurnik://` as a custom URL scheme on install via Velopack. 
 ## Time and timestamps
 
 Full timestamps (start and end in UTC) are stored on every journey row — needed for feed ordering and duration display. Duration is derived; it is never stored separately.
+
+## Moderation
+
+Moderation is built around a report-then-act model. Users flag content; admins review and act. There is no automated removal.
+
+**Admin role** — the `is_admin` boolean on the `users` row. Set directly in the database; there is no self-service promotion flow. Admin status gates all `/api/admin/*` routes, checked on every request.
+
+**Reporting** — any authenticated user can report a journey log, a comment, or a profile via `POST /api/reports`. Reports are stored in the `reports` table. A unique constraint on `(reporter_id, target_type, target_id)` prevents duplicate reports from the same user. The velocity limiter applies to report submissions (20-minute minimum interval, escalating up to 24 hours for repeat violations) to prevent report-flooding.
+
+Target types:
+- `journey_log` — the `log` field on a journey row; `target_id` is the journey UUID
+- `comment` — a row in the `comments` table; `target_id` is the comment UUID, `context_id` is the journey UUID
+- `profile` — a user's display name, bio, or avatar; `target_id` is the user UUID
+
+Valid reasons: `spam`, `harassment`, `hate_speech`, `explicit`, `impersonation`, `private_info`, `other`. Reason `other` requires a note (max 200 characters).
+
+**Admin actions** — admins can:
+- List all reports (`GET /api/admin/reports`)
+- Suspend a user (`POST /api/admin/users/{id}/suspend`) — sets `suspended_at`; suspended users cannot authenticate
+- Unsuspend a user (`DELETE /api/admin/users/{id}/suspend`)
+- List suspended users (`GET /api/admin/users/suspended`)
+- Reset a user's profile (`POST /api/admin/users/{id}/reset-profile`) — clears `custom_avatar_url` and `display_name`, reverting to Discord values
+- Clear a journey log (`DELETE /api/admin/journeys/{id}/log`) — sets `log = NULL` on the journey row
+- Delete a comment (`DELETE /api/admin/comments/{id}`)
+
+Reports are not automatically resolved or dismissed — there is no resolved/dismissed state on the `reports` table. The admin reviews the queue and takes action directly on the content or account.
 
 ## Testing
 

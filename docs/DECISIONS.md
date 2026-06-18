@@ -117,3 +117,33 @@ What was built instead, all enforced server-side in `api/internal/journeys/handl
 - **URL rejection** (`mvdan.cc/xurls`) — journey logs and comments are plain text, never rendered as links, so a URL serves no legitimate purpose and is rejected outright. Deliberately does not try to catch obfuscated URLs (`example . com`, `example[.]com`) — that requires the same kind of context-sensitive normalisation as a word list, with the same false-positive risk, for a trick that mostly defeats itself (a human has to retype it).
 
 Cloudflare's per-IP rate limit (see [DEPLOYMENT.md](DEPLOYMENT.md#rate-limiting)) remains the outermost, blanket DDoS floor and is configured generously — it is not part of the app-level spam strategy.
+
+---
+
+## Batched echo model
+
+Echoes (in-app notifications) accumulate actors into a single row per `(recipient, type, subject)` rather than creating one row per actor. This produces "Juan and 2 others commented on your journey" instead of three separate notifications. The alternative — one row per actor, deduplicated at read time — produces the same UI but requires a GROUP BY on every notification panel open. The batched model pays a slightly more complex write path in exchange for a trivial read.
+
+`subject_title` is snapshotted at echo creation time rather than joined at read time. If a journey is deleted, the echo continues to render with the title intact — the journey link is simply omitted. Referenced data can disappear; snapshots survive deletion.
+
+---
+
+## Genre hours: full duration per genre, not split
+
+When a game has multiple genres, its full play duration is counted toward each genre rather than divided equally. A 10-hour Action/RPG contributes 10 hours to Action and 10 hours to RPG, not 5 each.
+
+This overstates absolute time compared to a splitting approach but better reflects intent — if you played an Action/RPG, you spent those hours in Action games and those same hours in RPG games. Splitting would imply you spent half the session in each, which has no useful meaning. The bar chart is already relative (sized to the highest genre), so the over-counting doesn't distort the visual comparison.
+
+---
+
+## Report-then-act moderation, no automated removal
+
+When the user base grew beyond a handful of known players, a lightweight moderation system became necessary. The design goal was the minimum viable path from "user sees bad content" to "admin removes it" without building a content-policy engine.
+
+**No automated removal.** Content is never removed by the system itself — only by an admin acting on a filed report. Automated removal at this scale would either over-censor (frustrating legitimate users) or under-censor (still requiring human review anyway). Human review is always the bottleneck; the system just queues work for it.
+
+**Report velocity limit over CAPTCHA.** The reporting endpoint has its own velocity limiter (20-minute minimum interval, escalating up to 24 hours) for the same reasons the write velocity limiter was preferred over CAPTCHA for content submission. A CAPTCHA adds friction for legitimate reporters without meaningfully stopping a determined abuser.
+
+**No resolved/dismissed state on reports.** Reports accumulate; admins act on the content or account directly rather than closing tickets. This keeps the data model minimal — the queue is a simple time-ordered list. If the volume of reports ever makes a triage workflow necessary, a `resolved_at` column and filter are the obvious next step.
+
+**`is_admin` flag set in the database.** There is no self-service admin promotion, invite flow, or role management UI. Admin status is a database flag set by whoever controls the Postgres instance. This is acceptable for a side project with a small, known admin set and avoids building privilege escalation controls before they are needed.
