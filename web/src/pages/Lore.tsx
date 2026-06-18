@@ -30,8 +30,8 @@ type FeatureCardProps = { icon: React.ReactNode; title: string; body: string };
 
 function FeatureCard({ icon, title, body }: FeatureCardProps) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5">
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/40">
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
         {icon}
       </div>
       <p className="font-semibold text-foreground">{title}</p>
@@ -45,7 +45,7 @@ type StepProps = { number: number; label: string };
 function Step({ number, label }: StepProps) {
   return (
     <div className="flex w-28 flex-col items-center gap-2 text-center">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-muted text-sm font-bold text-muted-foreground">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-sm font-bold text-primary">
         {number}
       </div>
       <p className="text-sm text-muted-foreground">{label}</p>
@@ -66,11 +66,13 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
   return (
     <div>
       {/* Hero */}
-      <section className="flex flex-col items-center gap-6 px-6 py-20 text-center sm:py-24">
-        <img src="/logo.png" alt="Yurnik" className="h-20 w-20 object-contain sm:h-24 sm:w-24" />
-        <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-          yurnik
-        </h1>
+      <section className="flex flex-col items-center gap-6 px-6 py-12 text-center sm:py-16">
+        <div className="flex flex-col items-center gap-0.5">
+          <img src="/logo.png" alt="Yurnik" className="w-24 sm:w-28" />
+          <h1 className="bg-gradient-to-r from-blue-400 via-primary to-orange-400 bg-clip-text text-2xl font-extrabold tracking-tight text-transparent sm:text-3xl">
+            yurnik
+          </h1>
+        </div>
         <p className="max-w-md text-base text-muted-foreground sm:text-lg">{t("lore_tagline")}</p>
         <div className="mt-2 flex flex-col gap-3 sm:flex-row">
           {authenticated ? (
@@ -122,7 +124,7 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
       {/* How it works */}
       <section
         id="how-it-works"
-        className="border-y border-border bg-muted/50 px-6 py-14"
+        className="border-y border-border bg-muted/50 px-6 py-8"
       >
         <div className="mx-auto max-w-2xl">
           <h2 className="mb-10 text-center text-sm font-semibold uppercase tracking-widest text-muted-foreground">
@@ -131,9 +133,9 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
           <div className="flex justify-center">
             <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:gap-8">
               <Step number={1} label={t("lore_step_play")} />
-              <div className="hidden h-px w-12 self-center border-t border-dashed border-border sm:block" />
+              <div className="hidden h-px w-12 self-center border-t border-dashed border-primary/30 sm:block" />
               <Step number={2} label={t("lore_step_confirm")} />
-              <div className="hidden h-px w-12 self-center border-t border-dashed border-border sm:block" />
+              <div className="hidden h-px w-12 self-center border-t border-dashed border-primary/30 sm:block" />
               <Step number={3} label={t("lore_step_share")} />
             </div>
           </div>
@@ -179,7 +181,7 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
       {/* Open */}
       <section className="border-y border-border bg-muted/50 px-6 py-14">
         <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 text-center">
-          <Gamepad2 size={32} className="text-muted-foreground" />
+          <Gamepad2 size={32} className="text-primary" />
           <h2 className="text-xl font-bold text-foreground">{t("lore_open_title")}</h2>
           <div className="grid grid-cols-1 gap-4 text-left sm:grid-cols-2">
             {openPoints.map(({ title, sub }) => (
@@ -197,7 +199,7 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
 
       {/* Bottom CTA */}
       {!authenticated && (
-        <section className="flex flex-col items-center gap-4 px-6 py-20 text-center">
+        <section className="flex flex-col items-center gap-4 bg-gradient-to-b from-primary/5 to-background px-6 py-20 text-center">
           <h2 className="text-2xl font-bold text-foreground">{t("lore_bottom_title")}</h2>
           <p className="text-sm text-muted-foreground">{t("lore_bottom_sub")}</p>
           <button

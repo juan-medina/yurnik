@@ -26,7 +26,7 @@ export default function SignInPromptModal({ onClose }: Props) {
           <X size={18} />
         </button>
         <div className="flex flex-col items-center gap-4 text-center">
-          <img src="/logo.png" alt="Yurnik" className="h-10 w-10 object-contain" />
+          <img src="/logo.png" alt="Yurnik" className="w-14" />
           <div>
             <h2 className="font-semibold text-foreground">{t("signin_prompt_title")}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{t("signin_prompt_sub")}</p>

@@ -86,7 +86,7 @@ export default function Settings() {
   if (!player) {
     return (
       <div className="mx-auto flex max-w-md flex-col items-center gap-6 px-4 py-24 text-center">
-        <img src="/logo.png" alt="Yurnik" className="h-14 w-14 object-contain" />
+        <img src="/logo.png" alt="Yurnik" className="w-20" />
         <div>
           <h1 className="text-xl font-bold text-foreground">{t("settings_title")}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{t("settings_signin_hint")}</p>
