@@ -58,10 +58,12 @@ export default function LegalLayout({ title, updated, children }: LegalLayoutPro
       <header className="sticky top-0 z-10 flex h-14 items-center border-b border-border bg-background/80 px-6 backdrop-blur-sm">
         <Link
           to="/lore"
-          className="flex items-center gap-2 font-bold tracking-tight text-primary"
+          className="flex items-center gap-2 font-bold tracking-tight"
         >
           <img src="/favicon-32x32.png" alt="" aria-hidden className="h-5 w-5" />
-          yurnik
+          <span className="bg-gradient-to-r from-blue-400 via-primary to-orange-400 bg-clip-text text-transparent">
+            yurnik
+          </span>
         </Link>
       </header>
       <main className="mx-auto max-w-2xl px-6 py-12">

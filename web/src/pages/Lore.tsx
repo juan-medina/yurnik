@@ -253,9 +253,11 @@ export default function Lore() {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border bg-background/80 px-6 backdrop-blur-sm">
-          <div className="flex items-center gap-2 font-bold tracking-tight text-primary">
+          <div className="flex items-center gap-2 font-bold tracking-tight">
             <img src="/favicon-32x32.png" alt="" aria-hidden className="h-5 w-5" />
-            yurnik
+            <span className="bg-gradient-to-r from-blue-400 via-primary to-orange-400 bg-clip-text text-transparent">
+              yurnik
+            </span>
           </div>
           <button
             onClick={() => signIn()}
