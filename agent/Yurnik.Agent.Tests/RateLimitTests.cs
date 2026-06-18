@@ -20,6 +20,9 @@ public class RateLimitTests : IDisposable
     readonly QueueProcessor _processor;
     readonly string _dbPath;
 
+    readonly DateTimeOffset _start = DateTimeOffset.UtcNow.AddHours(-1);
+    readonly DateTimeOffset _end = DateTimeOffset.UtcNow;
+
     public RateLimitTests()
     {
         _dbPath = Path.Combine(Path.GetTempPath(), $"yurnik_ratelimit_{Guid.NewGuid():N}.db");
@@ -34,16 +37,13 @@ public class RateLimitTests : IDisposable
     {
         _client.NextResult = ApiResult.RateLimited;
 
-        _queue.Enqueue(QueueEventType.GameStarted, 1, "game.exe", "My Game");
-        await _processor.DrainAsync();
-
-        _queue.Enqueue(QueueEventType.GameEnded, 1, "game.exe", "My Game");
+        _queue.Enqueue("game.exe", "My Game", _start, _end);
         await _processor.DrainAsync(); // trips the circuit breaker
 
         var callsBefore = _client.Calls.Count;
 
         // Drain again immediately — circuit breaker should block all API calls.
-        _queue.Enqueue(QueueEventType.GameEnded, 2, "other.exe", "Other Game");
+        _queue.Enqueue("other.exe", "Other Game", _start, _end);
         await _processor.DrainAsync();
 
         Assert.Equal(callsBefore, _client.Calls.Count);
@@ -54,14 +54,10 @@ public class RateLimitTests : IDisposable
     {
         _client.NextResult = ApiResult.RateLimited;
 
-        _queue.Enqueue(QueueEventType.GameStarted, 1, "game.exe", "My Game");
+        _queue.Enqueue("game.exe", "My Game", _start, _end);
         await _processor.DrainAsync();
 
-        _queue.Enqueue(QueueEventType.GameEnded, 1, "game.exe", "My Game");
-        await _processor.DrainAsync();
-
-        var remaining = _queue.Peek();
-        Assert.Contains(remaining, e => e.Type == QueueEventType.GameEnded);
+        Assert.Single(_queue.Peek());
     }
 
     public void Dispose()

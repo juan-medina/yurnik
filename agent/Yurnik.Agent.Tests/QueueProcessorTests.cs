@@ -25,6 +25,7 @@ class FakeYurnikClient : IYurnikClient
     public void SetToken(string token) { }
     public void ClearToken() { }
     public Task<HeartbeatResult> HeartbeatAsync() => Task.FromResult(new HeartbeatResult(ApiResult.Ok));
+    public Task<MeResult> GetMeAsync() => Task.FromResult(new MeResult(ApiResult.Ok, "testuser", "Test User"));
 
     public Task<CreatePendingResult> CreatePendingJourneyAsync(
         string exeName, string windowTitle, DateTimeOffset startedAt, DateTimeOffset endedAt)
@@ -44,6 +45,9 @@ public class QueueProcessorTests : IDisposable
     readonly QueueProcessor _processor;
     readonly string _dbPath;
 
+    readonly DateTimeOffset _start = DateTimeOffset.UtcNow.AddHours(-1);
+    readonly DateTimeOffset _end = DateTimeOffset.UtcNow;
+
     public QueueProcessorTests()
     {
         _dbPath = Path.Combine(Path.GetTempPath(), $"yurnik_test_{Guid.NewGuid():N}.db");
@@ -54,100 +58,55 @@ public class QueueProcessorTests : IDisposable
     }
 
     [Fact]
-    public async Task GameStarted_IsConsumedWithoutApiCall()
+    public async Task Journey_InQueue_CallsApiAndIsDeleted()
     {
-        _queue.Enqueue(QueueEventType.GameStarted, 1, "game.exe", "My Game");
+        _queue.Enqueue("game.exe", "My Game", _start, _end);
 
-        await _processor.DrainAsync();
-
-        Assert.Empty(_client.Calls);
-        Assert.Empty(_queue.Peek());
-    }
-
-    [Fact]
-    public async Task GameEnded_AfterGameStarted_CallsApiWithBothTimestamps()
-    {
-        _queue.Enqueue(QueueEventType.GameStarted, 1, "game.exe", "My Game");
-        await _processor.DrainAsync();
-
-        _queue.Enqueue(QueueEventType.GameEnded, 1, "game.exe", "My Game");
         await _processor.DrainAsync();
 
         Assert.Single(_client.Calls);
-        Assert.Empty(_queue.Peek());
-
-        var call = _client.Calls[0];
-        Assert.Equal("game.exe", call.ExeName);
-        Assert.Equal("My Game", call.WindowTitle);
-        Assert.True(call.EndedAt >= call.StartedAt);
-    }
-
-    [Fact]
-    public async Task GameEnded_WithNoTrackedStart_IsDiscardedWithoutApiCall()
-    {
-        // Game was running when the agent started — no GameStarted was ever processed.
-        _queue.Enqueue(QueueEventType.GameEnded, 1, "game.exe", "My Game");
-
-        await _processor.DrainAsync();
-
-        Assert.Empty(_client.Calls);
+        Assert.Equal("game.exe", _client.Calls[0].ExeName);
+        Assert.Equal("My Game", _client.Calls[0].WindowTitle);
         Assert.Empty(_queue.Peek());
     }
 
     [Fact]
-    public async Task TwoGames_TrackIndependently()
-    {
-        _queue.Enqueue(QueueEventType.GameStarted, 1, "alpha.exe", "Alpha");
-        _queue.Enqueue(QueueEventType.GameStarted, 2, "beta.exe", "Beta");
-        await _processor.DrainAsync();
-
-        _queue.Enqueue(QueueEventType.GameEnded, 1, "alpha.exe", "Alpha");
-        await _processor.DrainAsync();
-
-        Assert.Single(_client.Calls);
-        Assert.Equal("alpha.exe", _client.Calls[0].ExeName);
-
-        _queue.Enqueue(QueueEventType.GameEnded, 2, "beta.exe", "Beta");
-        await _processor.DrainAsync();
-
-        Assert.Equal(2, _client.Calls.Count);
-        Assert.Equal("beta.exe", _client.Calls[1].ExeName);
-    }
-
-    [Fact]
-    public async Task GameEnded_OnTransientFailure_RemainsInQueue()
+    public async Task TransientFailure_IncrementsAttempts_LeavesInQueue()
     {
         _client.NextResult = ApiResult.TransientFailure;
+        _queue.Enqueue("game.exe", "My Game", _start, _end);
 
-        _queue.Enqueue(QueueEventType.GameStarted, 1, "game.exe", "My Game");
         await _processor.DrainAsync();
 
-        _queue.Enqueue(QueueEventType.GameEnded, 1, "game.exe", "My Game");
-        await _processor.DrainAsync();
-
-        // API failed — event still in queue (attempts incremented for backoff)
         var remaining = _queue.Peek();
         Assert.Single(remaining);
-        Assert.Equal(QueueEventType.GameEnded, remaining[0].Type);
         Assert.Equal(1, remaining[0].Attempts);
     }
 
     [Fact]
-    public async Task SameExe_DifferentPids_TrackedAsIndependentSessions()
+    public async Task TwoJourneys_BothSentAndDeleted()
     {
-        // Same executable launched twice (e.g. game restart) — different pids.
-        _queue.Enqueue(QueueEventType.GameStarted, 100, "game.exe", "My Game");
-        _queue.Enqueue(QueueEventType.GameEnded, 100, "game.exe", "My Game");
-        await _processor.DrainAsync();
+        _queue.Enqueue("alpha.exe", "Alpha", _start, _end);
+        _queue.Enqueue("beta.exe", "Beta", _start, _end);
+
         await _processor.DrainAsync();
 
-        _queue.Enqueue(QueueEventType.GameStarted, 101, "game.exe", "My Game");
-        _queue.Enqueue(QueueEventType.GameEnded, 101, "game.exe", "My Game");
-        await _processor.DrainAsync();
-        await _processor.DrainAsync();
-
-        // Both sessions reach the API independently — server decides whether to merge.
         Assert.Equal(2, _client.Calls.Count);
+        Assert.Empty(_queue.Peek());
+    }
+
+    [Fact]
+    public async Task RateLimited_StopsAfterFirstEntry()
+    {
+        _client.NextResult = ApiResult.RateLimited;
+        _queue.Enqueue("alpha.exe", "Alpha", _start, _end);
+        _queue.Enqueue("beta.exe", "Beta", _start, _end);
+
+        await _processor.DrainAsync();
+
+        // Only one attempt made before circuit breaker tripped
+        Assert.Single(_client.Calls);
+        Assert.Equal(2, _queue.Peek().Count);
     }
 
     public void Dispose()

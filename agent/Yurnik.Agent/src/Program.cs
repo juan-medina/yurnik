@@ -55,12 +55,15 @@ static class Program
         var agentClient = new YurnikClient(config.ApiBaseUrl);
         var authManager = new AuthManager(config, credentialStore, agentClient);
         authManager.Start();
+
+        var sessionStore = new SessionStore(db);
         var eventQueue = new EventQueue(db);
+        var sessionMonitor = new SessionMonitor(sessionStore, eventQueue);
         var queueProcessor = new QueueProcessor(eventQueue, agentClient, authManager);
-        var processWatcher = new ProcessWatcher(eventQueue);
+        var processWatcher = new ProcessWatcher(sessionStore, eventQueue);
         var updater = new Updater();
 
-        using var trayApp = new TrayApp(config.WebBaseUrl, authManager, processWatcher, queueProcessor, updater);
+        using var trayApp = new TrayApp(config.WebBaseUrl, authManager, agentClient, processWatcher, sessionMonitor, queueProcessor, updater);
         trayApp.Run();
 
         Log.Info("Yurnik agent stopped");

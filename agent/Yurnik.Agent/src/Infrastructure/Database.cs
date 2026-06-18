@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 using Microsoft.Data.Sqlite;
-using Yurnik.Agent.Infrastructure;
 
 namespace Yurnik.Agent.Infrastructure;
 
@@ -24,7 +23,6 @@ sealed class Database
         var conn = new SqliteConnection($"Data Source={_path}");
         conn.Open();
 
-        // WAL mode for better concurrent read/write.
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "PRAGMA journal_mode=WAL;";
         cmd.ExecuteNonQuery();
@@ -37,45 +35,53 @@ sealed class Database
         Log.Info($"Running database migrations on {_path}");
         using var conn = OpenConnection();
 
-        // PRAGMA user_version tracks the schema generation. Version 0 means a fresh
-        // install or a pre-versioning database — drop any old tables and start clean.
         using var versionCmd = conn.CreateCommand();
         versionCmd.CommandText = "PRAGMA user_version;";
         var version = (long)(versionCmd.ExecuteScalar() ?? 0L);
 
-        if (version == 0)
+        // Versions 0 and 1 had an incompatible schema — drop everything and start clean.
+        if (version < 2)
         {
-            Log.Info("Schema is unversioned — recreating tables");
-            using var dropCmd = conn.CreateCommand();
-            dropCmd.CommandText = """
-                DROP TABLE IF EXISTS queue;
-                DROP TABLE IF EXISTS schema_version;
-                """;
-            dropCmd.ExecuteNonQuery();
+            Log.Info($"Schema is version {version} — recreating tables");
+            DropAll(conn);
         }
 
         using var schemaCmd = conn.CreateCommand();
         schemaCmd.CommandText = """
-            CREATE TABLE IF NOT EXISTS queue (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                type        TEXT    NOT NULL,
-                pid         INTEGER NOT NULL,
-                exe_name    TEXT    NOT NULL,
-                payload     TEXT    NOT NULL,
-                created_at  INTEGER NOT NULL,
-                attempts    INTEGER NOT NULL DEFAULT 0,
-                UNIQUE(pid, type)
+            CREATE TABLE IF NOT EXISTS sessions (
+                pid             INTEGER PRIMARY KEY,
+                exe_name        TEXT    NOT NULL,
+                window_title    TEXT    NOT NULL,
+                started_at      INTEGER NOT NULL,
+                last_running_at INTEGER NOT NULL
             );
 
-            CREATE INDEX IF NOT EXISTS queue_exe_type
-                ON queue(exe_name, type, created_at);
+            CREATE TABLE IF NOT EXISTS queue (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                exe_name     TEXT    NOT NULL,
+                window_title TEXT    NOT NULL,
+                started_at   INTEGER NOT NULL,
+                ended_at     INTEGER NOT NULL,
+                attempts     INTEGER NOT NULL DEFAULT 0
+            );
             """;
         schemaCmd.ExecuteNonQuery();
 
         using var pragmaCmd = conn.CreateCommand();
-        pragmaCmd.CommandText = "PRAGMA user_version = 1;";
+        pragmaCmd.CommandText = "PRAGMA user_version = 2;";
         pragmaCmd.ExecuteNonQuery();
 
         Log.Info("Database migrations complete");
+    }
+
+    static void DropAll(SqliteConnection conn)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            DROP TABLE IF EXISTS sessions;
+            DROP TABLE IF EXISTS queue;
+            DROP TABLE IF EXISTS schema_version;
+            """;
+        cmd.ExecuteNonQuery();
     }
 }

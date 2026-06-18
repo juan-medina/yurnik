@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using Yurnik.Agent.Infrastructure;
 using Yurnik.Agent.Queue;
 
@@ -10,13 +9,13 @@ namespace Yurnik.Agent.Detection;
 
 /// <summary>
 /// Watches for processes that load a graphics API DLL (DirectX, OpenGL, Vulkan).
-/// When a matching process starts or ends, writes a GameStarted/GameEnded event
-/// to the queue. Has no knowledge of the API or auth state.
+/// When a matching process is first seen, inserts a session row into SessionStore.
+/// Session end is detected by SessionMonitor via periodic pid liveness checks.
 ///
 /// Detection strategy:
 ///   - Poll running processes every 5 seconds
 ///   - For each process, check loaded modules for known graphics DLLs
-///   - Track which pids we have already seen to detect start/end transitions
+///   - Track which pids we have already seen this run to avoid redundant DB writes
 ///
 /// This is the simplest approach that works without requiring elevated privileges.
 /// WMI process events would be faster but require more setup and can be unreliable.
@@ -31,20 +30,25 @@ sealed class ProcessWatcher : IDisposable
         "vulkan-1.dll",
     ];
 
-    // Executables under these directories are Windows OS components, not games.
     static readonly string WindowsDir =
         Environment.GetFolderPath(Environment.SpecialFolder.Windows)
             .TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
 
     static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
 
+    readonly SessionStore _sessions;
     readonly EventQueue _queue;
     readonly CancellationTokenSource _cts = new();
-    readonly Dictionary<int, TrackedProcess> _tracked = [];
+
+    // In-memory dedup set — avoids redundant DB writes within one agent run.
+    // SessionStore uses INSERT OR IGNORE, so this is an optimisation only.
+    readonly HashSet<int> _seen = [];
+
     Task? _pollTask;
 
-    public ProcessWatcher(EventQueue queue)
+    public ProcessWatcher(SessionStore sessions, EventQueue queue)
     {
+        _sessions = sessions;
         _queue = queue;
     }
 
@@ -58,7 +62,7 @@ sealed class ProcessWatcher : IDisposable
     {
         _cts.Cancel();
         try { _pollTask?.Wait(5000); }
-        catch (AggregateException) { } // task cancelled on shutdown — expected
+        catch (AggregateException) { }
         Log.Info("ProcessWatcher stopped");
     }
 
@@ -83,19 +87,18 @@ sealed class ProcessWatcher : IDisposable
 
                 currentPids.Add(process.Id);
 
-                if (!_tracked.ContainsKey(process.Id))
-                {
-                    var windowTitle = process.MainWindowTitle;
-                    if (string.IsNullOrWhiteSpace(windowTitle)) continue;
+                if (_seen.Contains(process.Id)) continue;
 
-                    var exePath = process.MainModule?.FileName ?? "";
-                    if (exePath.StartsWith(WindowsDir, StringComparison.OrdinalIgnoreCase)) continue;
+                var windowTitle = process.MainWindowTitle;
+                if (string.IsNullOrWhiteSpace(windowTitle)) continue;
 
-                    var exeName = Path.GetFileName(exePath.Length > 0 ? exePath : process.ProcessName);
-                    _tracked[process.Id] = new TrackedProcess(process.Id, exeName, windowTitle);
-                    _queue.Enqueue(QueueEventType.GameStarted, process.Id, exeName, windowTitle);
-                    Log.Info($"Game started: {exeName} (pid {process.Id}) — \"{windowTitle}\"");
-                }
+                var exePath = process.MainModule?.FileName ?? "";
+                if (exePath.StartsWith(WindowsDir, StringComparison.OrdinalIgnoreCase)) continue;
+
+                var exeName = Path.GetFileName(exePath.Length > 0 ? exePath : process.ProcessName);
+                _sessions.Insert(process.Id, exeName, windowTitle);
+                _seen.Add(process.Id);
+                Log.Info($"Game started: {exeName} (pid {process.Id}) — \"{windowTitle}\"");
             }
             catch
             {
@@ -107,16 +110,20 @@ sealed class ProcessWatcher : IDisposable
             }
         }
 
-        // Any tracked pid no longer in the current set has ended.
-        foreach (var (pid, tracked) in _tracked.ToList())
+        // Any pid we were tracking that is no longer running has exited — close immediately.
+        foreach (var pid in _seen.Except(currentPids).ToList())
         {
-            if (!currentPids.Contains(pid))
+            var session = _sessions.GetAll().FirstOrDefault(s => s.Pid == pid);
+            if (session is not null)
             {
-                _tracked.Remove(pid);
-                _queue.Enqueue(QueueEventType.GameEnded, tracked.Pid, tracked.ExeName, tracked.WindowTitle);
-                Log.Info($"Game ended: {tracked.ExeName} (pid {pid}) — \"{tracked.WindowTitle}\"");
+                var endedAt = DateTimeOffset.UtcNow;
+                Log.Info($"Game ended: {session.ExeName} (pid {pid}) — \"{session.WindowTitle}\"");
+                _queue.Enqueue(session.ExeName, session.WindowTitle, session.StartedAt, endedAt);
+                _sessions.Delete(pid);
             }
         }
+
+        _seen.IntersectWith(currentPids);
     }
 
     static bool HasGraphicsDll(Process process)
@@ -138,6 +145,4 @@ sealed class ProcessWatcher : IDisposable
     }
 
     public void Dispose() => Stop();
-
-    record TrackedProcess(int Pid, string ExeName, string WindowTitle);
 }

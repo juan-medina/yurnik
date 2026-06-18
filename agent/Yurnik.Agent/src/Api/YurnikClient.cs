@@ -12,6 +12,7 @@ namespace Yurnik.Agent.Api;
 enum ApiResult { Ok, Unauthorized, TransientFailure, RateLimited }
 
 record CreatePendingResult(ApiResult Status, string? JourneyId);
+record MeResult(ApiResult Status, string? Handle, string? Name);
 
 /// <summary>
 /// Returned by HeartbeatAsync. Status distinguishes a rejected token (Unauthorized)
@@ -92,6 +93,34 @@ sealed class YurnikClient(string baseUrl) : IYurnikClient
         {
             Log.Error("Heartbeat failed", ex);
             return new HeartbeatResult(ApiResult.TransientFailure);
+        }
+    }
+
+    public async Task<MeResult> GetMeAsync()
+    {
+        try
+        {
+            var resp = await _http.GetAsync("api/me");
+
+            if (resp.StatusCode == HttpStatusCode.Unauthorized)
+                return new MeResult(ApiResult.Unauthorized, null, null);
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                Log.Warn($"GetMe: unexpected status {resp.StatusCode}");
+                return new MeResult(ApiResult.TransientFailure, null, null);
+            }
+
+            var json = await resp.Content.ReadAsStringAsync();
+            var doc = JsonDocument.Parse(json);
+            var handle = doc.RootElement.GetProperty("handle").GetString();
+            var name = doc.RootElement.GetProperty("name").GetString();
+            return new MeResult(ApiResult.Ok, handle, name);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("GetMe failed", ex);
+            return new MeResult(ApiResult.TransientFailure, null, null);
         }
     }
 

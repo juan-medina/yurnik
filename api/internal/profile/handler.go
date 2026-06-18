@@ -57,11 +57,20 @@ func (h *Handler) resolvePlayer(w http.ResponseWriter, r *http.Request) (db.User
 }
 
 func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
-	cookie, err := r.Cookie("yurnik_session")
-	if err != nil {
+	if cookie, err := r.Cookie("yurnik_session"); err == nil {
+		userID, err := auth.ParseAndRenewSession(w, cookie.Value, h.jwtPriv)
+		if err != nil {
+			return "", false
+		}
+		return userID, true
+	}
+
+	token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if !ok || token == "" {
 		return "", false
 	}
-	userID, err := auth.ParseAndRenewSession(w, cookie.Value, h.jwtPriv)
+	pub := h.jwtPriv.Public().(ed25519.PublicKey)
+	userID, err := auth.ParseSessionJWT(token, pub)
 	if err != nil {
 		return "", false
 	}

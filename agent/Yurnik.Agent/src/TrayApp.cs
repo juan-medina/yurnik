@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 using Velopack;
+using Yurnik.Agent.Api;
 using Yurnik.Agent.Auth;
 using Yurnik.Agent.Detection;
 using Yurnik.Agent.Infrastructure;
@@ -16,7 +17,9 @@ namespace Yurnik.Agent;
 sealed class TrayApp : IDisposable
 {
     readonly AuthManager _auth;
+    readonly IYurnikClient _client;
     readonly ProcessWatcher _watcher;
+    readonly SessionMonitor _sessionMonitor;
     readonly QueueProcessor _processor;
     readonly Updater _updater;
     readonly string _webBaseUrl;
@@ -27,11 +30,16 @@ sealed class TrayApp : IDisposable
     bool _authenticated;
     UpdateInfo? _pendingUpdate;
 
-    public TrayApp(string webBaseUrl, AuthManager auth, ProcessWatcher watcher, QueueProcessor processor, Updater updater)
+    ToolStripMenuItem? _signInItem;
+    ToolStripMenuItem? _signOutItem;
+
+    public TrayApp(string webBaseUrl, AuthManager auth, IYurnikClient client, ProcessWatcher watcher, SessionMonitor sessionMonitor, QueueProcessor processor, Updater updater)
     {
         _webBaseUrl = webBaseUrl;
         _auth = auth;
+        _client = client;
         _watcher = watcher;
+        _sessionMonitor = sessionMonitor;
         _processor = processor;
         _updater = updater;
 
@@ -62,16 +70,8 @@ sealed class TrayApp : IDisposable
             try
             {
                 var authenticated = await _auth.InitialiseAsync();
-                if (authenticated)
-                {
-                    _authenticated = true;
-                    StartWorkers();
-                    UpdateTray(Strings.TrayReady, null);
-                }
-                else
-                {
+                if (!authenticated)
                     ShowSignInRequired();
-                }
 
                 await CheckForUpdatesAsync();
             }
@@ -86,7 +86,15 @@ sealed class TrayApp : IDisposable
 
     void OnAuthStateChanged(bool authenticated)
     {
+        // AuthStateChanged fires from background threads — marshal to the UI thread.
+        if (_tray.ContextMenuStrip?.InvokeRequired == true)
+        {
+            _tray.ContextMenuStrip.Invoke(() => OnAuthStateChanged(authenticated));
+            return;
+        }
+
         _authenticated = authenticated;
+        UpdateAuthMenuItems();
         if (authenticated)
         {
             StartWorkers();
@@ -98,6 +106,13 @@ sealed class TrayApp : IDisposable
             StopWorkers();
             ShowSignInRequired();
         }
+    }
+
+    void UpdateAuthMenuItems()
+    {
+        if (_signInItem is null || _signOutItem is null) return;
+        _signInItem.Visible = !_authenticated;
+        _signOutItem.Visible = _authenticated;
     }
 
     void ShowSignInRequired()
@@ -127,8 +142,27 @@ sealed class TrayApp : IDisposable
 
     void OnTrayIconClicked(object? sender, MouseEventArgs e)
     {
-        if (e.Button == MouseButtons.Left && !_authenticated)
+        if (e.Button != MouseButtons.Left) return;
+
+        if (!_authenticated)
+        {
             _auth.StartLoginFlow();
+            return;
+        }
+
+        if (_pendingUpdate is not null)
+        {
+            var update = _pendingUpdate;
+            Task.Run(async () =>
+            {
+                try { await _updater.DownloadAndRestartAsync(update); }
+                catch (Exception ex) { Log.Error("Update failed", ex); }
+            });
+            return;
+        }
+
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+            $"{_webBaseUrl}/journeys") { UseShellExecute = true });
     }
 
     async Task CheckForUpdatesAsync()
@@ -137,11 +171,13 @@ sealed class TrayApp : IDisposable
         if (update is null) return;
 
         _pendingUpdate = update;
-        UpdateTray(Strings.TrayReady, Strings.BalloonUpdateAvailable(update.TargetFullRelease.Version.ToString()));
+        _tray.Icon = SystemIcons.Information;
+        UpdateTray(Strings.TrayUpdateAvailable, Strings.BalloonUpdateAvailable(update.TargetFullRelease.Version.ToString()));
     }
 
     void StartWorkers()
     {
+        _sessionMonitor.Start();
         _processor.Start();
         _watcher.Start();
         Log.Info("Workers started");
@@ -150,6 +186,7 @@ sealed class TrayApp : IDisposable
     void StopWorkers()
     {
         _watcher.Stop();
+        _sessionMonitor.Stop();
         _processor.Stop();
         Log.Info("Workers stopped");
     }
@@ -167,7 +204,6 @@ sealed class TrayApp : IDisposable
             .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
             .OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
             .FirstOrDefault()?.InformationalVersion ?? "unknown";
-        // Strip any build metadata appended by the SDK (e.g. "0.2.0+abc123").
         var plus = v.IndexOf('+');
         return plus >= 0 ? v[..plus] : v;
     }
@@ -176,15 +212,42 @@ sealed class TrayApp : IDisposable
     {
         var menu = new ContextMenuStrip();
 
-        menu.Items.Add(new ToolStripMenuItem($"v{AppVersion()}") { Enabled = false });
-        menu.Items.Add(new ToolStripSeparator());
-
         menu.Items.Add(Strings.MenuOpen, null, (_, _) =>
         {
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_webBaseUrl)
             {
                 UseShellExecute = true
             });
+        });
+
+        menu.Items.Add(new ToolStripSeparator());
+
+        _signInItem = new ToolStripMenuItem(Strings.MenuSignIn, null, (_, _) =>
+        {
+            _auth.StartLoginFlow();
+        });
+        _signInItem.Visible = !_authenticated;
+        menu.Items.Add(_signInItem);
+
+        _signOutItem = new ToolStripMenuItem(Strings.MenuSignOut, null, (_, _) =>
+        {
+            _auth.OnUnauthorized();
+        });
+        _signOutItem.Visible = _authenticated;
+        menu.Items.Add(_signOutItem);
+
+        menu.Items.Add(new ToolStripSeparator());
+
+        menu.Items.Add(Strings.MenuAbout, null, async (_, _) =>
+        {
+            string? handle = null;
+            if (_authenticated)
+            {
+                var me = await _client.GetMeAsync();
+                handle = me.Name ?? me.Handle;
+            }
+            using var dialog = new AboutDialog(AppVersion(), handle, _webBaseUrl);
+            dialog.ShowDialog();
         });
 
         menu.Items.Add(new ToolStripSeparator());
@@ -213,6 +276,7 @@ sealed class TrayApp : IDisposable
         _tray.Dispose();
         _auth.Dispose();
         _watcher.Dispose();
+        _sessionMonitor.Dispose();
         _processor.Dispose();
     }
 }

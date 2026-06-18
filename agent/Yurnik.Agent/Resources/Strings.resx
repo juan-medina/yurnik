@@ -48,6 +48,9 @@
   <data name="TrayReady" xml:space="preserve">
     <value>Yurnik</value>
   </data>
+  <data name="TrayUpdateAvailable" xml:space="preserve">
+    <value>Yurnik — update available</value>
+  </data>
   <data name="BalloonSignIn" xml:space="preserve">
     <value>Sign in to Yurnik — click to open browser</value>
   </data>
@@ -62,6 +65,30 @@
   </data>
   <data name="MenuExit" xml:space="preserve">
     <value>Exit</value>
+  </data>
+  <data name="MenuSignIn" xml:space="preserve">
+    <value>Sign in…</value>
+  </data>
+  <data name="MenuSignOut" xml:space="preserve">
+    <value>Sign out</value>
+  </data>
+  <data name="MenuAbout" xml:space="preserve">
+    <value>About Yurnik…</value>
+  </data>
+  <data name="AboutTitle" xml:space="preserve">
+    <value>About Yurnik</value>
+  </data>
+  <data name="AboutTagline" xml:space="preserve">
+    <value>Your gaming journey tracker</value>
+  </data>
+  <data name="AboutSignedIn" xml:space="preserve">
+    <value>Signed in</value>
+  </data>
+  <data name="AboutSignedInAs" xml:space="preserve">
+    <value>Signed in as {0}</value>
+  </data>
+  <data name="AboutNotSignedIn" xml:space="preserve">
+    <value>Not signed in</value>
   </data>
 
 </root>

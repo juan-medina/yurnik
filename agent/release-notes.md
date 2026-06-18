@@ -1,1 +1,3 @@
-The agent will now refresh the session automatically during long-running periods, avoiding unnecessary sign-in prompts.
+Improve session refresh logic.
+Handle client restart and better game detection.
+Adding About Dialog.

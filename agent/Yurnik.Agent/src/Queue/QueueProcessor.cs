@@ -8,30 +8,21 @@ using Yurnik.Agent.Infrastructure;
 namespace Yurnik.Agent.Queue;
 
 /// <summary>
-/// Periodically drains the event queue and sends events to the API.
-///
+/// Periodically drains the journey outbox and sends entries to the API.
 /// Only runs while authenticated. Pauses on 401 and signals AuthManager.
-/// Uses exponential backoff per event on transient failures.
-///
-/// A pending journey is only created on the API once the game ends, so the
-/// UI only shows journeys with a real duration.
+/// Uses exponential backoff per entry on transient failures.
 /// </summary>
 sealed class QueueProcessor(EventQueue queue, IYurnikClient client, IAuthState auth) : IDisposable
 {
-    static readonly TimeSpan DrainInterval = TimeSpan.FromSeconds(30);
+    static readonly TimeSpan DrainInterval = TimeSpan.FromMinutes(15);
     static readonly TimeSpan RateLimitCooldown = TimeSpan.FromMinutes(5);
     static readonly TimeSpan[] Backoff =
     [
-        TimeSpan.FromSeconds(30),
         TimeSpan.FromMinutes(2),
         TimeSpan.FromMinutes(10),
         TimeSpan.FromMinutes(30),
     ];
 
-    // Tracks the start time of sessions detected so far (no API call yet), keyed by pid.
-    readonly Dictionary<int, DateTimeOffset> _activeSessions = [];
-
-    // Circuit breaker: set when the API returns 429. Drain is skipped until this clears.
     DateTimeOffset? _rateLimitedUntil;
 
     readonly CancellationTokenSource _cts = new();
@@ -56,10 +47,7 @@ sealed class QueueProcessor(EventQueue queue, IYurnikClient client, IAuthState a
         while (!ct.IsCancellationRequested)
         {
             if (auth.IsAuthenticated)
-            {
-                queue.Evict();
                 await DrainAsync(ct);
-            }
 
             await Task.Delay(DrainInterval, ct).ConfigureAwait(false);
         }
@@ -74,76 +62,46 @@ sealed class QueueProcessor(EventQueue queue, IYurnikClient client, IAuthState a
         }
         _rateLimitedUntil = null;
 
-        var events = queue.Peek();
-        foreach (var ev in events)
+        foreach (var journey in queue.Peek())
         {
             if (ct.IsCancellationRequested) break;
 
-            // Respect backoff — skip events that have failed recently.
-            if (ev.Attempts > 0)
+            if (journey.Attempts > 0)
             {
-                var backoff = Backoff[Math.Min(ev.Attempts - 1, Backoff.Length - 1)];
-                if (DateTimeOffset.UtcNow - ev.OccurredAt < backoff)
+                var backoff = Backoff[Math.Min(journey.Attempts - 1, Backoff.Length - 1)];
+                if (DateTimeOffset.UtcNow - journey.EndedAt < backoff)
                     continue;
             }
 
-            var handled = ev.Type switch
+            var result = await client.CreatePendingJourneyAsync(
+                journey.ExeName, journey.WindowTitle, journey.StartedAt, journey.EndedAt);
+
+            if (result.Status == ApiResult.Unauthorized)
             {
-                QueueEventType.GameStarted => HandleGameStarted(ev),
-                QueueEventType.GameEnded   => await HandleGameEnded(ev, ct),
-                _ => true,
-            };
+                auth.OnUnauthorized();
+                return;
+            }
 
-            if (handled)
-                queue.Delete(ev.Id);
+            if (result.Status == ApiResult.RateLimited)
+            {
+                _rateLimitedUntil = DateTimeOffset.UtcNow + RateLimitCooldown;
+                Log.Warn($"Rate limited — pausing drain until {_rateLimitedUntil:HH:mm:ss}Z");
+                return;
+            }
+
+            if (result.Status == ApiResult.TransientFailure)
+            {
+                queue.IncrementAttempts(journey.Id);
+                continue;
+            }
+
+            queue.Delete(journey.Id);
+
+            if (result.JourneyId is null)
+                Log.Info($"Journey excluded: {journey.ExeName}");
             else
-                queue.IncrementAttempts(ev.Id);
+                Log.Info($"Journey created: {journey.ExeName} → id={result.JourneyId}");
         }
-    }
-
-    bool HandleGameStarted(QueueEvent ev)
-    {
-        _activeSessions[ev.Pid] = ev.OccurredAt;
-        Log.Info($"Session started: {ev.ExeName} (pid {ev.Pid}) at {ev.OccurredAt:HH:mm:ss}Z");
-        return true;
-    }
-
-    async Task<bool> HandleGameEnded(QueueEvent ev, CancellationToken ct)
-    {
-        if (!_activeSessions.TryGetValue(ev.Pid, out var startedAt))
-        {
-            // No tracked start — game was running before the agent started, or agent reconnected.
-            Log.Warn($"No tracked session for {ev.ExeName} (pid {ev.Pid}), discarding game_ended");
-            return true;
-        }
-
-        Log.Info($"Creating journey: {ev.ExeName} — \"{ev.WindowTitle}\" ({startedAt:HH:mm:ss}Z → {ev.OccurredAt:HH:mm:ss}Z)");
-        var result = await client.CreatePendingJourneyAsync(ev.ExeName, ev.WindowTitle, startedAt, ev.OccurredAt);
-
-        if (result.Status == ApiResult.Unauthorized)
-        {
-            auth.OnUnauthorized();
-            return false;
-        }
-
-        if (result.Status == ApiResult.RateLimited)
-        {
-            _rateLimitedUntil = DateTimeOffset.UtcNow + RateLimitCooldown;
-            Log.Warn($"Rate limited — pausing drain until {_rateLimitedUntil:HH:mm:ss}Z");
-            return false;
-        }
-
-        if (result.Status == ApiResult.TransientFailure)
-            return false;
-
-        _activeSessions.Remove(ev.Pid);
-
-        if (result.JourneyId is null)
-            Log.Info($"Journey excluded: {ev.ExeName}");
-        else
-            Log.Info($"Journey created: {ev.ExeName} → id={result.JourneyId}");
-
-        return true;
     }
 
     public void Dispose() => Stop();

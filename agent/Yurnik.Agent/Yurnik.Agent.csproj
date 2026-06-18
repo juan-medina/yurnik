@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\tray.ico" />
+    <EmbeddedResource Include="Resources\logo.png" />
   </ItemGroup>
 
   <ItemGroup>

@@ -48,6 +48,9 @@
   <data name="TrayReady" xml:space="preserve">
     <value>Yurnik</value>
   </data>
+  <data name="TrayUpdateAvailable" xml:space="preserve">
+    <value>Yurnik — actualización disponible</value>
+  </data>
   <data name="BalloonSignIn" xml:space="preserve">
     <value>Inicia sesión en Yurnik — haz clic para continuar</value>
   </data>
@@ -62,6 +65,30 @@
   </data>
   <data name="MenuExit" xml:space="preserve">
     <value>Salir</value>
+  </data>
+  <data name="MenuSignIn" xml:space="preserve">
+    <value>Iniciar sesión…</value>
+  </data>
+  <data name="MenuSignOut" xml:space="preserve">
+    <value>Cerrar sesión</value>
+  </data>
+  <data name="MenuAbout" xml:space="preserve">
+    <value>Acerca de Yurnik…</value>
+  </data>
+  <data name="AboutTitle" xml:space="preserve">
+    <value>Acerca de Yurnik</value>
+  </data>
+  <data name="AboutTagline" xml:space="preserve">
+    <value>Tu rastreador de aventuras gaming</value>
+  </data>
+  <data name="AboutSignedIn" xml:space="preserve">
+    <value>Sesión iniciada</value>
+  </data>
+  <data name="AboutSignedInAs" xml:space="preserve">
+    <value>Sesión iniciada como {0}</value>
+  </data>
+  <data name="AboutNotSignedIn" xml:space="preserve">
+    <value>Sin sesión iniciada</value>
   </data>
 
 </root>
