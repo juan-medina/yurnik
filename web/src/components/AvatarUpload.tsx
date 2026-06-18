@@ -3,7 +3,7 @@
 
 import { useRef, useState } from "react";
 import { Loader2, Upload } from "lucide-react";
-import { avatarSrc, initials } from "@/lib/display";
+import PlayerAvatar from "@/components/PlayerAvatar";
 import { uploadAvatar, ACCEPTED_AVATAR_TYPES, MAX_AVATAR_BYTES } from "@/services/avatar";
 import type { Player } from "@/models/player";
 
@@ -60,23 +60,7 @@ export default function AvatarUpload({ player, size = "lg", onUploaded }: Avatar
         aria-label="Change avatar"
         className={`group relative ${dim} shrink-0 cursor-pointer rounded-full disabled:cursor-wait`}
       >
-        <img
-          src={avatarSrc(player)}
-          alt={player.name}
-          className="h-full w-full rounded-full object-cover"
-          onError={(e) => {
-            const target = e.currentTarget;
-            target.style.display = "none";
-            target.nextElementSibling?.removeAttribute("hidden");
-          }}
-        />
-        <div
-          hidden
-          className={`flex h-full w-full items-center justify-center rounded-full ${textSize} font-bold text-white`}
-          style={{ backgroundColor: player.color }}
-        >
-          {initials(player.name)}
-        </div>
+        <PlayerAvatar player={player} className={`h-full w-full ${textSize}`} />
 
         {/* Hover / loading overlay */}
         <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100 group-disabled:opacity-100">

@@ -53,13 +53,10 @@ type RawJourney = {
 
 export async function getUserJourneys(): Promise<Journey[]> {
   const player = await getCurrentPlayer();
-  console.log("[getUserJourneys] player:", player.id, player.handle);
   const url = `${API_BASE}/api/players/me/journeys`;
   const resp = await apiFetch(url, { credentials: "include" });
-  console.log("[getUserJourneys] response status:", resp.status);
   if (!resp.ok) throw new Error(`get user journeys: ${resp.status}`);
   const data: { journeys: RawJourney[] } = await resp.json();
-  console.log("[getUserJourneys] journeys count:", data.journeys?.length ?? 0);
   return (data.journeys ?? []).map((j): Journey => ({
     id: j.id,
     igdbId: j.igdb_id,
@@ -111,7 +108,6 @@ export async function getPendingJourneysCount(): Promise<number> {
 }
 
 export async function addJourney(input: NewJourney): Promise<void> {
-  console.log("[addJourney] input:", JSON.stringify(input));
   if (!input.igdbId) throw new Error("addJourney: igdbId is required");
   const body = {
     igdb_id: input.igdbId,
@@ -119,20 +115,16 @@ export async function addJourney(input: NewJourney): Promise<void> {
     played_at: formatLocalDate(input.playedAt),
     log: input.log ?? null,
   };
-  console.log("[addJourney] posting:", JSON.stringify(body));
   const resp = await apiFetch(`${API_BASE}/api/players/me/journeys`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  console.log("[addJourney] response status:", resp.status);
   if (!resp.ok) {
     const text = await resp.text();
-    console.log("[addJourney] error body:", text);
-    throw new Error(`add journey: ${resp.status}`);
+    throw new Error(`add journey: ${resp.status} ${text}`);
   }
-  console.log("[addJourney] success");
 }
 
 export async function updateJourney(id: string, input: UpdateJourney): Promise<void> {

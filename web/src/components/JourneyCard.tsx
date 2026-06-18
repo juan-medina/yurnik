@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 import { Link, useNavigate } from "react-router";
 import { Clock, Info } from "lucide-react";
-import { avatarSrc, playerHref } from "@/lib/display";
+import { playerHref } from "@/lib/display";
+import PlayerAvatar from "@/components/PlayerAvatar";
 import { formatJourneyDate } from "@/lib/time";
 import type { Journey } from "@/models";
 import GenreChip from "@/components/GenreChip";
@@ -39,11 +40,7 @@ export default function JourneyCard({ journey, showPlayer = false }: JourneyCard
               onClick={(e) => e.stopPropagation()}
               className="flex items-center gap-2"
             >
-              <img
-                src={avatarSrc(journey.player)}
-                alt={journey.player.name}
-                className="h-6 w-6 shrink-0 rounded-full object-cover"
-              />
+              <PlayerAvatar player={journey.player} className="h-6 w-6 shrink-0" />
               <span className="text-sm font-semibold leading-none">{journey.player.name}</span>
             </Link>
             <span className="truncate text-xs text-muted-foreground">@{journey.player.handle}</span>

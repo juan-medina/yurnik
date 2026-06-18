@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { getEchoes, markAllRead } from "@/services/echoes";
 import { getCurrentPlayer } from "@/services/auth";
-import { avatarSrc } from "@/lib/display";
+import PlayerAvatar from "@/components/PlayerAvatar";
 import { formatCommentAge } from "@/lib/time";
 import FollowListModal from "@/components/FollowListModal";
 import type { Echo, Player } from "@/models";
@@ -19,12 +19,7 @@ function ActorAvatars({ actors }: { actors: Player[] }) {
   return (
     <div className="flex shrink-0 -space-x-2">
       {actors.slice(0, 3).map((a) => (
-        <img
-          key={a.id}
-          src={avatarSrc(a)}
-          alt={a.name}
-          className="h-8 w-8 rounded-full object-cover ring-2 ring-card"
-        />
+        <PlayerAvatar key={a.id} player={a} className="h-8 w-8 ring-2 ring-card" />
       ))}
     </div>
   );

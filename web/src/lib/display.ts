@@ -13,10 +13,6 @@ export function deriveColor(did: string): string {
   return `hsl(${hue}, 65%, 45%)`;
 }
 
-export function avatarSrc(player: Player): string {
-  return player.avatarUrl ?? `https://i.pravatar.cc/64?u=${encodeURIComponent(player.id)}`;
-}
-
 
 export function initials(name: string): string {
   return name

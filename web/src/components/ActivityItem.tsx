@@ -3,7 +3,8 @@
 import { Link } from "react-router";
 import { MessageSquare, Telescope, UserPlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { avatarSrc, playerHref } from "@/lib/display";
+import { playerHref } from "@/lib/display";
+import PlayerAvatar from "@/components/PlayerAvatar";
 import { formatCommentAge } from "@/lib/time";
 import type { Activity } from "@/models";
 
@@ -57,11 +58,7 @@ export default function ActivityItem({ activity, viewerId }: ActivityItemProps) 
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
         {icon}
       </div>
-      <img
-        src={avatarSrc(actor)}
-        alt={actor.name}
-        className="h-6 w-6 shrink-0 rounded-full object-cover"
-      />
+      <PlayerAvatar player={actor} className="h-6 w-6 shrink-0" />
       <div className="min-w-0 flex-1">
         <p className="text-sm">
           {viewerIsActor ? text : (

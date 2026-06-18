@@ -5,7 +5,7 @@ import { NavLink } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
-import { avatarSrc, initials } from "@/lib/display";
+import PlayerAvatar from "@/components/PlayerAvatar";
 import { getCurrentPlayer } from "@/services/auth";
 import { useEchoes } from "@/hooks/useEchoes";
 
@@ -65,25 +65,7 @@ export default function TopBar({ onMenuClick = () => {} }: TopBarProps) {
           }
         >
           {player ? (
-            <div className="relative h-8 w-8">
-              <img
-                key={avatarSrc(player)}
-                src={avatarSrc(player)}
-                alt={player.name}
-                className="h-full w-full rounded-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                  e.currentTarget.nextElementSibling?.removeAttribute("hidden");
-                }}
-              />
-              <div
-                hidden
-                className="absolute inset-0 flex items-center justify-center rounded-full text-[10px] font-bold text-white"
-                style={{ backgroundColor: player.color }}
-              >
-                {initials(player.name)}
-              </div>
-            </div>
+            <PlayerAvatar key={player.avatarUrl} player={player} className="h-8 w-8 text-[10px]" />
           ) : (
             <div className="h-8 w-8 rounded-full bg-muted" />
           )}

@@ -10,7 +10,8 @@ import { getGameDetail, getGameJourneys } from "@/services/games";
 import { followPlayer, unfollowPlayer } from "@/services/players";
 import { getCurrentPlayer } from "@/services/auth";
 import { addToHorizon } from "@/services/horizon";
-import { avatarSrc, playerHref } from "@/lib/display";
+import { playerHref } from "@/lib/display";
+import PlayerAvatar from "@/components/PlayerAvatar";
 import { formatJourneyDate } from "@/lib/time";
 import GenreChip from "@/components/GenreChip";
 import SignInPromptModal from "@/components/SignInPromptModal";
@@ -158,11 +159,7 @@ function JourneyPlayerRow({ entry }: { entry: JourneyPlayer }) {
         onClick={(e) => e.stopPropagation()}
         className="flex shrink-0 items-center gap-2"
       >
-        <img
-          src={avatarSrc(entry.player)}
-          alt={entry.player.name}
-          className="h-8 w-8 shrink-0 rounded-full object-cover"
-        />
+        <PlayerAvatar player={entry.player} className="h-8 w-8 shrink-0" />
       </Link>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-1.5">

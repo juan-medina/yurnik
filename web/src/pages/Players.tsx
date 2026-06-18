@@ -6,7 +6,8 @@ import { Clock, Info, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { getGameActivity } from "@/services/games";
-import { avatarSrc, playerHref } from "@/lib/display";
+import { playerHref } from "@/lib/display";
+import PlayerAvatar from "@/components/PlayerAvatar";
 import { cn } from "@/lib/utils";
 import { genreColor } from "@/lib/genres";
 import GenreChip from "@/components/GenreChip";
@@ -39,11 +40,7 @@ function JourneyRow({ entry }: { entry: JourneyEntry }) {
         onClick={(e) => e.stopPropagation()}
         className="flex items-center gap-3 min-w-0"
       >
-        <img
-          src={avatarSrc(entry.player)}
-          alt={entry.player.name}
-          className="h-7 w-7 shrink-0 rounded-full object-cover"
-        />
+        <PlayerAvatar player={entry.player} className="h-7 w-7 shrink-0" />
         <p className="text-sm font-medium leading-tight">{entry.player.name}</p>
       </Link>
       {entry.log && (

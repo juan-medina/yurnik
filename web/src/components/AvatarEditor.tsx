@@ -3,7 +3,7 @@
 
 import { useRef, useState } from "react";
 import { Camera, Loader2, Trash2, Upload, X } from "lucide-react";
-import { avatarSrc, initials } from "@/lib/display";
+import PlayerAvatar from "@/components/PlayerAvatar";
 import {
   uploadAvatar,
   removeAvatar,
@@ -99,24 +99,7 @@ export default function AvatarEditor({ player, size = "lg", onChanged }: AvatarE
         aria-label="Edit avatar"
         className={`relative ${dim} shrink-0 cursor-pointer rounded-full`}
       >
-        <img
-          key={avatarSrc(player)}
-        src={avatarSrc(player)}
-          alt={player.name}
-          className="h-full w-full rounded-full object-cover"
-          onError={(e) => {
-            const target = e.currentTarget;
-            target.style.display = "none";
-            target.nextElementSibling?.removeAttribute("hidden");
-          }}
-        />
-        <div
-          hidden
-          className={`flex h-full w-full items-center justify-center rounded-full ${textSize} font-bold text-white`}
-          style={{ backgroundColor: player.color }}
-        >
-          {initials(player.name)}
-        </div>
+        <PlayerAvatar key={player.avatarUrl} player={player} className={`h-full w-full ${textSize}`} />
 
         {/* Persistent camera badge */}
         <div
@@ -152,24 +135,7 @@ export default function AvatarEditor({ player, size = "lg", onChanged }: AvatarE
             {/* Current avatar preview */}
             <div className="mb-4 flex justify-center">
               <div className="relative h-20 w-20">
-                <img
-                  key={avatarSrc(player)}
-        src={avatarSrc(player)}
-                  alt={player.name}
-                  className="h-full w-full rounded-full object-cover"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    target.style.display = "none";
-                    target.nextElementSibling?.removeAttribute("hidden");
-                  }}
-                />
-                <div
-                  hidden
-                  className="flex h-full w-full items-center justify-center rounded-full text-2xl font-bold text-white"
-                  style={{ backgroundColor: player.color }}
-                >
-                  {initials(player.name)}
-                </div>
+                <PlayerAvatar key={player.avatarUrl} player={player} className="h-full w-full text-2xl" />
               </div>
             </div>
 

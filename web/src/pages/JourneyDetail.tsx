@@ -10,7 +10,8 @@ import { useTranslation } from "react-i18next";
 import { getJourney, getComments, getJourneyPlayers, postComment, deleteJourney, deleteComment, updateJourney } from "@/services/journeys";
 import { followPlayer, unfollowPlayer, getIsFollowing } from "@/services/players";
 import { getCurrentPlayer } from "@/services/auth";
-import { avatarSrc, playerHref } from "@/lib/display";
+import { playerHref } from "@/lib/display";
+import PlayerAvatar from "@/components/PlayerAvatar";
 import SignInPromptModal from "@/components/SignInPromptModal";
 import ReportModal from "@/components/ReportModal";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -21,16 +22,6 @@ import { LimitedTextarea } from "@/components/LimitedTextarea";
 import { formatCommentAge, formatJourneyDate } from "@/lib/time";
 import type { Comment, JourneyPlayer, Player } from "@/models";
 
-function PlayerAvatar({ player, size = "md" }: { player: Player; size?: "sm" | "md" | "lg" }) {
-  const dims = size === "sm" ? "h-6 w-6" : size === "lg" ? "h-10 w-10" : "h-8 w-8";
-  return (
-    <img
-      src={avatarSrc(player)}
-      alt={player.name}
-      className={`${dims} shrink-0 rounded-full object-cover`}
-    />
-  );
-}
 
 function JourneyPlayerRow({ entry, currentPlayerId }: { entry: JourneyPlayer; currentPlayerId?: string }) {
   const { t } = useTranslation();
@@ -45,7 +36,7 @@ function JourneyPlayerRow({ entry, currentPlayerId }: { entry: JourneyPlayer; cu
   return (
     <div className="flex items-center gap-3 py-2">
       <Link to={playerHref(entry.player)} className="flex items-center gap-3 min-w-0 flex-1">
-        <PlayerAvatar player={entry.player} size="md" />
+        <PlayerAvatar player={entry.player} className="h-8 w-8 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-1.5">
             <span className="text-sm font-semibold">{entry.player.name}</span>
@@ -115,7 +106,7 @@ function CommentRow({ comment, journeyId, currentPlayerId, isAdmin, highlighted 
     <div ref={ref} id={`comment-${comment.id}`} className="rounded py-3 transition-colors duration-1000">
       <div className="mb-1 flex items-center gap-2">
         <Link to={playerHref(comment.player)} className="flex items-center gap-2">
-          <PlayerAvatar player={comment.player} size="sm" />
+          <PlayerAvatar player={comment.player} className="h-6 w-6 shrink-0" />
           <span className="text-sm font-semibold">{comment.player.name}</span>
         </Link>
         {confirming ? (
@@ -296,7 +287,7 @@ export default function JourneyDetail() {
             to={playerHref(journey.player)}
             className="flex min-w-0 items-center gap-2"
           >
-            <PlayerAvatar player={journey.player} size="sm" />
+            <PlayerAvatar player={journey.player} className="h-6 w-6 shrink-0" />
             <span className="truncate text-sm font-semibold">{journey.player.name}</span>
           </Link>
           <span className="shrink-0 text-xs text-muted-foreground">@{journey.player.handle}</span>

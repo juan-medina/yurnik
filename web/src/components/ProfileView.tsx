@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Flag, ShieldOff, RotateCcw } from "lucide-react";
 import GenreChip from "@/components/GenreChip";
 import ReportModal from "@/components/ReportModal";
-import { avatarSrc, initials } from "@/lib/display";
+import PlayerAvatar from "@/components/PlayerAvatar";
 import { genreBarColor } from "@/lib/genres";
 import FollowListModal from "@/components/FollowListModal";
 import ActivityFeed from "@/components/ActivityFeed";
@@ -73,26 +73,7 @@ export default function ProfileView({
         <div className="flex items-start gap-5">
           {/* Avatar */}
           {avatarContent ?? (
-            <div className="h-16 w-16 shrink-0">
-              <img
-                key={avatarSrc(player)}
-                src={avatarSrc(player)}
-                alt={player.name}
-                className="h-full w-full rounded-full object-cover"
-                onError={(e) => {
-                  const target = e.currentTarget;
-                  target.style.display = "none";
-                  target.nextElementSibling?.removeAttribute("hidden");
-                }}
-              />
-              <div
-                hidden
-                className="flex h-full w-full items-center justify-center rounded-full text-xl font-bold text-white"
-                style={{ backgroundColor: player.color }}
-              >
-                {initials(player.name)}
-              </div>
-            </div>
+            <PlayerAvatar player={player} className="h-16 w-16 shrink-0 text-xl" />
           )}
 
           {/* Name, handle, bio */}

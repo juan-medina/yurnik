@@ -3,7 +3,8 @@
 import { X } from "lucide-react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { avatarSrc, initials, playerHref } from "@/lib/display";
+import { playerHref } from "@/lib/display";
+import PlayerAvatar from "@/components/PlayerAvatar";
 import type { Player } from "@/models";
 
 type Props = {
@@ -47,25 +48,7 @@ export default function FollowListModal({ title, players, onClose }: Props) {
                   onClick={onClose}
                   className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/50"
                 >
-                  <div className="relative h-9 w-9 shrink-0">
-                    <img
-                      src={avatarSrc(player)}
-                      alt={player.name}
-                      className="h-full w-full rounded-full object-cover"
-                      onError={(e) => {
-                        const t = e.currentTarget;
-                        t.style.display = "none";
-                        t.nextElementSibling?.removeAttribute("hidden");
-                      }}
-                    />
-                    <div
-                      hidden
-                      className="flex h-full w-full items-center justify-center rounded-full text-sm font-bold text-white"
-                      style={{ backgroundColor: player.color }}
-                    >
-                      {initials(player.name)}
-                    </div>
-                  </div>
+                  <PlayerAvatar player={player} className="h-9 w-9 shrink-0 text-sm" />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{player.name}</p>
                     <p className="truncate text-xs text-muted-foreground">@{player.handle}</p>
