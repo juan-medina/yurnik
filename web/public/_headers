@@ -1,2 +1,2 @@
 /*
-  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.igdb.com https://cdn.discordapp.com https://assets.yurnik.social; connect-src 'self'; font-src 'self'; frame-ancestors 'none'
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.igdb.com https://cdn.discordapp.com https://assets.yurnik.social; connect-src 'self' https://api.yurnik.social; font-src 'self'; frame-ancestors 'none'
