@@ -58,10 +58,12 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }: SidebarP
         <NavLink
           to="/lore"
           onClick={onClose}
-          className="flex h-14 items-center gap-2 px-4 font-bold tracking-tight text-primary"
+          className="flex h-14 items-center gap-2 px-4 font-bold tracking-tight"
         >
           <img src="/favicon-32x32.png" alt="" aria-hidden className="h-5 w-5" />
-          yurnik
+          <span className="bg-gradient-to-r from-blue-400 via-primary to-orange-400 bg-clip-text text-transparent">
+            yurnik
+          </span>
         </NavLink>
         <nav className="flex flex-1 flex-col gap-1 p-2">
           {navItems.map(({ to, labelKey, icon: Icon, end }) => (
