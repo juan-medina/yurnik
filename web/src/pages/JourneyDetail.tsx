@@ -20,7 +20,7 @@ import { RateLimitedError } from "@/lib/api";
 import { JourneyForm } from "@/components/JourneyForm";
 import { LimitedTextarea } from "@/components/LimitedTextarea";
 import { formatCommentAge, formatJourneyDate } from "@/lib/time";
-import type { Comment, JourneyPlayer, Player } from "@/models";
+import type { Comment, JourneyPlayer } from "@/models";
 
 
 function JourneyPlayerRow({ entry, currentPlayerId }: { entry: JourneyPlayer; currentPlayerId?: string }) {
