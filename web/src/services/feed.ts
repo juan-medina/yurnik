@@ -84,16 +84,26 @@ function toFeedItem(item: RawFeedItem): FeedItem {
   };
 }
 
-export async function getFeedItems(): Promise<FeedItem[]> {
-  const resp = await apiFetch(`${API_BASE}/api/feed`, { credentials: "include" });
-  if (!resp.ok) return [];
-  const data: { items: RawFeedItem[] } = await resp.json();
-  return (data.items ?? []).map(toFeedItem);
+export async function getFeedItems(cursor?: string): Promise<{ items: FeedItem[]; nextCursor?: string }> {
+  const url = new URL(`${API_BASE}/api/feed`);
+  if (cursor) url.searchParams.set("cursor", cursor);
+  const resp = await apiFetch(url.toString(), { credentials: "include" });
+  if (!resp.ok) return { items: [] };
+  const data: { items: RawFeedItem[]; next_cursor?: string } = await resp.json();
+  return {
+    items: (data.items ?? []).map(toFeedItem),
+    nextCursor: data.next_cursor,
+  };
 }
 
-export async function getPlayerActivity(handle: string): Promise<FeedItem[]> {
-  const resp = await apiFetch(`${API_BASE}/api/players/${handle}/activity`, { credentials: "include" });
-  if (!resp.ok) return [];
-  const data: { items: RawFeedItem[] } = await resp.json();
-  return (data.items ?? []).map(toFeedItem);
+export async function getPlayerActivity(handle: string, cursor?: string): Promise<{ items: FeedItem[]; nextCursor?: string }> {
+  const url = new URL(`${API_BASE}/api/players/${handle}/activity`);
+  if (cursor) url.searchParams.set("cursor", cursor);
+  const resp = await apiFetch(url.toString(), { credentials: "include" });
+  if (!resp.ok) return { items: [] };
+  const data: { items: RawFeedItem[]; next_cursor?: string } = await resp.json();
+  return {
+    items: (data.items ?? []).map(toFeedItem),
+    nextCursor: data.next_cursor,
+  };
 }

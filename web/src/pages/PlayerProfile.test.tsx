@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { MOCK_FRIENDS_ON_JOURNEY, MOCK_HORIZON, MY_PLAYER, MY_PLAYER_ID, PLAYERS, JOURNEYS } from "@/test/fixtures";
@@ -99,5 +99,34 @@ describe("PlayerProfile", () => {
     renderProfile(PLAYERS[1].handle);
     await screen.findByText(PLAYERS[1].name);
     expect(screen.queryByText("Horizon")).not.toBeInTheDocument();
+  });
+
+  it("shows a Load more button when the player activity returns a next_cursor", async () => {
+    const defaultFetch = vi.mocked(fetch);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input.toString();
+        if (url.includes("/api/players/") && url.endsWith("/activity")) {
+          return new Response(
+            JSON.stringify({ items: [], next_cursor: "2026-06-01,2026-06-01T12:00:00Z" }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return defaultFetch(input, init);
+      }),
+    );
+
+    renderProfile(PLAYERS[1].handle);
+    await screen.findByText(PLAYERS[1].name);
+    expect(await screen.findByRole("button", { name: /load more/i })).toBeInTheDocument();
+  });
+
+  it("does not show a Load more button when the player activity returns no next_cursor", async () => {
+    renderProfile(PLAYERS[1].handle);
+    await screen.findByText(PLAYERS[1].name);
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
+    });
   });
 });

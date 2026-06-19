@@ -39,6 +39,8 @@ interface ProfileViewProps {
   onSuspend?: () => void;
   /** Called when admin clicks the reset profile button */
   onResetProfile?: () => void;
+  /** Optional content rendered after the activity feed (e.g. a load-more button) */
+  activityFooter?: ReactNode;
 }
 
 export default function ProfileView({
@@ -54,6 +56,7 @@ export default function ProfileView({
   bioContent,
   onSuspend,
   onResetProfile,
+  activityFooter,
 }: ProfileViewProps) {
   const { t } = useTranslation();
   const [followList, setFollowList] = useState<{ title: string; players: Player[] } | null>(null);
@@ -282,6 +285,7 @@ export default function ProfileView({
           </div>
         }
       />
+      {activityFooter}
 
       <div className="h-8" />
 

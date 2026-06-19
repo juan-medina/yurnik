@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { MOCK_PENDING_JOURNEYS } from "@/test/fixtures";
@@ -232,5 +232,46 @@ describe("Journeys — add journey", () => {
     await user.click(screen.getByRole("button", { name: "Log journey" }));
     expect(await screen.findByText("Celeste")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Search for a game…")).not.toBeInTheDocument();
+  });
+});
+
+describe("Journeys — history load more", () => {
+  it("shows a Load more button when the user journey history returns a next_cursor", async () => {
+    const defaultFetch = vi.mocked(fetch);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input.toString();
+        if (url.match(/\/api\/players\/me\/journeys$/) && (init?.method ?? "GET").toUpperCase() === "GET") {
+          return new Response(
+            JSON.stringify({ journeys: [], next_cursor: "2026-06-01,2026-06-01T12:00:00Z" }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return defaultFetch(input, init);
+      }),
+    );
+
+    renderWithProviders(
+      <MemoryRouter>
+        <Journeys />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("button", { name: /load more/i })).toBeInTheDocument();
+  });
+
+  it("does not show a Load more button when history returns no next_cursor", async () => {
+    renderWithProviders(
+      <MemoryRouter>
+        <Journeys />
+      </MemoryRouter>,
+    );
+
+    // Wait for the component to settle (hint banner visible)
+    await screen.findByRole("button", { name: "Dismiss" });
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
+    });
   });
 });

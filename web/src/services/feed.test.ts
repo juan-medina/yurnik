@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { getFeedItems } from "@/services/feed";
+import { getFeedItems, getPlayerActivity } from "@/services/feed";
 
 function mockFetch(body: unknown, status = 200): void {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status })));
@@ -28,7 +28,7 @@ describe("getFeedItems", () => {
       ],
     });
 
-    const items = await getFeedItems();
+    const { items } = await getFeedItems();
 
     expect(items).toHaveLength(1);
     expect(items[0]).toEqual({
@@ -58,7 +58,7 @@ describe("getFeedItems", () => {
       ],
     });
 
-    const items = await getFeedItems();
+    const { items } = await getFeedItems();
 
     expect(items[0]).toEqual({
       kind: "activity",
@@ -89,7 +89,7 @@ describe("getFeedItems", () => {
       ],
     });
 
-    const items = await getFeedItems();
+    const { items } = await getFeedItems();
 
     expect(items[0]).toEqual({
       kind: "activity",
@@ -103,6 +103,44 @@ describe("getFeedItems", () => {
 
   it("returns an empty array on a non-ok response", async () => {
     mockFetch({}, 500);
-    expect(await getFeedItems()).toEqual([]);
+    expect((await getFeedItems()).items).toEqual([]);
+  });
+
+  it("forwards next_cursor when the API returns one", async () => {
+    mockFetch({ items: [], next_cursor: "2026-06-01,2026-06-01T12:00:00Z" });
+    const { nextCursor } = await getFeedItems();
+    expect(nextCursor).toBe("2026-06-01,2026-06-01T12:00:00Z");
+  });
+
+  it("passes cursor as a query param", async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ items: [] }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await getFeedItems("2026-06-01,2026-06-01T12:00:00Z");
+
+    const calledUrl = fetchSpy.mock.calls[0][0].toString();
+    expect(calledUrl).toContain("cursor=");
+  });
+});
+
+describe("getPlayerActivity", () => {
+  it("forwards next_cursor when the API returns one", async () => {
+    mockFetch({ items: [], next_cursor: "2026-06-01,2026-06-01T12:00:00Z" });
+    const { nextCursor } = await getPlayerActivity("maria");
+    expect(nextCursor).toBe("2026-06-01,2026-06-01T12:00:00Z");
+  });
+
+  it("passes cursor as a query param", async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ items: [] }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await getPlayerActivity("maria", "2026-06-01,2026-06-01T12:00:00Z");
+
+    const calledUrl = fetchSpy.mock.calls[0][0].toString();
+    expect(calledUrl).toContain("cursor=");
   });
 });

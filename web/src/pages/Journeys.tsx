@@ -13,7 +13,7 @@ import JourneyCard from "@/components/JourneyCard";
 import { GameCover } from "@/components/GameSelector";
 import { JourneyForm } from "@/components/JourneyForm";
 import type { JourneyFormValue } from "@/components/JourneyForm";
-import type { PendingJourney } from "@/models/journey";
+import type { Journey, PendingJourney } from "@/models/journey";
 import type { Game } from "@/models/game";
 import { useCooldown } from "@/hooks/useCooldown";
 import { RateLimitedError } from "@/lib/api";
@@ -313,7 +313,33 @@ export default function Journeys() {
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
   });
-  const { data: history = [] } = useQuery({ queryKey: ["journeys", "user"], queryFn: getUserJourneys });
+  const [allHistory, setAllHistory] = useState<Journey[]>([]);
+  const [nextHistoryCursor, setNextHistoryCursor] = useState<string | undefined>();
+  const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
+
+  useQuery({
+    queryKey: ["journeys", "user"],
+    queryFn: async () => {
+      const page = await getUserJourneys();
+      setAllHistory(page.journeys);
+      setNextHistoryCursor(page.nextCursor);
+      return page;
+    },
+  });
+
+  async function loadMoreHistory() {
+    if (!nextHistoryCursor || loadingMoreHistory) return;
+    setLoadingMoreHistory(true);
+    try {
+      const page = await getUserJourneys(nextHistoryCursor);
+      setAllHistory((prev) => [...prev, ...page.journeys]);
+      setNextHistoryCursor(page.nextCursor);
+    } finally {
+      setLoadingMoreHistory(false);
+    }
+  }
+
+  const history = allHistory;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -362,6 +388,18 @@ export default function Journeys() {
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">{t("journeys_empty")}</p>
+        )}
+        {nextHistoryCursor && (
+          <div className="border-t border-border mt-3 px-4 py-3">
+            <button
+              type="button"
+              onClick={loadMoreHistory}
+              disabled={loadingMoreHistory}
+              className="text-sm text-primary hover:underline disabled:opacity-50"
+            >
+              {loadingMoreHistory ? t("loading") : t("load_more")}
+            </button>
+          </div>
         )}
       </section>
 

@@ -13,6 +13,7 @@ import {
   unfollowPlayer,
 } from "@/services/players";
 import { getPlayerActivity } from "@/services/feed";
+import type { FeedItem } from "@/models/feed";
 import { getCurrentPlayer, updateProfile } from "@/services/auth";
 import ProfileView from "@/components/ProfileView";
 import AvatarEditor from "@/components/AvatarEditor";
@@ -38,11 +39,34 @@ export default function PlayerProfile() {
     enabled: !!handle,
   });
 
-  const { data: activity = [] } = useQuery({
+  const [allActivity, setAllActivity] = useState<FeedItem[]>([]);
+  const [nextActivityCursor, setNextActivityCursor] = useState<string | undefined>();
+  const [loadingMoreActivity, setLoadingMoreActivity] = useState(false);
+
+  useQuery({
     queryKey: ["activity", "player", handle],
-    queryFn: () => getPlayerActivity(handle!),
+    queryFn: async () => {
+      const page = await getPlayerActivity(handle!);
+      setAllActivity(page.items);
+      setNextActivityCursor(page.nextCursor);
+      return page;
+    },
     enabled: !!handle,
   });
+
+  async function loadMoreActivity() {
+    if (!nextActivityCursor || loadingMoreActivity) return;
+    setLoadingMoreActivity(true);
+    try {
+      const page = await getPlayerActivity(handle!, nextActivityCursor);
+      setAllActivity((prev) => [...prev, ...page.items]);
+      setNextActivityCursor(page.nextCursor);
+    } finally {
+      setLoadingMoreActivity(false);
+    }
+  }
+
+  const activity = allActivity;
 
   const { data: followers = [] } = useQuery({
     queryKey: ["follow-list", profile?.player.id, "followers"],
@@ -179,6 +203,20 @@ export default function PlayerProfile() {
         bioContent={
           profile.player.bio ? (
             <p className="break-words whitespace-pre-wrap text-sm text-muted-foreground">{profile.player.bio}</p>
+          ) : undefined
+        }
+        activityFooter={
+          nextActivityCursor ? (
+            <div className="border-t border-border px-4 py-3">
+              <button
+                type="button"
+                onClick={loadMoreActivity}
+                disabled={loadingMoreActivity}
+                className="text-sm text-primary hover:underline disabled:opacity-50"
+              >
+                {loadingMoreActivity ? t("loading") : t("load_more")}
+              </button>
+            </div>
           ) : undefined
         }
       />

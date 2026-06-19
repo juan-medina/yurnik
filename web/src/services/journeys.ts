@@ -51,24 +51,28 @@ type RawJourney = {
   log?: string;
 };
 
-export async function getUserJourneys(): Promise<Journey[]> {
+export async function getUserJourneys(cursor?: string): Promise<{ journeys: Journey[]; nextCursor?: string }> {
   const player = await getCurrentPlayer();
-  const url = `${API_BASE}/api/players/me/journeys`;
-  const resp = await apiFetch(url, { credentials: "include" });
+  const url = new URL(`${API_BASE}/api/players/me/journeys`);
+  if (cursor) url.searchParams.set("cursor", cursor);
+  const resp = await apiFetch(url.toString(), { credentials: "include" });
   if (!resp.ok) throw new Error(`get user journeys: ${resp.status}`);
-  const data: { journeys: RawJourney[] } = await resp.json();
-  return (data.journeys ?? []).map((j): Journey => ({
-    id: j.id,
-    igdbId: j.igdb_id,
-    player,
-    game: j.game,
-    coverUrl: j.cover_url,
-    genres: j.genres,
-    releaseYear: j.release_year,
-    duration: formatDuration(j.duration_seconds ?? 0),
-    playedAt: parseLocalDate(j.played_at),
-    log: j.log,
-  }));
+  const data: { journeys: RawJourney[]; next_cursor?: string } = await resp.json();
+  return {
+    journeys: (data.journeys ?? []).map((j): Journey => ({
+      id: j.id,
+      igdbId: j.igdb_id,
+      player,
+      game: j.game,
+      coverUrl: j.cover_url,
+      genres: j.genres,
+      releaseYear: j.release_year,
+      duration: formatDuration(j.duration_seconds ?? 0),
+      playedAt: parseLocalDate(j.played_at),
+      log: j.log,
+    })),
+    nextCursor: data.next_cursor,
+  };
 }
 
 export async function getPendingJourneys(): Promise<PendingJourney[]> {
