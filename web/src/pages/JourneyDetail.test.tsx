@@ -228,4 +228,34 @@ describe("JourneyDetail", () => {
       expect(screen.queryAllByRole("button", { name: "Delete comment" })).toHaveLength(before.length - 1),
     );
   });
+
+  it("shows a Load more button when comments returns a next_cursor", async () => {
+    const defaultFetch = vi.mocked(fetch);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input.toString();
+        const method = init?.method ?? "GET";
+        if (/\/api\/journeys\/\w+\/comments$/.test(url) && method === "GET") {
+          return new Response(
+            JSON.stringify({ comments: [], next_cursor: "2026-06-01T12:00:00Z|abc-123" }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return defaultFetch(input, init);
+      }),
+    );
+
+    renderJourney("s1");
+    await screen.findByRole("heading", { name: s1.game });
+    expect(await screen.findByRole("button", { name: /load more/i })).toBeInTheDocument();
+  });
+
+  it("does not show a Load more button when comments returns no next_cursor", async () => {
+    renderJourney("s1");
+    await screen.findByRole("heading", { name: s1.game });
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
+    });
+  });
 });

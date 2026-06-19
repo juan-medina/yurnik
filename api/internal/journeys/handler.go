@@ -232,20 +232,34 @@ func (h *Handler) players(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) listComments(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	comments, err := db.ListComments(r.Context(), h.pool, id)
+	limit := 50
+	if s := r.URL.Query().Get("limit"); s != "" {
+		if n, err := strconv.Atoi(s); err == nil && n > 0 && n <= 100 {
+			limit = n
+		}
+	}
+	cursor := r.URL.Query().Get("cursor")
+	comments, err := db.ListComments(r.Context(), h.pool, id, limit+1, cursor)
 	if err != nil {
 		log.Printf("journeys/listComments: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return
 	}
 
+	result := map[string]any{}
+	if len(comments) == limit+1 {
+		last := comments[limit-1]
+		result["next_cursor"] = db.EncodeCommentCursor(last.CreatedAt, last.ID)
+		comments = comments[:limit]
+	}
 	resp := make([]commentResp, 0, len(comments))
 	for _, c := range comments {
 		resp = append(resp, toCommentResp(c))
 	}
+	result["comments"] = resp
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"comments": resp})
+	_ = json.NewEncoder(w).Encode(result)
 }
 
 func (h *Handler) postComment(w http.ResponseWriter, r *http.Request) {

@@ -79,10 +79,9 @@ function JourneyPlayerRow({ entry, currentPlayerId }: { entry: JourneyPlayer; cu
   );
 }
 
-function CommentRow({ comment, journeyId, currentPlayerId, isAdmin, highlighted }: { comment: Comment; journeyId: string; currentPlayerId?: string; isAdmin?: boolean; highlighted?: boolean }) {
+function CommentRow({ comment, journeyId, currentPlayerId, isAdmin, highlighted, onDeleted }: { comment: Comment; journeyId: string; currentPlayerId?: string; isAdmin?: boolean; highlighted?: boolean; onDeleted?: (id: string) => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
   const [reporting, setReporting] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -97,7 +96,7 @@ function CommentRow({ comment, journeyId, currentPlayerId, isAdmin, highlighted 
   }, [highlighted]);
   const deleteCommentMutation = useMutation({
     mutationFn: () => deleteComment(journeyId, comment.id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["journey", journeyId, "comments"] }),
+    onSuccess: () => onDeleted?.(comment.id),
   });
 
   const isOwn = comment.player.id === currentPlayerId;
@@ -188,6 +187,9 @@ export default function JourneyDetail() {
   const [confirmDeleteJourney, setConfirmDeleteJourney] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [reportingLog, setReportingLog] = useState(false);
+  const [allComments, setAllComments] = useState<Comment[]>([]);
+  const [nextCommentsCursor, setNextCommentsCursor] = useState<string | undefined>();
+  const [loadingMoreComments, setLoadingMoreComments] = useState(false);
 
   const { data: currentPlayer } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
 
@@ -199,13 +201,30 @@ export default function JourneyDetail() {
     refetchIntervalInBackground: false,
   });
 
-  const { data: comments = [] } = useQuery({
+  useQuery({
     queryKey: ["journey", id, "comments"],
-    queryFn: () => getComments(id!),
+    queryFn: async () => {
+      const page = await getComments(id!);
+      setAllComments(page.comments);
+      setNextCommentsCursor(page.nextCursor);
+      return page;
+    },
     enabled: !!id,
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
   });
+
+  async function loadMoreComments() {
+    if (!nextCommentsCursor || loadingMoreComments) return;
+    setLoadingMoreComments(true);
+    try {
+      const page = await getComments(id!, nextCommentsCursor);
+      setAllComments((prev) => [...prev, ...page.comments]);
+      setNextCommentsCursor(page.nextCursor);
+    } finally {
+      setLoadingMoreComments(false);
+    }
+  }
 
   const { data: journeyPlayers } = useQuery({
     queryKey: ["journey", id, "players"],
@@ -233,7 +252,7 @@ export default function JourneyDetail() {
   const postCommentMutation = useMutation({
     mutationFn: (text: string) => postComment(id!, text),
     onSuccess: (newComment) => {
-      queryClient.setQueryData<Comment[]>(["journey", id, "comments"], (old = []) => [...old, newComment]);
+      setAllComments((prev) => [...prev, newComment]);
       setCommentText("");
     },
     onError: (err) => {
@@ -476,10 +495,21 @@ export default function JourneyDetail() {
           <h2 className="text-sm font-semibold">{t("journey_comments")}</h2>
         </div>
         <div className="divide-y divide-border px-4">
-          {comments.map((c) => (
-            <CommentRow key={c.id} comment={c} journeyId={id!} currentPlayerId={currentPlayer?.id} isAdmin={isAdmin} highlighted={c.id === highlightedCommentId} />
+          {allComments.map((c) => (
+            <CommentRow key={c.id} comment={c} journeyId={id!} currentPlayerId={currentPlayer?.id} isAdmin={isAdmin} highlighted={c.id === highlightedCommentId} onDeleted={(cid) => setAllComments((prev) => prev.filter((x) => x.id !== cid))} />
           ))}
         </div>
+        {nextCommentsCursor && (
+          <div className="px-4 pb-2">
+            <button
+              onClick={loadMoreComments}
+              disabled={loadingMoreComments}
+              className="w-full rounded-md py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
+            >
+              {loadingMoreComments ? t("loading") : t("load_more")}
+            </button>
+          </div>
+        )}
         <div className="border-t border-border p-4">
           {(commentCooldown.remaining > 0 || postCommentMutation.isError) && (
             <p className="mb-2 text-xs text-destructive">

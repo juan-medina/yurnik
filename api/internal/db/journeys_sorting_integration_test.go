@@ -276,3 +276,56 @@ func TestGetFollowingFeed_SameDayTiebreaksByCreatedAt_AndCursorPagination(t *tes
 		t.Fatalf("page2 = %v, want [%s]", page2, id3)
 	}
 }
+
+func TestListComments_CursorPagination(t *testing.T) {
+	pool := connectTestDB(t)
+	ctx := context.Background()
+	userA := createTestUserNamed(t, pool, "-commenter-a")
+	userB := createTestUserNamed(t, pool, "-commenter-b")
+	insertTestGame(t, pool, 90210, "Comment Paging Game")
+
+	// Insert a journey to comment on.
+	journeyID, err := db.InsertJourney(ctx, pool, db.Journey{
+		UserID:          userA,
+		IGDBID:          90210,
+		StartedAt:       time.Date(2026, 6, 10, 10, 0, 0, 0, time.UTC),
+		EndedAt:         time.Date(2026, 6, 10, 11, 0, 0, 0, time.UTC),
+		DurationSeconds: 3600,
+		PlayedAt:        time.Date(2026, 6, 10, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("insert journey: %v", err)
+	}
+
+	c1, err := db.InsertComment(ctx, pool, journeyID, userA, "first comment")
+	if err != nil {
+		t.Fatalf("insert c1: %v", err)
+	}
+	c2, err := db.InsertComment(ctx, pool, journeyID, userB, "second comment")
+	if err != nil {
+		t.Fatalf("insert c2: %v", err)
+	}
+	c3, err := db.InsertComment(ctx, pool, journeyID, userA, "third comment")
+	if err != nil {
+		t.Fatalf("insert c3: %v", err)
+	}
+
+	// Page 1: limit=2, no cursor — should get oldest two.
+	page1, err := db.ListComments(ctx, pool, journeyID, 2, "")
+	if err != nil {
+		t.Fatalf("page1: %v", err)
+	}
+	if len(page1) != 2 || page1[0].ID != c1.ID || page1[1].ID != c2.ID {
+		t.Fatalf("page1 = %v, want [c1, c2]", page1)
+	}
+
+	// Page 2: cursor from last item on page 1 — should get third comment.
+	cursor := db.EncodeCommentCursor(page1[1].CreatedAt, page1[1].ID)
+	page2, err := db.ListComments(ctx, pool, journeyID, 2, cursor)
+	if err != nil {
+		t.Fatalf("page2: %v", err)
+	}
+	if len(page2) != 1 || page2[0].ID != c3.ID {
+		t.Fatalf("page2 = %v, want [c3]", page2)
+	}
+}

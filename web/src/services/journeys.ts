@@ -228,11 +228,13 @@ function toComment(c: RawComment): Comment {
   };
 }
 
-export async function getComments(journeyId: string): Promise<Comment[]> {
-  const resp = await apiFetch(`${API_BASE}/api/journeys/${journeyId}/comments`, { credentials: "include" });
+export async function getComments(journeyId: string, cursor?: string): Promise<{ comments: Comment[]; nextCursor?: string }> {
+  const url = new URL(`${API_BASE}/api/journeys/${journeyId}/comments`);
+  if (cursor) url.searchParams.set("cursor", cursor);
+  const resp = await apiFetch(url.toString(), { credentials: "include" });
   if (!resp.ok) throw new Error(`get comments: ${resp.status}`);
-  const data: { comments: RawComment[] } = await resp.json();
-  return (data.comments ?? []).map(toComment);
+  const data: { comments: RawComment[]; next_cursor?: string } = await resp.json();
+  return { comments: (data.comments ?? []).map(toComment), nextCursor: data.next_cursor };
 }
 
 export async function getJourneyPlayers(journeyId: string): Promise<{

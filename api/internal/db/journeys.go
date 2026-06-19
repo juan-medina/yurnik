@@ -585,16 +585,50 @@ type JourneyComment struct {
 	PlayerColor     string
 }
 
-// ListComments returns all comments for the given journey ordered by created_at ascending.
-func ListComments(ctx context.Context, pool *pgxpool.Pool, journeyID string) ([]JourneyComment, error) {
-	rows, err := pool.Query(ctx, `
-		SELECT c.id, c.journey_id, c.user_id, c.body, c.created_at,
-		       u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.color
-		FROM comments c
-		JOIN users u ON u.id = c.user_id
-		WHERE c.journey_id = $1
-		ORDER BY c.created_at ASC
-	`, journeyID)
+// EncodeCommentCursor encodes a (created_at, id) pair as a stable cursor for
+// comment lists ordered by (created_at ASC, id ASC).
+func EncodeCommentCursor(createdAt time.Time, id string) string {
+	return createdAt.UTC().Format(time.RFC3339Nano) + "|" + id
+}
+
+// splitCommentCursor parses a cursor produced by EncodeCommentCursor.
+func splitCommentCursor(cursor string) (createdAt time.Time, id string, err error) {
+	i := strings.LastIndex(cursor, "|")
+	if i < 0 {
+		return time.Time{}, "", fmt.Errorf("invalid comment cursor")
+	}
+	createdAt, err = time.Parse(time.RFC3339Nano, cursor[:i])
+	if err != nil {
+		return time.Time{}, "", fmt.Errorf("parse comment cursor time: %w", err)
+	}
+	return createdAt, cursor[i+1:], nil
+}
+
+// ListComments returns comments for the given journey ordered by (created_at, id) ASC.
+// limit controls the page size; cursor resumes from the position encoded by EncodeCommentCursor.
+func ListComments(ctx context.Context, pool *pgxpool.Pool, journeyID string, limit int, cursor string) ([]JourneyComment, error) {
+	const cols = `c.id, c.journey_id, c.user_id, c.body, c.created_at,
+		       u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.color`
+	const from = `FROM comments c JOIN users u ON u.id = c.user_id`
+
+	var rows pgx.Rows
+	var err error
+	if at, id, cerr := splitCommentCursor(cursor); cerr == nil {
+		rows, err = pool.Query(ctx, `
+			SELECT `+cols+` `+from+`
+			WHERE c.journey_id = $1
+			  AND (c.created_at, c.id) > ($2, $3)
+			ORDER BY c.created_at ASC, c.id ASC
+			LIMIT $4
+		`, journeyID, at, id, limit)
+	} else {
+		rows, err = pool.Query(ctx, `
+			SELECT `+cols+` `+from+`
+			WHERE c.journey_id = $1
+			ORDER BY c.created_at ASC, c.id ASC
+			LIMIT $2
+		`, journeyID, limit)
+	}
 	if err != nil {
 		return nil, err
 	}

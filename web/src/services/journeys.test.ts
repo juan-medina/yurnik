@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { getUserJourneys } from "@/services/journeys";
+import { getUserJourneys, getComments } from "@/services/journeys";
 
 // getCurrentPlayer is called by getUserJourneys — stub /api/me
 function mockFetchWithMe(journeyBody: unknown): void {
@@ -59,5 +59,39 @@ describe("getUserJourneys", () => {
     );
     expect(journeyCall).toBeDefined();
     expect(journeyCall![0].toString()).toContain("cursor=");
+  });
+});
+
+describe("getComments", () => {
+  function mockFetch(body: unknown, status = 200): void {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status })));
+  }
+
+  it("forwards next_cursor when the API returns one", async () => {
+    mockFetch({ comments: [], next_cursor: "2026-06-01T12:00:00Z|abc-123" });
+
+    const { nextCursor } = await getComments("journey-1");
+
+    expect(nextCursor).toBe("2026-06-01T12:00:00Z|abc-123");
+  });
+
+  it("returns undefined nextCursor when the API omits it", async () => {
+    mockFetch({ comments: [] });
+
+    const { nextCursor } = await getComments("journey-1");
+
+    expect(nextCursor).toBeUndefined();
+  });
+
+  it("passes cursor as a query param", async () => {
+    const fetchSpy = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ comments: [] }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await getComments("journey-1", "2026-06-01T12:00:00Z|abc-123");
+
+    const calledUrl = fetchSpy.mock.calls[0][0].toString();
+    expect(calledUrl).toContain("cursor=");
   });
 });
