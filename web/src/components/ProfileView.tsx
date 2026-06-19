@@ -41,6 +41,12 @@ interface ProfileViewProps {
   onResetProfile?: () => void;
   /** Optional content rendered after the activity feed (e.g. a load-more button) */
   activityFooter?: ReactNode;
+  hasMoreFollowers?: boolean;
+  loadingMoreFollowers?: boolean;
+  onLoadMoreFollowers?: () => void;
+  hasMoreFollowing?: boolean;
+  loadingMoreFollowing?: boolean;
+  onLoadMoreFollowing?: () => void;
 }
 
 export default function ProfileView({
@@ -57,9 +63,15 @@ export default function ProfileView({
   onSuspend,
   onResetProfile,
   activityFooter,
+  hasMoreFollowers,
+  loadingMoreFollowers,
+  onLoadMoreFollowers,
+  hasMoreFollowing,
+  loadingMoreFollowing,
+  onLoadMoreFollowing,
 }: ProfileViewProps) {
   const { t } = useTranslation();
-  const [followList, setFollowList] = useState<{ title: string; players: Player[] } | null>(null);
+  const [followList, setFollowList] = useState<{ title: string; kind: "followers" | "following" } | null>(null);
   const [reporting, setReporting] = useState<ReportTargetType | null>(null);
 
   const { player, journeyCount, totalSeconds, recentGames, genreHours, horizon } = profile;
@@ -142,12 +154,12 @@ export default function ProfileView({
           {
             labelKey: "profile_stat_followers",
             value: player.followers ?? followers.length,
-            onClick: () => setFollowList({ title: t("profile_followers_modal"), players: followers }),
+            onClick: () => setFollowList({ title: t("profile_followers_modal"), kind: "followers" }),
           },
           {
             labelKey: "profile_stat_following",
             value: player.following ?? following.length,
-            onClick: () => setFollowList({ title: t("profile_following_modal"), players: following }),
+            onClick: () => setFollowList({ title: t("profile_following_modal"), kind: "following" }),
           },
         ].map(({ labelKey, value, onClick }) =>
           onClick ? (
@@ -292,8 +304,11 @@ export default function ProfileView({
       {followList && (
         <FollowListModal
           title={followList.title}
-          players={followList.players}
+          players={followList.kind === "followers" ? followers : following}
           onClose={() => setFollowList(null)}
+          hasMore={followList.kind === "followers" ? (hasMoreFollowers ?? false) : (hasMoreFollowing ?? false)}
+          loadingMore={followList.kind === "followers" ? (loadingMoreFollowers ?? false) : (loadingMoreFollowing ?? false)}
+          onLoadMore={followList.kind === "followers" ? onLoadMoreFollowers : onLoadMoreFollowing}
         />
       )}
 

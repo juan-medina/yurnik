@@ -129,4 +129,37 @@ describe("PlayerProfile", () => {
       expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
     });
   });
+
+  it("shows a Load more button inside the followers modal when the API returns a next_cursor", async () => {
+    const user = userEvent.setup();
+    const defaultFetch = vi.mocked(fetch);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input.toString();
+        if (url.includes("/api/players/") && url.includes("/followers")) {
+          return new Response(
+            JSON.stringify({ players: [], next_cursor: "dGVzdA==" }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return defaultFetch(input, init);
+      }),
+    );
+
+    renderProfile(PLAYERS[1].handle);
+    await user.click(await screen.findByRole("button", { name: /Followers/ }));
+    expect(await screen.findByRole("button", { name: /load more/i })).toBeInTheDocument();
+  });
+
+  it("does not show a Load more button inside the followers modal when no next_cursor", async () => {
+    const user = userEvent.setup();
+    renderProfile(PLAYERS[1].handle);
+    await user.click(await screen.findByRole("button", { name: /Followers/ }));
+    // modal opens
+    expect(await screen.findByRole("button", { name: "Close" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
+    });
+  });
 });

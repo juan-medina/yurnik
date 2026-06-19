@@ -5,6 +5,7 @@ package db
 import (
 	"context"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -252,30 +253,84 @@ func UnfollowUser(ctx context.Context, pool *pgxpool.Pool, followerID, followeeI
 	return err
 }
 
-// GetFollowers returns users who follow the given user ID, ordered by name.
-func GetFollowers(ctx context.Context, pool *pgxpool.Pool, userID string) ([]User, error) {
-	rows, err := pool.Query(ctx, `
-		SELECT u.id, u.provider, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.bio, u.color, false, false
-		FROM users u
-		JOIN follows f ON f.follower_id = u.id
-		WHERE f.followee_id = $1
-		ORDER BY u.name
-	`, userID)
+// EncodeFollowCursor encodes a (name, id) pair as a stable cursor for
+// follow lists ordered by (name, id). The null byte separates the two fields
+// and cannot appear in valid display names.
+func EncodeFollowCursor(name, id string) string {
+	return base64.URLEncoding.EncodeToString([]byte(name + "\x00" + id))
+}
+
+// splitFollowCursor decodes a cursor produced by EncodeFollowCursor.
+func splitFollowCursor(cursor string) (name, id string, err error) {
+	b, err := base64.URLEncoding.DecodeString(cursor)
+	if err != nil {
+		return "", "", fmt.Errorf("decode follow cursor: %w", err)
+	}
+	i := strings.IndexByte(string(b), 0)
+	if i < 0 {
+		return "", "", fmt.Errorf("invalid follow cursor: missing separator")
+	}
+	return string(b[:i]), string(b[i+1:]), nil
+}
+
+// GetFollowers returns users who follow the given user ID, ordered by
+// (effective_name, id). limit controls the page size; cursor resumes from
+// the position encoded by EncodeFollowCursor.
+func GetFollowers(ctx context.Context, pool *pgxpool.Pool, userID string, limit int, cursor string) ([]User, error) {
+	var rows pgx.Rows
+	var err error
+	if n, id, cerr := splitFollowCursor(cursor); cerr == nil {
+		rows, err = pool.Query(ctx, `
+			SELECT u.id, u.provider, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.bio, u.color, false, false
+			FROM users u
+			JOIN follows f ON f.follower_id = u.id
+			WHERE f.followee_id = $1
+			  AND (COALESCE(u.display_name, u.name), u.id) > ($2, $3)
+			ORDER BY COALESCE(u.display_name, u.name), u.id
+			LIMIT $4
+		`, userID, n, id, limit)
+	} else {
+		rows, err = pool.Query(ctx, `
+			SELECT u.id, u.provider, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.bio, u.color, false, false
+			FROM users u
+			JOIN follows f ON f.follower_id = u.id
+			WHERE f.followee_id = $1
+			ORDER BY COALESCE(u.display_name, u.name), u.id
+			LIMIT $2
+		`, userID, limit)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("get followers: %w", err)
 	}
 	return scanUsers(rows)
 }
 
-// GetFollowing returns users that the given user ID follows, ordered by name.
-func GetFollowing(ctx context.Context, pool *pgxpool.Pool, userID string) ([]User, error) {
-	rows, err := pool.Query(ctx, `
-		SELECT u.id, u.provider, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.bio, u.color, false, false
-		FROM users u
-		JOIN follows f ON f.followee_id = u.id
-		WHERE f.follower_id = $1
-		ORDER BY u.name
-	`, userID)
+// GetFollowing returns users that the given user ID follows, ordered by
+// (effective_name, id). limit controls the page size; cursor resumes from
+// the position encoded by EncodeFollowCursor.
+func GetFollowing(ctx context.Context, pool *pgxpool.Pool, userID string, limit int, cursor string) ([]User, error) {
+	var rows pgx.Rows
+	var err error
+	if n, id, cerr := splitFollowCursor(cursor); cerr == nil {
+		rows, err = pool.Query(ctx, `
+			SELECT u.id, u.provider, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.bio, u.color, false, false
+			FROM users u
+			JOIN follows f ON f.followee_id = u.id
+			WHERE f.follower_id = $1
+			  AND (COALESCE(u.display_name, u.name), u.id) > ($2, $3)
+			ORDER BY COALESCE(u.display_name, u.name), u.id
+			LIMIT $4
+		`, userID, n, id, limit)
+	} else {
+		rows, err = pool.Query(ctx, `
+			SELECT u.id, u.provider, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.bio, u.color, false, false
+			FROM users u
+			JOIN follows f ON f.followee_id = u.id
+			WHERE f.follower_id = $1
+			ORDER BY COALESCE(u.display_name, u.name), u.id
+			LIMIT $2
+		`, userID, limit)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("get following: %w", err)
 	}

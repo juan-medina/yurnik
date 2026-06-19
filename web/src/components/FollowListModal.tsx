@@ -11,9 +11,12 @@ type Props = {
   title: string;
   players: Player[];
   onClose: () => void;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 };
 
-export default function FollowListModal({ title, players, onClose }: Props) {
+export default function FollowListModal({ title, players, onClose, hasMore, loadingMore, onLoadMore }: Props) {
   const { t } = useTranslation();
 
   return (
@@ -56,6 +59,18 @@ export default function FollowListModal({ title, players, onClose }: Props) {
                 </Link>
               </li>
             ))
+          )}
+          {hasMore && (
+            <li className="border-t border-border px-4 py-3">
+              <button
+                type="button"
+                onClick={onLoadMore}
+                disabled={loadingMore}
+                className="text-sm text-primary hover:underline disabled:opacity-50"
+              >
+                {loadingMore ? t("loading") : t("load_more")}
+              </button>
+            </li>
           )}
         </ul>
       </div>

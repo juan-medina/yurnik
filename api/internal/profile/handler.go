@@ -222,15 +222,27 @@ func (h *Handler) getFollowers(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	id := user.ID
-	users, err := db.GetFollowers(r.Context(), h.pool, id)
+	limit := 50
+	if s := r.URL.Query().Get("limit"); s != "" {
+		if n, err := strconv.Atoi(s); err == nil && n > 0 && n <= 100 {
+			limit = n
+		}
+	}
+	cursor := r.URL.Query().Get("cursor")
+	users, err := db.GetFollowers(r.Context(), h.pool, user.ID, limit+1, cursor)
 	if err != nil {
-		log.Printf("profile/followers: %s: %v", id, err)
+		log.Printf("profile/followers: %s: %v", user.ID, err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	result := map[string]any{"players": usersToPlayerItems(users)}
+	if len(users) == limit+1 {
+		last := users[limit-1]
+		result["players"] = usersToPlayerItems(users[:limit])
+		result["next_cursor"] = db.EncodeFollowCursor(last.Name, last.ID)
+	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"players": usersToPlayerItems(users)})
+	_ = json.NewEncoder(w).Encode(result)
 }
 
 func (h *Handler) getFollowing(w http.ResponseWriter, r *http.Request) {
@@ -238,15 +250,27 @@ func (h *Handler) getFollowing(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	id := user.ID
-	users, err := db.GetFollowing(r.Context(), h.pool, id)
+	limit := 50
+	if s := r.URL.Query().Get("limit"); s != "" {
+		if n, err := strconv.Atoi(s); err == nil && n > 0 && n <= 100 {
+			limit = n
+		}
+	}
+	cursor := r.URL.Query().Get("cursor")
+	users, err := db.GetFollowing(r.Context(), h.pool, user.ID, limit+1, cursor)
 	if err != nil {
-		log.Printf("profile/following: %s: %v", id, err)
+		log.Printf("profile/following: %s: %v", user.ID, err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	result := map[string]any{"players": usersToPlayerItems(users)}
+	if len(users) == limit+1 {
+		last := users[limit-1]
+		result["players"] = usersToPlayerItems(users[:limit])
+		result["next_cursor"] = db.EncodeFollowCursor(last.Name, last.ID)
+	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"players": usersToPlayerItems(users)})
+	_ = json.NewEncoder(w).Encode(result)
 }
 
 type playerItem struct {

@@ -111,18 +111,28 @@ export async function getIsFollowing(playerId: string): Promise<boolean> {
   return player?.isFollowing ?? false;
 }
 
-export async function getFollowers(playerId: string): Promise<Player[]> {
-  const resp = await apiFetch(`${API_BASE}/api/players/${playerId}/followers`);
+export async function getFollowers(playerId: string, cursor?: string): Promise<{ players: Player[]; nextCursor?: string }> {
+  const url = new URL(`${API_BASE}/api/players/${playerId}/followers`);
+  if (cursor) url.searchParams.set("cursor", cursor);
+  const resp = await apiFetch(url.toString());
   if (!resp.ok) throw new Error(`get followers: ${resp.status}`);
-  const data: { players: RawPlayer[] } = await resp.json();
-  return (data.players ?? []).map(rawToPlayer);
+  const data: { players: RawPlayer[]; next_cursor?: string } = await resp.json();
+  return {
+    players: (data.players ?? []).map(rawToPlayer),
+    nextCursor: data.next_cursor,
+  };
 }
 
-export async function getFollowing(playerId: string): Promise<Player[]> {
-  const resp = await apiFetch(`${API_BASE}/api/players/${playerId}/following`);
+export async function getFollowing(playerId: string, cursor?: string): Promise<{ players: Player[]; nextCursor?: string }> {
+  const url = new URL(`${API_BASE}/api/players/${playerId}/following`);
+  if (cursor) url.searchParams.set("cursor", cursor);
+  const resp = await apiFetch(url.toString());
   if (!resp.ok) throw new Error(`get following: ${resp.status}`);
-  const data: { players: RawPlayer[] } = await resp.json();
-  return (data.players ?? []).map(rawToPlayer);
+  const data: { players: RawPlayer[]; next_cursor?: string } = await resp.json();
+  return {
+    players: (data.players ?? []).map(rawToPlayer),
+    nextCursor: data.next_cursor,
+  };
 }
 
 export async function followPlayer(playerId: string): Promise<void> {

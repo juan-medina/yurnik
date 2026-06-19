@@ -14,6 +14,7 @@ import {
 } from "@/services/players";
 import { getPlayerActivity } from "@/services/feed";
 import type { FeedItem } from "@/models/feed";
+import type { Player } from "@/models/player";
 import { getCurrentPlayer, updateProfile } from "@/services/auth";
 import ProfileView from "@/components/ProfileView";
 import AvatarEditor from "@/components/AvatarEditor";
@@ -68,17 +69,62 @@ export default function PlayerProfile() {
 
   const activity = allActivity;
 
-  const { data: followers = [] } = useQuery({
+  const [allFollowers, setAllFollowers] = useState<Player[]>([]);
+  const [nextFollowersCursor, setNextFollowersCursor] = useState<string | undefined>();
+  const [loadingMoreFollowers, setLoadingMoreFollowers] = useState(false);
+
+  useQuery({
     queryKey: ["follow-list", profile?.player.id, "followers"],
-    queryFn: () => getFollowers(profile!.player.handle),
+    queryFn: async () => {
+      const page = await getFollowers(profile!.player.handle);
+      setAllFollowers(page.players);
+      setNextFollowersCursor(page.nextCursor);
+      return page;
+    },
     enabled: !!profile,
   });
 
-  const { data: following = [] } = useQuery({
+  async function loadMoreFollowers() {
+    if (!nextFollowersCursor || loadingMoreFollowers) return;
+    setLoadingMoreFollowers(true);
+    try {
+      const page = await getFollowers(profile!.player.handle, nextFollowersCursor);
+      setAllFollowers((prev) => [...prev, ...page.players]);
+      setNextFollowersCursor(page.nextCursor);
+    } finally {
+      setLoadingMoreFollowers(false);
+    }
+  }
+
+  const [allFollowing, setAllFollowing] = useState<Player[]>([]);
+  const [nextFollowingCursor, setNextFollowingCursor] = useState<string | undefined>();
+  const [loadingMoreFollowing, setLoadingMoreFollowing] = useState(false);
+
+  useQuery({
     queryKey: ["follow-list", profile?.player.id, "following"],
-    queryFn: () => getFollowing(profile!.player.handle),
+    queryFn: async () => {
+      const page = await getFollowing(profile!.player.handle);
+      setAllFollowing(page.players);
+      setNextFollowingCursor(page.nextCursor);
+      return page;
+    },
     enabled: !!profile,
   });
+
+  async function loadMoreFollowing() {
+    if (!nextFollowingCursor || loadingMoreFollowing) return;
+    setLoadingMoreFollowing(true);
+    try {
+      const page = await getFollowing(profile!.player.handle, nextFollowingCursor);
+      setAllFollowing((prev) => [...prev, ...page.players]);
+      setNextFollowingCursor(page.nextCursor);
+    } finally {
+      setLoadingMoreFollowing(false);
+    }
+  }
+
+  const followers = allFollowers;
+  const following = allFollowing;
 
   const isFollowing = profile?.player.isFollowing ?? false;
 
@@ -168,6 +214,12 @@ export default function PlayerProfile() {
         viewerId={currentPlayer?.id}
         followers={followers}
         following={following}
+        hasMoreFollowers={!!nextFollowersCursor}
+        loadingMoreFollowers={loadingMoreFollowers}
+        onLoadMoreFollowers={loadMoreFollowers}
+        hasMoreFollowing={!!nextFollowingCursor}
+        loadingMoreFollowing={loadingMoreFollowing}
+        onLoadMoreFollowing={loadMoreFollowing}
         sectionTitle={
           isOwnProfile
             ? t("profile_section_activity_you")
