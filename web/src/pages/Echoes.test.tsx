@@ -20,7 +20,7 @@ function renderEchoes() {
 }
 
 beforeEach(() => {
-  vi.mocked(echoesService.getEchoes).mockResolvedValue([...MOCK_ECHOES]);
+  vi.mocked(echoesService.getEchoes).mockResolvedValue({ echoes: [...MOCK_ECHOES] });
   vi.mocked(echoesService.markAllRead).mockResolvedValue(undefined);
 });
 
@@ -59,5 +59,20 @@ describe("Echoes", () => {
     const firstFollower = MOCK_ECHOES.find((e) => e.type === "new_follower")!;
     const links = await screen.findAllByRole("link", { name: /started following you/ });
     expect(links[0]).toHaveAttribute("href", `/player/${firstFollower.actors[0].handle}`);
+  });
+
+  it("shows a Load more button when the API returns a next_cursor", async () => {
+    vi.mocked(echoesService.getEchoes).mockResolvedValue({
+      echoes: [...MOCK_ECHOES],
+      nextCursor: "2026-06-01T12:00:00Z|42",
+    });
+    renderEchoes();
+    expect(await screen.findByRole("button", { name: /load more/i })).toBeInTheDocument();
+  });
+
+  it("does not show a Load more button when the API returns no next_cursor", async () => {
+    renderEchoes();
+    await screen.findAllByText(/commented on your/);
+    expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
   });
 });

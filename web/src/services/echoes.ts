@@ -29,23 +29,28 @@ function rawToPlayer(a: RawActor): Player {
   return { id: a.id, handle: a.handle, name: a.name, avatarUrl: a.avatar_url, color: a.color };
 }
 
-export async function getEchoes(): Promise<Echo[]> {
-  const resp = await apiFetch(`${API_BASE}/api/echoes`, { credentials: "include" });
+export async function getEchoes(cursor?: string): Promise<{ echoes: Echo[]; nextCursor?: string }> {
+  const url = new URL(`${API_BASE}/api/echoes`);
+  if (cursor) url.searchParams.set("cursor", cursor);
+  const resp = await apiFetch(url.toString(), { credentials: "include" });
   if (!resp.ok) throw new Error(`get echoes: ${resp.status}`);
-  const data: { echoes: RawEcho[] } = await resp.json();
-  return (data.echoes ?? []).map(
-    (r): Echo => ({
-      id: String(r.id),
-      type: r.type as Echo["type"],
-      actors: (r.actors ?? []).map(rawToPlayer),
-      actorCount: r.actor_count,
-      subjectId: r.subject_id ?? null,
-      subjectTitle: r.subject_title ?? null,
-      read: r.read,
-      createdAt: new Date(r.created_at),
-      updatedAt: new Date(r.updated_at),
-    }),
-  );
+  const data: { echoes: RawEcho[]; next_cursor?: string } = await resp.json();
+  return {
+    echoes: (data.echoes ?? []).map(
+      (r): Echo => ({
+        id: String(r.id),
+        type: r.type as Echo["type"],
+        actors: (r.actors ?? []).map(rawToPlayer),
+        actorCount: r.actor_count,
+        subjectId: r.subject_id ?? null,
+        subjectTitle: r.subject_title ?? null,
+        read: r.read,
+        createdAt: new Date(r.created_at),
+        updatedAt: new Date(r.updated_at),
+      }),
+    ),
+    nextCursor: data.next_cursor,
+  };
 }
 
 export async function markAllRead(): Promise<void> {

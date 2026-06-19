@@ -6,10 +6,34 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// EncodeEchoCursor encodes an echo pagination cursor from updated_at and id.
+func EncodeEchoCursor(updatedAt time.Time, id int64) string {
+	return updatedAt.UTC().Format(time.RFC3339Nano) + "|" + strconv.FormatInt(id, 10)
+}
+
+func splitEchoCursor(cursor string) (time.Time, int64, error) {
+	idx := strings.LastIndex(cursor, "|")
+	if idx < 0 {
+		return time.Time{}, 0, fmt.Errorf("invalid echo cursor")
+	}
+	t, err := time.Parse(time.RFC3339Nano, cursor[:idx])
+	if err != nil {
+		return time.Time{}, 0, fmt.Errorf("invalid echo cursor time: %w", err)
+	}
+	id, err := strconv.ParseInt(cursor[idx+1:], 10, 64)
+	if err != nil {
+		return time.Time{}, 0, fmt.Errorf("invalid echo cursor id: %w", err)
+	}
+	return t, id, nil
+}
 
 // EchoActor is a player who contributed to a batched echo.
 type EchoActor struct {
@@ -100,10 +124,11 @@ func UpsertFollowerEcho(ctx context.Context, pool *pgxpool.Pool, recipientID, ac
 	return err
 }
 
-// ListEchoes returns up to 50 echoes for the user, reverse chronological by updated_at.
+// ListEchoes returns up to limit echoes for the user, reverse chronological by updated_at.
 // Each echo includes up to 3 actor profiles and the total actor count.
-func ListEchoes(ctx context.Context, pool *pgxpool.Pool, userID string) ([]EchoRow, error) {
-	rows, err := pool.Query(ctx, `
+// cursor (optional) is an opaque token from EncodeEchoCursor for keyset pagination.
+func ListEchoes(ctx context.Context, pool *pgxpool.Pool, userID string, limit int, cursor string) ([]EchoRow, error) {
+	const baseSelect = `
 		SELECT
 			e.id,
 			e.type,
@@ -128,10 +153,29 @@ func ListEchoes(ctx context.Context, pool *pgxpool.Pool, userID string) ([]EchoR
 				) u
 			) AS actors
 		FROM echoes e
-		WHERE e.recipient_id = $1
-		ORDER BY e.updated_at DESC
-		LIMIT 50
-	`, userID)
+	`
+	var rows pgx.Rows
+	var err error
+	if cursor == "" {
+		rows, err = pool.Query(ctx, baseSelect+`
+			WHERE e.recipient_id = $1
+			ORDER BY e.updated_at DESC, e.id DESC
+			LIMIT $2
+		`, userID, limit)
+	} else {
+		var cursorTime time.Time
+		var cursorID int64
+		cursorTime, cursorID, err = splitEchoCursor(cursor)
+		if err != nil {
+			return nil, fmt.Errorf("list echoes: %w", err)
+		}
+		rows, err = pool.Query(ctx, baseSelect+`
+			WHERE e.recipient_id = $1
+			AND (e.updated_at, e.id) < ($2, $3)
+			ORDER BY e.updated_at DESC, e.id DESC
+			LIMIT $4
+		`, userID, cursorTime, cursorID, limit)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("list echoes: %w", err)
 	}

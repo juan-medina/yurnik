@@ -73,11 +73,21 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := db.ListEchoes(r.Context(), h.pool, userID)
+	limit := 50
+	cursor := r.URL.Query().Get("cursor")
+
+	rows, err := db.ListEchoes(r.Context(), h.pool, userID, limit+1, cursor)
 	if err != nil {
 		log.Printf("echoes/list: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return
+	}
+
+	var nextCursor string
+	if len(rows) == limit+1 {
+		last := rows[limit-1]
+		nextCursor = db.EncodeEchoCursor(last.UpdatedAt, last.ID)
+		rows = rows[:limit]
 	}
 
 	resp := make([]echoResp, 0, len(rows))
@@ -110,11 +120,15 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{
+	result := map[string]any{
 		"echoes":       resp,
 		"unread_count": unreadCount,
-	})
+	}
+	if nextCursor != "" {
+		result["next_cursor"] = nextCursor
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(result)
 }
 
 func (h *Handler) markRead(w http.ResponseWriter, r *http.Request) {

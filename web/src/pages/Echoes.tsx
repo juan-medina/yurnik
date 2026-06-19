@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { MessageSquare, UserPlus } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { getEchoes, markAllRead } from "@/services/echoes";
@@ -119,8 +119,10 @@ function EchoRow({ echo }: { echo: Echo }) {
 
 export default function Echoes() {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<Filter>("all");
+  const [allEchoes, setAllEchoes] = useState<Echo[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | undefined>();
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const { data: player } = useQuery({
     queryKey: ["auth", "me"],
@@ -128,12 +130,30 @@ export default function Echoes() {
     retry: false,
   });
 
-  const { data: echoes = [] } = useQuery({ queryKey: ["echoes"], queryFn: getEchoes, enabled: !!player });
-
-  const markReadMutation = useMutation({
-    mutationFn: markAllRead,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["echoes"] }),
+  useQuery({
+    queryKey: ["echoes"],
+    queryFn: async () => {
+      const page = await getEchoes();
+      setAllEchoes(page.echoes);
+      setNextCursor(page.nextCursor);
+      return page;
+    },
+    enabled: !!player,
   });
+
+  const markReadMutation = useMutation({ mutationFn: markAllRead });
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await getEchoes(nextCursor);
+      setAllEchoes((prev) => [...prev, ...page.echoes]);
+      setNextCursor(page.nextCursor);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   // Mark all read as soon as the panel opens (only when authenticated).
   useEffect(() => {
@@ -152,7 +172,7 @@ export default function Echoes() {
     followers: "echoes_empty_followers",
   };
 
-  const visible = echoes.filter((e) => {
+  const visible = allEchoes.filter((e) => {
     if (filter === "comments") return e.type === "new_comment";
     if (filter === "followers") return e.type === "new_follower";
     return true;
@@ -192,6 +212,17 @@ export default function Echoes() {
         ) : (
           <div className="px-4 py-12 text-center text-sm text-muted-foreground">
             {t(emptyKey[filter])}
+          </div>
+        )}
+        {nextCursor && (
+          <div className="border-t border-border p-3">
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="w-full rounded-md py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
+            >
+              {loadingMore ? t("loading") : t("load_more")}
+            </button>
           </div>
         )}
       </div>
