@@ -149,7 +149,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	inserted, err := db.InsertReport(r.Context(), h.pool, userID, body.TargetType, body.TargetID, body.ContextID, body.Reason, body.Note)
+	_, inserted, err := db.InsertReport(r.Context(), h.pool, userID, body.TargetType, body.TargetID, body.ContextID, body.Reason, body.Note)
 	if err != nil {
 		log.Printf("reports/create: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
@@ -168,26 +168,36 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reports, err := db.ListReports(r.Context(), h.pool)
+	limit := 50
+	cursor := r.URL.Query().Get("cursor")
+
+	reports, err := db.ListReports(r.Context(), h.pool, limit+1, cursor)
 	if err != nil {
 		log.Printf("reports/list: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return
 	}
 
+	var nextCursor string
+	if len(reports) == limit+1 {
+		last := reports[limit-1]
+		nextCursor = db.EncodeReportCursor(last.CreatedAt, last.ID)
+		reports = reports[:limit]
+	}
+
 	type reportItem struct {
-		ID              string  `json:"id"`
-		ReporterHandle  string  `json:"reporter_handle"`
-		ReporterName    string  `json:"reporter_name"`
-		ReporterAvatar  *string `json:"reporter_avatar,omitempty"`
-		ReporterColor   string  `json:"reporter_color"`
-		TargetType      string  `json:"target_type"`
-		TargetID        string  `json:"target_id"`
-		ContextID       *string `json:"context_id,omitempty"`
-		TargetHandle    *string `json:"target_handle,omitempty"`
-		Reason          string  `json:"reason"`
-		Note            *string `json:"note,omitempty"`
-		CreatedAt       string  `json:"created_at"`
+		ID             string  `json:"id"`
+		ReporterHandle string  `json:"reporter_handle"`
+		ReporterName   string  `json:"reporter_name"`
+		ReporterAvatar *string `json:"reporter_avatar,omitempty"`
+		ReporterColor  string  `json:"reporter_color"`
+		TargetType     string  `json:"target_type"`
+		TargetID       string  `json:"target_id"`
+		ContextID      *string `json:"context_id,omitempty"`
+		TargetHandle   *string `json:"target_handle,omitempty"`
+		Reason         string  `json:"reason"`
+		Note           *string `json:"note,omitempty"`
+		CreatedAt      string  `json:"created_at"`
 	}
 
 	items := make([]reportItem, 0, len(reports))
@@ -208,8 +218,12 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	result := map[string]any{"reports": items}
+	if nextCursor != "" {
+		result["next_cursor"] = nextCursor
+	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"reports": items})
+	_ = json.NewEncoder(w).Encode(result)
 }
 
 func (h *Handler) suspend(w http.ResponseWriter, r *http.Request) {

@@ -6,7 +6,7 @@ import { render } from "@testing-library/react";
 
 export function renderWithProviders(ui: ReactElement) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false }, mutations: { retry: false } },
   });
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }

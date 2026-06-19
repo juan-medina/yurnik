@@ -69,13 +69,34 @@ function Avatar({ src, name, color, size = 8 }: { src?: string; name: string; co
 
 function ReportsTab() {
   const { t } = useTranslation();
-  const { data: reports = [], isLoading } = useQuery({
+  const [allReports, setAllReports] = useState<AdminReport[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | undefined>();
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const { isLoading } = useQuery({
     queryKey: ["admin", "reports"],
-    queryFn: listReports,
+    queryFn: async () => {
+      const page = await listReports();
+      setAllReports(page.reports);
+      setNextCursor(page.nextCursor);
+      return page;
+    },
   });
 
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await listReports(nextCursor);
+      setAllReports((prev) => [...prev, ...page.reports]);
+      setNextCursor(page.nextCursor);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
   if (isLoading) return null;
-  if (reports.length === 0) {
+  if (allReports.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-card px-4 py-12 text-center text-sm text-muted-foreground">
         {t("admin_reports_empty")}
@@ -85,7 +106,7 @@ function ReportsTab() {
 
   return (
     <div className="rounded-lg border border-border bg-card divide-y divide-border">
-      {reports.map((rep) => (
+      {allReports.map((rep) => (
         <div key={rep.id} className="flex items-start gap-3 px-4 py-3">
           <Link to={`/player/${rep.reporterHandle}`} className="shrink-0">
             <Avatar src={rep.reporterAvatar} name={rep.reporterName} color={rep.reporterColor} />
@@ -116,6 +137,17 @@ function ReportsTab() {
           </Link>
         </div>
       ))}
+      {nextCursor && (
+        <div className="px-4 py-3">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="w-full rounded-md py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
+          >
+            {loadingMore ? t("loading") : t("load_more")}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -189,17 +221,6 @@ export default function Admin() {
     retry: false,
   });
 
-  if (isLoading) return null;
-  if (!currentPlayer?.isAdmin) return <NotFound />;
-
-  const confirmSuspendId = searchParams.get("confirm_suspend");
-  const confirmSuspendName = searchParams.get("suspend_name") ?? "";
-  const confirmResetId = searchParams.get("confirm_reset");
-  const confirmResetName = searchParams.get("reset_name") ?? "";
-  const confirmDeleteJourneyLogId = searchParams.get("confirm_delete_journey_log");
-  const confirmDeleteCommentId = searchParams.get("confirm_delete_comment");
-  const fromJourneyId = searchParams.get("from_journey");
-
   const suspendMutation = useMutation({
     mutationFn: suspendUser,
     onSuccess: () => {
@@ -222,12 +243,23 @@ export default function Admin() {
     },
   });
 
+  const confirmSuspendId = searchParams.get("confirm_suspend");
+  const confirmSuspendName = searchParams.get("suspend_name") ?? "";
+  const confirmResetId = searchParams.get("confirm_reset");
+  const confirmResetName = searchParams.get("reset_name") ?? "";
+  const confirmDeleteJourneyLogId = searchParams.get("confirm_delete_journey_log");
+  const confirmDeleteCommentId = searchParams.get("confirm_delete_comment");
+  const fromJourneyId = searchParams.get("from_journey");
+
   const deleteCommentMutation = useMutation({
     mutationFn: adminDeleteComment,
     onSuccess: () => {
       void navigate(fromJourneyId ? `/journey/${fromJourneyId}` : "/admin", { replace: true });
     },
   });
+
+  if (isLoading) return null;
+  if (!currentPlayer?.isAdmin) return <NotFound />;
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "reports", label: t("admin_tab_reports") },

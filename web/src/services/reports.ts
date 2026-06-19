@@ -26,11 +26,23 @@ export async function submitReport(
   if (!resp.ok) throw new Error(`report: ${resp.status}`);
 }
 
-export async function listReports(): Promise<AdminReport[]> {
-  const resp = await apiFetch(`${API_BASE}/api/admin/reports`, { credentials: "include" });
-  if (!resp.ok) throw new Error(`list reports: ${resp.status}`);
-  const data: { reports: { id: string; reporter_handle: string; reporter_name: string; reporter_avatar?: string; reporter_color: string; target_type: string; target_id: string; context_id?: string; target_handle?: string; reason: string; note?: string; created_at: string }[] } = await resp.json();
-  return (data.reports ?? []).map((r) => ({
+type RawReport = {
+  id: string;
+  reporter_handle: string;
+  reporter_name: string;
+  reporter_avatar?: string;
+  reporter_color: string;
+  target_type: string;
+  target_id: string;
+  context_id?: string;
+  target_handle?: string;
+  reason: string;
+  note?: string;
+  created_at: string;
+};
+
+function toAdminReport(r: RawReport): AdminReport {
+  return {
     id: r.id,
     reporterHandle: r.reporter_handle,
     reporterName: r.reporter_name,
@@ -43,5 +55,14 @@ export async function listReports(): Promise<AdminReport[]> {
     reason: r.reason as ReportReason,
     note: r.note,
     createdAt: new Date(r.created_at),
-  }));
+  };
+}
+
+export async function listReports(cursor?: string): Promise<{ reports: AdminReport[]; nextCursor?: string }> {
+  const url = new URL(`${API_BASE}/api/admin/reports`);
+  if (cursor) url.searchParams.set("cursor", cursor);
+  const resp = await apiFetch(url.toString(), { credentials: "include" });
+  if (!resp.ok) throw new Error(`list reports: ${resp.status}`);
+  const data: { reports: RawReport[]; next_cursor?: string } = await resp.json();
+  return { reports: (data.reports ?? []).map(toAdminReport), nextCursor: data.next_cursor };
 }
