@@ -371,5 +371,7 @@
   "privacy_rights_title": "Tus derechos",
   "privacy_rights_body": "Si te encuentras en la UE, tienes derechos según el RGPD, incluyendo el acceso a tus datos, la corrección de datos inexactos, la eliminación y la portabilidad de datos. Para ejercer cualquiera de estos derechos, contáctanos con los datos indicados a continuación.",
   "privacy_contact_title": "Contacto",
-  "privacy_contact_body": "Para preguntas sobre privacidad o para realizar una solicitud sobre tus datos, contacta con privacy@yurnik.example."
+  "privacy_contact_body": "Para preguntas sobre privacidad o para realizar una solicitud sobre tus datos, contacta con privacy@yurnik.example.",
+  "load_more": "Cargar más",
+  "loading": "Cargando…"
 }

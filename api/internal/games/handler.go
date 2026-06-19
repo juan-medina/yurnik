@@ -167,8 +167,16 @@ func (h *Handler) journeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	limit := 20
+	if s := r.URL.Query().Get("limit"); s != "" {
+		if n, err2 := strconv.Atoi(s); err2 == nil && n > 0 && n <= 50 {
+			limit = n
+		}
+	}
+	cursor := r.URL.Query().Get("cursor")
+
 	callerID, authed := h.tryAuthenticate(r)
-	players, err := db.ListJourneysByIGDBID(r.Context(), h.pool, igdbID)
+	players, err := db.ListJourneysByIGDBID(r.Context(), h.pool, igdbID, limit, cursor)
 	if err != nil {
 		log.Printf("games/journeys: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
@@ -196,9 +204,9 @@ func (h *Handler) journeys(w http.ResponseWriter, r *http.Request) {
 		PlayedAt        string     `json:"played_at"`
 	}
 
-	resp := make([]entryResp, 0, len(players))
+	entries := make([]entryResp, 0, len(players))
 	for _, p := range players {
-		resp = append(resp, entryResp{
+		entries = append(entries, entryResp{
 			JourneyID: p.JourneyID,
 			Player: playerResp{
 				ID:          p.UserID,
@@ -214,8 +222,15 @@ func (h *Handler) journeys(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	var nextCursor *string
+	if len(players) == limit {
+		last := players[len(players)-1]
+		c := db.EncodeJourneyCursor(last.PlayedAt, last.CreatedAt)
+		nextCursor = &c
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"players": resp})
+	_ = json.NewEncoder(w).Encode(map[string]any{"players": entries, "next_cursor": nextCursor})
 }
 
 type gameResponse struct {

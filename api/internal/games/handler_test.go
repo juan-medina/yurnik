@@ -35,3 +35,4 @@ func TestJourneys_invalidID(t *testing.T) {
 		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
 	}
 }
+

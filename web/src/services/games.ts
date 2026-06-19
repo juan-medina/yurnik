@@ -49,16 +49,20 @@ export async function getGameDetail(igdbId: string): Promise<GameDetail | undefi
   };
 }
 
-export async function getGameJourneys(igdbId: string): Promise<{
-  self?: JourneyPlayer;
+export async function getGameJourneys(igdbId: string, cursor?: string): Promise<{
+  self: JourneyPlayer[];
   following: JourneyPlayer[];
   others: JourneyPlayer[];
+  nextCursor?: string;
 }> {
-  const resp = await apiFetch(`${API_BASE}/api/games/${igdbId}/journeys`, { credentials: "include" });
+  const url = cursor
+    ? `${API_BASE}/api/games/${igdbId}/journeys?cursor=${encodeURIComponent(cursor)}`
+    : `${API_BASE}/api/games/${igdbId}/journeys`;
+  const resp = await apiFetch(url, { credentials: "include" });
   if (!resp.ok) throw new Error(`get game journeys: ${resp.status}`);
-  const data: { players: RawJourneyPlayer[] } = await resp.json();
+  const data: { players: RawJourneyPlayer[]; next_cursor?: string } = await resp.json();
 
-  let self: JourneyPlayer | undefined;
+  const self: JourneyPlayer[] = [];
   const following: JourneyPlayer[] = [];
   const others: JourneyPlayer[] = [];
   for (const p of data.players ?? []) {
@@ -71,14 +75,14 @@ export async function getGameJourneys(igdbId: string): Promise<{
       isSelf: p.player.is_self,
     };
     if (p.player.is_self) {
-      self = entry;
+      self.push(entry);
     } else if (p.player.is_following) {
       following.push(entry);
     } else {
       others.push(entry);
     }
   }
-  return { self, following, others };
+  return { self, following, others, nextCursor: data.next_cursor };
 }
 
 export async function searchGames(query: string, offset = 0): Promise<Game[]> {

@@ -148,7 +148,7 @@ func TestListJourneysByIGDBID_OrdersByPlayedAtThenCreatedAt(t *testing.T) {
 	idA := insertJourneyRaw(t, pool, userA, 90203, dayEarlier, dayEarlier.Add(time.Hour))
 	idB := insertJourneyRaw(t, pool, userB, 90203, dayLater, dayLater.Add(time.Hour))
 
-	players, err := db.ListJourneysByIGDBID(ctx, pool, 90203)
+	players, err := db.ListJourneysByIGDBID(ctx, pool, 90203, 20, "")
 	if err != nil {
 		t.Fatalf("list journeys by igdb id: %v", err)
 	}
@@ -157,22 +157,57 @@ func TestListJourneysByIGDBID_OrdersByPlayedAtThenCreatedAt(t *testing.T) {
 	}
 }
 
-func TestListJourneysByIGDBID_DistinctOnUserKeepsLatestPerPlayer(t *testing.T) {
+func TestListJourneysByIGDBID_AllJourneysFromSamePlayerReturned(t *testing.T) {
 	pool := connectTestDB(t)
 	ctx := context.Background()
-	userID := createTestUserNamed(t, pool, "-distinct")
-	insertTestGame(t, pool, 90204, "Distinct Game")
+	userID := createTestUserNamed(t, pool, "-multi")
+	insertTestGame(t, pool, 90204, "Multi-Session Game")
 
 	day := time.Date(2026, 6, 4, 0, 0, 0, 0, time.UTC)
-	_ = insertJourneyRaw(t, pool, userID, 90204, day, day.Add(8*time.Hour))
+	older := insertJourneyRaw(t, pool, userID, 90204, day, day.Add(8*time.Hour))
 	newer := insertJourneyRaw(t, pool, userID, 90204, day, day.Add(9*time.Hour))
 
-	players, err := db.ListJourneysByIGDBID(ctx, pool, 90204)
+	players, err := db.ListJourneysByIGDBID(ctx, pool, 90204, 20, "")
 	if err != nil {
 		t.Fatalf("list journeys by igdb id: %v", err)
 	}
-	if len(players) != 1 || players[0].JourneyID != newer {
-		t.Fatalf("got %v, want a single entry [%s] (the most recently created)", players, newer)
+	// Both sessions must appear — deduplication was the bug.
+	if len(players) != 2 {
+		t.Fatalf("expected 2 journeys (one per session), got %d", len(players))
+	}
+	// Newest first.
+	if players[0].JourneyID != newer || players[1].JourneyID != older {
+		t.Fatalf("got [%s, %s], want [%s, %s]", players[0].JourneyID, players[1].JourneyID, newer, older)
+	}
+}
+
+func TestListJourneysByIGDBID_CursorPagination(t *testing.T) {
+	pool := connectTestDB(t)
+	ctx := context.Background()
+	userA := createTestUserNamed(t, pool, "-page-a")
+	userB := createTestUserNamed(t, pool, "-page-b")
+	insertTestGame(t, pool, 90207, "Paged Game")
+
+	day := time.Date(2026, 6, 7, 0, 0, 0, 0, time.UTC)
+	id1 := insertJourneyRaw(t, pool, userA, 90207, day, day.Add(8*time.Hour))
+	id2 := insertJourneyRaw(t, pool, userA, 90207, day, day.Add(9*time.Hour))
+	id3 := insertJourneyRaw(t, pool, userB, 90207, day, day.Add(10*time.Hour))
+
+	page1, err := db.ListJourneysByIGDBID(ctx, pool, 90207, 2, "")
+	if err != nil {
+		t.Fatalf("list page1: %v", err)
+	}
+	if len(page1) != 2 || page1[0].JourneyID != id3 || page1[1].JourneyID != id2 {
+		t.Fatalf("page1 = [%s, %s], want [%s, %s]", page1[0].JourneyID, page1[1].JourneyID, id3, id2)
+	}
+
+	cursor := db.EncodeJourneyCursor(page1[1].PlayedAt, page1[1].CreatedAt)
+	page2, err := db.ListJourneysByIGDBID(ctx, pool, 90207, 2, cursor)
+	if err != nil {
+		t.Fatalf("list page2: %v", err)
+	}
+	if len(page2) != 1 || page2[0].JourneyID != id1 {
+		t.Fatalf("page2 = %v, want [%s]", page2, id1)
 	}
 }
 

@@ -312,6 +312,7 @@ function RatingBadge({ value, label }: { value: number; label: string }) {
 export default function GameDetail() {
   const { igdbId } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const { data: game, isPending, isFetched } = useQuery({
@@ -322,11 +323,45 @@ export default function GameDetail() {
 
   usePageTitle(game?.name);
 
-  const { data: journeyPlayers } = useQuery({
+  const [allJourneys, setAllJourneys] = useState<{
+    self: JourneyPlayer[];
+    following: JourneyPlayer[];
+    others: JourneyPlayer[];
+  } | null>(null);
+  const [nextJourneyCursor, setNextJourneyCursor] = useState<string | undefined>();
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  useQuery({
     queryKey: ["game", igdbId, "journeys"],
-    queryFn: () => getGameJourneys(igdbId!),
+    queryFn: async () => {
+      const page = await getGameJourneys(igdbId!);
+      setAllJourneys(page);
+      setNextJourneyCursor(page.nextCursor);
+      return page;
+    },
     enabled: !!igdbId,
   });
+
+  async function loadMoreJourneys() {
+    if (!nextJourneyCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await getGameJourneys(igdbId!, nextJourneyCursor);
+      setAllJourneys((prev) => {
+        if (!prev) return page;
+        return {
+          self: [...prev.self, ...page.self],
+          following: [...prev.following, ...page.following],
+          others: [...prev.others, ...page.others],
+        };
+      });
+      setNextJourneyCursor(page.nextCursor);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  const journeyPlayers = allJourneys;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -469,10 +504,12 @@ export default function GameDetail() {
               <h2 className="text-sm font-semibold">Journeys</h2>
             </div>
 
-            {journeyPlayers?.self && (
+            {(journeyPlayers?.self ?? []).length > 0 && (
               <div className="px-4">
                 <div className="divide-y divide-border">
-                  <JourneyPlayerRow entry={journeyPlayers.self} />
+                  {journeyPlayers!.self.map((entry) => (
+                    <JourneyPlayerRow key={entry.journeyId} entry={entry} />
+                  ))}
                 </div>
               </div>
             )}
@@ -484,7 +521,7 @@ export default function GameDetail() {
                 </p>
                 <div className="divide-y divide-border">
                   {journeyPlayers!.following.map((entry) => (
-                    <JourneyPlayerRow key={entry.player.id} entry={entry} />
+                    <JourneyPlayerRow key={entry.journeyId} entry={entry} />
                   ))}
                 </div>
               </div>
@@ -497,16 +534,29 @@ export default function GameDetail() {
                 </p>
                 <div className="divide-y divide-border">
                   {journeyPlayers!.others.map((entry) => (
-                    <JourneyPlayerRow key={entry.player.id} entry={entry} />
+                    <JourneyPlayerRow key={entry.journeyId} entry={entry} />
                   ))}
                 </div>
               </div>
             )}
 
-            {journeyPlayers && !journeyPlayers.self && journeyPlayers.following.length + journeyPlayers.others.length === 0 && (
+            {journeyPlayers && journeyPlayers.self.length + journeyPlayers.following.length + journeyPlayers.others.length === 0 && (
               <p className="px-4 py-4 text-sm text-muted-foreground">
                 No journeys logged yet.
               </p>
+            )}
+
+            {nextJourneyCursor && (
+              <div className="border-t border-border px-4 py-3">
+                <button
+                  type="button"
+                  onClick={loadMoreJourneys}
+                  disabled={loadingMore}
+                  className="text-sm text-primary hover:underline disabled:opacity-50"
+                >
+                  {loadingMore ? t("loading") : t("load_more")}
+                </button>
+              </div>
             )}
           </div>
         </>

@@ -317,6 +317,7 @@ type PlayerOnJourney struct {
 	JourneyID       string
 	DurationSeconds int
 	PlayedAt        time.Time
+	CreatedAt       time.Time
 	UserID          string
 	Handle          string
 	Name            string
@@ -329,7 +330,7 @@ type PlayerOnJourney struct {
 func ListOthersOnJourney(ctx context.Context, pool *pgxpool.Pool, journeyID string) ([]PlayerOnJourney, error) {
 	rows, err := pool.Query(ctx, `
 		WITH src AS (SELECT igdb_id, user_id FROM journeys WHERE id = $1)
-		SELECT j.id, j.duration_seconds, j.played_at,
+		SELECT j.id, j.duration_seconds, j.played_at, j.created_at,
 		       u.id, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.color
 		FROM journeys j
 		JOIN users u ON u.id = j.user_id
@@ -346,7 +347,7 @@ func ListOthersOnJourney(ctx context.Context, pool *pgxpool.Pool, journeyID stri
 	for rows.Next() {
 		var p PlayerOnJourney
 		if err := rows.Scan(
-			&p.JourneyID, &p.DurationSeconds, &p.PlayedAt,
+			&p.JourneyID, &p.DurationSeconds, &p.PlayedAt, &p.CreatedAt,
 			&p.UserID, &p.Handle, &p.Name, &p.AvatarURL, &p.Color,
 		); err != nil {
 			return nil, err
@@ -356,23 +357,40 @@ func ListOthersOnJourney(ctx context.Context, pool *pgxpool.Pool, journeyID stri
 	return players, rows.Err()
 }
 
-// ListJourneysByIGDBID returns the most recent journey per player for the given game,
-// ordered by played_at desc. The caller uses GetFollowingIDs to split following/others/self.
-func ListJourneysByIGDBID(ctx context.Context, pool *pgxpool.Pool, igdbID int) ([]PlayerOnJourney, error) {
-	rows, err := pool.Query(ctx, `
-		SELECT journey_id, duration_seconds, played_at, user_id, handle, name, avatar_url, color FROM (
-			SELECT DISTINCT ON (j.user_id)
-			       j.id AS journey_id, j.duration_seconds, j.played_at, j.created_at,
-			       u.id AS user_id, u.handle, COALESCE(u.display_name, u.name) AS name,
-			       COALESCE(u.custom_avatar_url, u.avatar_url) AS avatar_url, u.color
+// ListJourneysByIGDBID returns all journeys for the given game, ordered by
+// played_at desc, with cursor-based pagination. The caller uses GetFollowingIDs
+// to split following/others/self.
+func ListJourneysByIGDBID(ctx context.Context, pool *pgxpool.Pool, igdbID, limit int, cursor string) ([]PlayerOnJourney, error) {
+	var rows pgx.Rows
+	var err error
+
+	if cursor == "" {
+		rows, err = pool.Query(ctx, `
+			SELECT j.id, j.duration_seconds, j.played_at, j.created_at,
+			       u.id, u.handle, COALESCE(u.display_name, u.name),
+			       COALESCE(u.custom_avatar_url, u.avatar_url), u.color
 			FROM journeys j
 			JOIN users u ON u.id = j.user_id
 			WHERE j.igdb_id = $1
-			ORDER BY j.user_id, j.played_at DESC, j.created_at DESC
-		) sub
-		ORDER BY played_at DESC, created_at DESC
-		LIMIT 50
-	`, igdbID)
+			ORDER BY j.played_at DESC, j.created_at DESC
+			LIMIT $2
+		`, igdbID, limit)
+	} else {
+		playedAt, createdAt, err2 := splitJourneyCursor(cursor)
+		if err2 != nil {
+			return nil, err2
+		}
+		rows, err = pool.Query(ctx, `
+			SELECT j.id, j.duration_seconds, j.played_at, j.created_at,
+			       u.id, u.handle, COALESCE(u.display_name, u.name),
+			       COALESCE(u.custom_avatar_url, u.avatar_url), u.color
+			FROM journeys j
+			JOIN users u ON u.id = j.user_id
+			WHERE j.igdb_id = $1 AND (j.played_at, j.created_at) < ($2, $3)
+			ORDER BY j.played_at DESC, j.created_at DESC
+			LIMIT $4
+		`, igdbID, playedAt, createdAt, limit)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -382,7 +400,7 @@ func ListJourneysByIGDBID(ctx context.Context, pool *pgxpool.Pool, igdbID int) (
 	for rows.Next() {
 		var p PlayerOnJourney
 		if err := rows.Scan(
-			&p.JourneyID, &p.DurationSeconds, &p.PlayedAt,
+			&p.JourneyID, &p.DurationSeconds, &p.PlayedAt, &p.CreatedAt,
 			&p.UserID, &p.Handle, &p.Name, &p.AvatarURL, &p.Color,
 		); err != nil {
 			return nil, err

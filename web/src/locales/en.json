@@ -374,5 +374,7 @@
   "privacy_rights_title": "Your rights",
   "privacy_rights_body": "If you're in the EU, you have rights under GDPR including access to your data, correction of inaccurate data, deletion, and data portability. To exercise any of these rights, contact us using the details below.",
   "privacy_contact_title": "Contact",
-  "privacy_contact_body": "For privacy questions or to make a request about your data, contact privacy@yurnik.example."
+  "privacy_contact_body": "For privacy questions or to make a request about your data, contact privacy@yurnik.example.",
+  "load_more": "Load more",
+  "loading": "Loading…"
 }

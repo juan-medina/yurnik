@@ -47,7 +47,16 @@ function journeyPlayersResponse(withFollowing: boolean) {
   });
 }
 
-function makeFetch({ withTrailer = true, withStoreLinks = true, withFollowing = true, notFound = false, inHorizon = false, anonymous = false } = {}) {
+function multipleOwnJourneysResponse() {
+  return JSON.stringify({
+    players: [
+      { journey_id: "j_self_1", player: { id: "me", handle: "tester", name: "Tester", color: "#ff0000", is_following: false, is_self: true }, duration_seconds: 7200, played_at: "2026-06-02" },
+      { journey_id: "j_self_2", player: { id: "me", handle: "tester", name: "Tester", color: "#ff0000", is_following: false, is_self: true }, duration_seconds: 3600, played_at: "2026-06-01" },
+    ],
+  });
+}
+
+function makeFetch({ withTrailer = true, withStoreLinks = true, withFollowing = true, notFound = false, inHorizon = false, anonymous = false, journeysBody = "" } = {}) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = input.toString();
     const method = init?.method ?? "GET";
@@ -67,7 +76,7 @@ function makeFetch({ withTrailer = true, withStoreLinks = true, withFollowing = 
       return new Response(null, { status: 204 });
     }
     if (/\/api\/games\/\d+\/journeys/.test(url)) {
-      return json(journeyPlayersResponse(withFollowing));
+      return json(journeysBody || journeyPlayersResponse(withFollowing));
     }
     if (/\/api\/games\/\d+$/.test(url)) {
       if (notFound) return new Response("not found", { status: 404 });
@@ -184,5 +193,39 @@ describe("GameDetail", () => {
     const addButton = await screen.findByRole("button", { name: /Add to horizon/i });
     await user.click(addButton);
     expect(await screen.findByRole("button", { name: /sign in/i })).toBeInTheDocument();
+  });
+
+  it("renders all own journeys when the same player has played a game multiple times", async () => {
+    vi.stubGlobal("fetch", makeFetch({ journeysBody: multipleOwnJourneysResponse() }));
+    renderGame("1");
+    await screen.findByRole("heading", { name: /Elden Ring/ });
+    // Both sessions must appear — the second must not silently overwrite the first.
+    // The durations (7200s → "2h", 3600s → "1h") are distinct, so both appearing
+    // proves two rows were rendered.
+    expect(await screen.findAllByText(/\bTester\b/)).toHaveLength(2);
+  });
+
+  it("shows a Load more button when the API returns a next_cursor", async () => {
+    const bodyWithCursor = JSON.stringify({
+      players: MOCK_OTHERS_ON_JOURNEY.map((jp) => ({
+        journey_id: jp.journeyId,
+        player: { id: jp.player.id, handle: jp.player.handle, name: jp.player.name, avatar_url: null, color: jp.player.color, is_following: false, is_self: false },
+        duration_seconds: 3600,
+        played_at: formatLocalDate(jp.playedAt),
+      })),
+      next_cursor: "2026-06-01,2026-06-01T12:00:00Z",
+    });
+    vi.stubGlobal("fetch", makeFetch({ journeysBody: bodyWithCursor }));
+    renderGame("1");
+    await screen.findByRole("heading", { name: /Elden Ring/ });
+    expect(await screen.findByRole("button", { name: /load more/i })).toBeInTheDocument();
+  });
+
+  it("does not show a Load more button when the API returns no next_cursor", async () => {
+    renderGame("1");
+    await screen.findByRole("heading", { name: /Elden Ring/ });
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
+    });
   });
 });
