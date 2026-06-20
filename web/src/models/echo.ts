@@ -3,7 +3,7 @@
 
 import type { Player } from "./player";
 
-export type EchoType = "new_comment" | "new_follower";
+export type EchoType = "new_comment" | "new_comment_reply" | "new_follower";
 
 export type Echo = {
   id: string;

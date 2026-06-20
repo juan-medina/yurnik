@@ -187,6 +187,8 @@
   "echoes_others_other": "and {{count}} others",
   "echoes_commented": " commented on your ",
   "echoes_commented_suffix": " journey",
+  "echoes_replied": " also commented on ",
+  "echoes_replied_suffix": "",
   "echoes_followed": " started following you",
   "echoes_removed": "removed",
   "echoes_empty_all": "No echoes yet.",
@@ -325,6 +327,7 @@
 
   "notif_title": "Yurnik",
   "notif_new_comment_body": "{{actor}} commented on {{title}}",
+  "notif_new_comment_reply_body": "{{actor}} also commented on {{title}}",
   "notif_new_follower_body": "{{actor}} started following you",
 
   "time_today": "Today",

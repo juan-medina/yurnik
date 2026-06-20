@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/juan-medina/yurnik/internal/db"
 )
 
@@ -86,5 +87,201 @@ func TestListEchoes_CursorPagination(t *testing.T) {
 	}
 	if len(page3) != 0 {
 		t.Fatalf("page3 len = %d, want 0", len(page3))
+	}
+}
+
+func TestUpsertCommentReplyEcho(t *testing.T) {
+	pool := connectTestDB(t)
+	ctx := context.Background()
+
+	recipient := createTestUserNamed(t, pool, "-reply-recipient")
+	actor1 := createTestUserNamed(t, pool, "-reply-actor1")
+	actor2 := createTestUserNamed(t, pool, "-reply-actor2")
+
+	insertTestGame(t, pool, 55503, "Reply Echo Game")
+	journey, err := db.InsertJourney(ctx, pool, db.Journey{
+		UserID:          recipient,
+		IGDBID:          55503,
+		StartedAt:       time.Date(2026, 6, 10, 10, 0, 0, 0, time.UTC),
+		EndedAt:         time.Date(2026, 6, 10, 11, 0, 0, 0, time.UTC),
+		DurationSeconds: 3600,
+		PlayedAt:        time.Date(2026, 6, 10, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("insert journey: %v", err)
+	}
+
+	// No-op when the recipient is the actor (commenting on your own prior comment).
+	if err := db.UpsertCommentReplyEcho(ctx, pool, recipient, recipient, journey, "Reply Echo Game"); err != nil {
+		t.Fatalf("upsert reply echo self: %v", err)
+	}
+
+	if err := db.UpsertCommentReplyEcho(ctx, pool, recipient, actor1, journey, "Reply Echo Game"); err != nil {
+		t.Fatalf("upsert reply echo 1: %v", err)
+	}
+	// A second commenter on the same journey batches into the same echo row.
+	if err := db.UpsertCommentReplyEcho(ctx, pool, recipient, actor2, journey, "Reply Echo Game"); err != nil {
+		t.Fatalf("upsert reply echo 2: %v", err)
+	}
+
+	echoes, err := db.ListEchoes(ctx, pool, recipient, 10, "")
+	if err != nil {
+		t.Fatalf("list echoes: %v", err)
+	}
+	if len(echoes) != 1 {
+		t.Fatalf("len(echoes) = %d, want 1", len(echoes))
+	}
+	if echoes[0].Type != "new_comment_reply" {
+		t.Fatalf("echo type = %s, want new_comment_reply", echoes[0].Type)
+	}
+	if echoes[0].ActorCount != 2 {
+		t.Fatalf("actor count = %d, want 2", echoes[0].ActorCount)
+	}
+	if !echoes[0].Unread {
+		t.Fatalf("echo should be unread")
+	}
+}
+
+// simulatePostComment mirrors the echo side effects of journeys.Handler.postComment
+// exactly, so this test exercises the same db-layer sequence the HTTP handler runs.
+func simulatePostComment(t *testing.T, ctx context.Context, pool *pgxpool.Pool, journeyID, actorID string) {
+	t.Helper()
+	if _, err := db.InsertComment(ctx, pool, journeyID, actorID, "test comment"); err != nil {
+		t.Fatalf("insert comment: %v", err)
+	}
+	meta, err := db.GetJourneyMeta(ctx, pool, journeyID)
+	if err != nil {
+		t.Fatalf("get journey meta: %v", err)
+	}
+	if err := db.UpsertCommentEcho(ctx, pool, meta.OwnerID, actorID, journeyID, meta.GameName); err != nil {
+		t.Fatalf("upsert comment echo: %v", err)
+	}
+	priorCommenters, err := db.ListPriorCommenterIDs(ctx, pool, journeyID, actorID)
+	if err != nil {
+		t.Fatalf("list prior commenters: %v", err)
+	}
+	for _, recipientID := range priorCommenters {
+		if recipientID == meta.OwnerID {
+			continue
+		}
+		if err := db.UpsertCommentReplyEcho(ctx, pool, recipientID, actorID, journeyID, meta.GameName); err != nil {
+			t.Fatalf("upsert reply echo: %v", err)
+		}
+	}
+}
+
+// TestCommentConversation_EchoFlow walks through a full back-and-forth conversation
+// (owner's journey, a commenter, then repeated replies from both sides) and checks
+// who gets notified — and who doesn't — at every step.
+func TestCommentConversation_EchoFlow(t *testing.T) {
+	pool := connectTestDB(t)
+	ctx := context.Background()
+
+	owner := createTestUserNamed(t, pool, "-conv-owner")
+	commenter := createTestUserNamed(t, pool, "-conv-commenter")
+
+	insertTestGame(t, pool, 55510, "Conversation Game")
+	journey, err := db.InsertJourney(ctx, pool, db.Journey{
+		UserID:          owner,
+		IGDBID:          55510,
+		StartedAt:       time.Date(2026, 6, 10, 10, 0, 0, 0, time.UTC),
+		EndedAt:         time.Date(2026, 6, 10, 11, 0, 0, 0, time.UTC),
+		DurationSeconds: 3600,
+		PlayedAt:        time.Date(2026, 6, 10, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("insert journey: %v", err)
+	}
+
+	// Step 1: owner creates the journey — no comments, no echoes for anyone yet.
+	ownerEchoes, err := db.ListEchoes(ctx, pool, owner, 10, "")
+	if err != nil {
+		t.Fatalf("list owner echoes (step1): %v", err)
+	}
+	if len(ownerEchoes) != 0 {
+		t.Fatalf("step1: owner echoes = %d, want 0", len(ownerEchoes))
+	}
+
+	// Step 2: commenter comments on the journey — owner gets new_comment,
+	// commenter (the only prior commenter besides themselves) gets nothing.
+	simulatePostComment(t, ctx, pool, journey, commenter)
+
+	ownerEchoes, err = db.ListEchoes(ctx, pool, owner, 10, "")
+	if err != nil {
+		t.Fatalf("list owner echoes (step2): %v", err)
+	}
+	if len(ownerEchoes) != 1 || ownerEchoes[0].Type != "new_comment" || !ownerEchoes[0].Unread {
+		t.Fatalf("step2: owner echoes = %+v, want one unread new_comment", ownerEchoes)
+	}
+	ownerEchoID := ownerEchoes[0].ID
+
+	commenterEchoes, err := db.ListEchoes(ctx, pool, commenter, 10, "")
+	if err != nil {
+		t.Fatalf("list commenter echoes (step2): %v", err)
+	}
+	if len(commenterEchoes) != 0 {
+		t.Fatalf("step2: commenter echoes = %d, want 0 (no one to notify them yet)", len(commenterEchoes))
+	}
+
+	// Step 3: owner replies — commenter gets new_comment_reply. Owner does not
+	// get a new echo for commenting on their own journey.
+	simulatePostComment(t, ctx, pool, journey, owner)
+
+	commenterEchoes, err = db.ListEchoes(ctx, pool, commenter, 10, "")
+	if err != nil {
+		t.Fatalf("list commenter echoes (step3): %v", err)
+	}
+	if len(commenterEchoes) != 1 || commenterEchoes[0].Type != "new_comment_reply" || !commenterEchoes[0].Unread {
+		t.Fatalf("step3: commenter echoes = %+v, want one unread new_comment_reply", commenterEchoes)
+	}
+	commenterEchoID := commenterEchoes[0].ID
+
+	ownerEchoes, err = db.ListEchoes(ctx, pool, owner, 10, "")
+	if err != nil {
+		t.Fatalf("list owner echoes (step3): %v", err)
+	}
+	if len(ownerEchoes) != 1 || ownerEchoes[0].ID != ownerEchoID {
+		t.Fatalf("step3: owner echoes = %+v, want unchanged single echo %d", ownerEchoes, ownerEchoID)
+	}
+
+	// Step 4: commenter comments again — owner's existing new_comment row is
+	// refreshed (same id, same single actor). Commenter does not get a reply
+	// echo for the owner's prior comment, since the owner already has their own.
+	simulatePostComment(t, ctx, pool, journey, commenter)
+
+	ownerEchoes, err = db.ListEchoes(ctx, pool, owner, 10, "")
+	if err != nil {
+		t.Fatalf("list owner echoes (step4): %v", err)
+	}
+	if len(ownerEchoes) != 1 || ownerEchoes[0].ID != ownerEchoID || ownerEchoes[0].ActorCount != 1 {
+		t.Fatalf("step4: owner echoes = %+v, want same row refreshed with actor count 1", ownerEchoes)
+	}
+
+	commenterEchoes, err = db.ListEchoes(ctx, pool, commenter, 10, "")
+	if err != nil {
+		t.Fatalf("list commenter echoes (step4): %v", err)
+	}
+	if len(commenterEchoes) != 1 || commenterEchoes[0].ID != commenterEchoID {
+		t.Fatalf("step4: commenter echoes = %+v, want unchanged single echo %d", commenterEchoes, commenterEchoID)
+	}
+
+	// Step 5: owner replies again — commenter's existing new_comment_reply row
+	// is refreshed (same id, same single actor), not duplicated.
+	simulatePostComment(t, ctx, pool, journey, owner)
+
+	commenterEchoes, err = db.ListEchoes(ctx, pool, commenter, 10, "")
+	if err != nil {
+		t.Fatalf("list commenter echoes (step5): %v", err)
+	}
+	if len(commenterEchoes) != 1 || commenterEchoes[0].ID != commenterEchoID || commenterEchoes[0].ActorCount != 1 {
+		t.Fatalf("step5: commenter echoes = %+v, want same row refreshed with actor count 1", commenterEchoes)
+	}
+
+	ownerEchoes, err = db.ListEchoes(ctx, pool, owner, 10, "")
+	if err != nil {
+		t.Fatalf("list owner echoes (step5): %v", err)
+	}
+	if len(ownerEchoes) != 1 || ownerEchoes[0].ID != ownerEchoID {
+		t.Fatalf("step5: owner echoes = %+v, want unchanged single echo %d", ownerEchoes, ownerEchoID)
 	}
 }

@@ -327,6 +327,14 @@ export const MOCK_ECHOES: Echo[] = [
     read: true,
     createdAt: daysAgo(1), updatedAt: hoursAgo(3),
   },
+  {
+    id: "e5", type: "new_comment_reply",
+    actors: [PLAYERS[1]],
+    actorCount: 1,
+    subjectId: "s9", subjectTitle: "Hollow Knight",
+    read: false,
+    createdAt: minsAgo(5), updatedAt: minsAgo(5),
+  },
 ];
 
 export const MOCK_GAME_ACTIVITY: GameActivity[] = [

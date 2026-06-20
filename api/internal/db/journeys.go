@@ -664,6 +664,29 @@ func LastCommentBody(ctx context.Context, pool *pgxpool.Pool, userID string) (st
 	return body, nil
 }
 
+// ListPriorCommenterIDs returns the distinct user IDs who have commented on
+// journeyID, excluding excludeUserID. Used to notify prior commenters when
+// someone else adds a new comment to the same journey.
+func ListPriorCommenterIDs(ctx context.Context, pool *pgxpool.Pool, journeyID, excludeUserID string) ([]string, error) {
+	rows, err := pool.Query(ctx, `
+		SELECT DISTINCT user_id FROM comments WHERE journey_id = $1 AND user_id != $2
+	`, journeyID, excludeUserID)
+	if err != nil {
+		return nil, fmt.Errorf("list prior commenter ids: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan prior commenter id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 // InsertComment writes a new comment and returns it with the commenter's player info.
 func InsertComment(ctx context.Context, pool *pgxpool.Pool, journeyID, userID, body string) (JourneyComment, error) {
 	var c JourneyComment

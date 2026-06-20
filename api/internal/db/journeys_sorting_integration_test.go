@@ -277,6 +277,46 @@ func TestGetFollowingFeed_SameDayTiebreaksByCreatedAt_AndCursorPagination(t *tes
 	}
 }
 
+func TestListPriorCommenterIDs(t *testing.T) {
+	pool := connectTestDB(t)
+	ctx := context.Background()
+	owner := createTestUserNamed(t, pool, "-prior-owner")
+	userA := createTestUserNamed(t, pool, "-prior-a")
+	userB := createTestUserNamed(t, pool, "-prior-b")
+	insertTestGame(t, pool, 90211, "Prior Commenter Game")
+
+	journeyID, err := db.InsertJourney(ctx, pool, db.Journey{
+		UserID:          owner,
+		IGDBID:          90211,
+		StartedAt:       time.Date(2026, 6, 10, 10, 0, 0, 0, time.UTC),
+		EndedAt:         time.Date(2026, 6, 10, 11, 0, 0, 0, time.UTC),
+		DurationSeconds: 3600,
+		PlayedAt:        time.Date(2026, 6, 10, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("insert journey: %v", err)
+	}
+
+	if _, err := db.InsertComment(ctx, pool, journeyID, userA, "first"); err != nil {
+		t.Fatalf("insert comment a: %v", err)
+	}
+	if _, err := db.InsertComment(ctx, pool, journeyID, userB, "second"); err != nil {
+		t.Fatalf("insert comment b: %v", err)
+	}
+	// userA comments again — should not produce a duplicate entry.
+	if _, err := db.InsertComment(ctx, pool, journeyID, userA, "third"); err != nil {
+		t.Fatalf("insert comment a again: %v", err)
+	}
+
+	ids, err := db.ListPriorCommenterIDs(ctx, pool, journeyID, userB)
+	if err != nil {
+		t.Fatalf("list prior commenter ids: %v", err)
+	}
+	if len(ids) != 1 || ids[0] != userA {
+		t.Fatalf("ids = %v, want [%s]", ids, userA)
+	}
+}
+
 func TestListComments_CursorPagination(t *testing.T) {
 	pool := connectTestDB(t)
 	ctx := context.Background()

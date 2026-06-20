@@ -54,6 +54,29 @@ describe("Echoes", () => {
     expect(links[0]).toHaveAttribute("href", `/journey/${firstComment.subjectId}`);
   });
 
+  it("comment reply echo links to its journey", async () => {
+    renderEchoes();
+    const reply = MOCK_ECHOES.find((e) => e.type === "new_comment_reply")!;
+    const links = await screen.findAllByRole("link", { name: /also commented on/ });
+    expect(links[0]).toHaveAttribute("href", `/journey/${reply.subjectId}`);
+  });
+
+  it("Comments filter includes comment reply echoes", async () => {
+    const user = userEvent.setup();
+    renderEchoes();
+    await screen.findAllByText(/also commented on/);
+    await user.click(screen.getByRole("button", { name: "Comments" }));
+    expect(screen.queryByText(/also commented on/)).toBeInTheDocument();
+  });
+
+  it("Followers filter hides comment reply echoes", async () => {
+    const user = userEvent.setup();
+    renderEchoes();
+    await screen.findAllByText(/also commented on/);
+    await user.click(screen.getByRole("button", { name: "Followers" }));
+    expect(screen.queryByText(/also commented on/)).not.toBeInTheDocument();
+  });
+
   it("follower echo links to the first actor's profile", async () => {
     renderEchoes();
     const firstFollower = MOCK_ECHOES.find((e) => e.type === "new_follower")!;

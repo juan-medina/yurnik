@@ -310,6 +310,19 @@ func (h *Handler) postComment(w http.ResponseWriter, r *http.Request) {
 		if err := db.RecordActivity(r.Context(), h.pool, userID, meta.OwnerID, "new_comment", &id, &meta.GameName, &comment.ID); err != nil {
 			log.Printf("journeys/postComment: record activity: %v", err)
 		}
+
+		if priorCommenters, err := db.ListPriorCommenterIDs(r.Context(), h.pool, id, userID); err == nil {
+			for _, recipientID := range priorCommenters {
+				if recipientID == meta.OwnerID {
+					continue
+				}
+				if err := db.UpsertCommentReplyEcho(r.Context(), h.pool, recipientID, userID, id, meta.GameName); err != nil {
+					log.Printf("journeys/postComment: upsert reply echo: %v", err)
+				}
+			}
+		} else {
+			log.Printf("journeys/postComment: list prior commenters: %v", err)
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

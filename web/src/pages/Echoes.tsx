@@ -27,8 +27,11 @@ function ActorAvatars({ actors }: { actors: Player[] }) {
 
 function EchoIcon({ type }: { type: Echo["type"] }) {
   const icon =
-    type === "new_comment" ? <MessageSquare size={13} /> :
-                             <UserPlus size={13} />;
+    type === "new_comment" || type === "new_comment_reply" ? (
+      <MessageSquare size={13} />
+    ) : (
+      <UserPlus size={13} />
+    );
   return (
     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
       {icon}
@@ -49,12 +52,12 @@ function EchoRow({ echo }: { echo: Echo }) {
   const { t } = useTranslation();
   const [showActors, setShowActors] = useState(false);
 
+  const isCommentEcho = echo.type === "new_comment" || echo.type === "new_comment_reply";
   const isFollowerBatch = echo.type === "new_follower" && echo.actorCount > 1;
-  const journeyDeleted = echo.type === "new_comment" && echo.subjectId === null;
-  const to =
-    echo.type === "new_comment"
-      ? `/journey/${echo.subjectId}`
-      : `/player/${echo.actors[0]?.handle}`;
+  const journeyDeleted = isCommentEcho && echo.subjectId === null;
+  const to = isCommentEcho
+    ? `/journey/${echo.subjectId}`
+    : `/player/${echo.actors[0]?.handle}`;
 
   const actorLabel = formatActors(echo.actors, echo.actorCount, t);
 
@@ -69,11 +72,11 @@ function EchoRow({ echo }: { echo: Echo }) {
       <div className="min-w-0 flex-1">
         <p className="text-sm">
           <span className="font-semibold">{actorLabel}</span>
-          {echo.type === "new_comment" ? (
+          {isCommentEcho ? (
             <>
-              {t("echoes_commented")}
+              {echo.type === "new_comment" ? t("echoes_commented") : t("echoes_replied")}
               <span className="font-medium">{echo.subjectTitle}</span>
-              {t("echoes_commented_suffix")}
+              {echo.type === "new_comment" ? t("echoes_commented_suffix") : t("echoes_replied_suffix")}
               {journeyDeleted && (
                 <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground">
                   {t("echoes_removed")}
@@ -173,7 +176,7 @@ export default function Echoes() {
   };
 
   const visible = allEchoes.filter((e) => {
-    if (filter === "comments") return e.type === "new_comment";
+    if (filter === "comments") return e.type === "new_comment" || e.type === "new_comment_reply";
     if (filter === "followers") return e.type === "new_follower";
     return true;
   });

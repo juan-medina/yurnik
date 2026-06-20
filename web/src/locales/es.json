@@ -187,6 +187,8 @@
   "echoes_others_other": "y {{count}} más",
   "echoes_commented": " ha comentado en tu partida de ",
   "echoes_commented_suffix": "",
+  "echoes_replied": " también ha comentado en ",
+  "echoes_replied_suffix": "",
   "echoes_followed": " ha empezado a seguirte",
   "echoes_removed": "eliminada",
   "echoes_empty_all": "Aún no hay ecos.",
@@ -322,6 +324,7 @@
 
   "notif_title": "Yurnik",
   "notif_new_comment_body": "{{actor}} comentó en {{title}}",
+  "notif_new_comment_reply_body": "{{actor}} también comentó en {{title}}",
   "notif_new_follower_body": "{{actor}} ha empezado a seguirte",
 
   "time_today": "Hoy",

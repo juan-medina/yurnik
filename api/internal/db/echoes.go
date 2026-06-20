@@ -103,6 +103,31 @@ func UpsertCommentEcho(ctx context.Context, pool *pgxpool.Pool, recipientID, act
 	return err
 }
 
+// UpsertCommentReplyEcho creates or updates a new_comment_reply echo for recipientID,
+// who previously commented on journeyID, when actorID posts a new comment there.
+// No-op if actorID == recipientID (commenting on your own prior comment).
+func UpsertCommentReplyEcho(ctx context.Context, pool *pgxpool.Pool, recipientID, actorID, journeyID, subjectTitle string) error {
+	if recipientID == actorID {
+		return nil
+	}
+	var echoID int64
+	err := pool.QueryRow(ctx, `
+		INSERT INTO echoes (recipient_id, type, subject_id, subject_title, updated_at)
+		VALUES ($1, 'new_comment_reply', $2, $3, now())
+		ON CONFLICT (recipient_id, subject_id) WHERE type = 'new_comment_reply'
+		DO UPDATE SET updated_at = now(), subject_title = EXCLUDED.subject_title, seen_at = NULL
+		RETURNING id
+	`, recipientID, journeyID, subjectTitle).Scan(&echoID)
+	if err != nil {
+		return fmt.Errorf("upsert comment reply echo: %w", err)
+	}
+	_, err = pool.Exec(ctx, `
+		INSERT INTO echo_actors (echo_id, actor_id) VALUES ($1, $2)
+		ON CONFLICT DO NOTHING
+	`, echoID, actorID)
+	return err
+}
+
 // UpsertFollowerEcho creates or updates a new_follower echo for recipientID when
 // actorID follows them. New activity resets seen_at.
 func UpsertFollowerEcho(ctx context.Context, pool *pgxpool.Pool, recipientID, actorID string) error {
