@@ -107,7 +107,7 @@ jobs:
         run: make build-agent
 
   build-web:
-    needs: [test-unit, test-integration, test-web, test-and-build-agent]
+    needs: [test-unit, test-integration, test-web]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
