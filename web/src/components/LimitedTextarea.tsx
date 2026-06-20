@@ -1,10 +1,17 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 
-import { useRef, useState, useEffect } from "react";
+import { lazy, Suspense, useRef, useState, useEffect } from "react";
 import { Smile } from "lucide-react";
-import EmojiPicker from "@emoji-mart/react";
-import data from "@emoji-mart/data";
+
+// @emoji-mart/react and its data file are ~500kB; loaded only once the picker is opened.
+const EmojiPicker = lazy(async () => {
+  const [{ default: Picker }, { default: data }] = await Promise.all([
+    import("@emoji-mart/react"),
+    import("@emoji-mart/data"),
+  ]);
+  return { default: (props: Omit<React.ComponentProps<typeof Picker>, "data">) => <Picker data={data} {...props} /> };
+});
 // Must match the CHECK constraint in api/internal/migrations/0012_text_length_limits.up.sql
 const MAX_TEXT_LENGTH = 400;
 
@@ -112,13 +119,14 @@ export function LimitedTextarea({ value, onChange, label, optionalLabel, placeho
         {toolbarRight}
         {pickerOpen && (
           <div ref={pickerRef} className="absolute bottom-full left-0 z-50 mb-1">
-            <EmojiPicker
-              data={data}
-              onEmojiSelect={insertEmoji}
-              theme="auto"
-              previewPosition="none"
-              skinTonePosition="search"
-            />
+            <Suspense fallback={null}>
+              <EmojiPicker
+                onEmojiSelect={insertEmoji}
+                theme="auto"
+                previewPosition="none"
+                skinTonePosition="search"
+              />
+            </Suspense>
           </div>
         )}
       </div>
