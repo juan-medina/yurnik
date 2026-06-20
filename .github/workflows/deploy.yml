@@ -3,7 +3,6 @@ name: Deploy
 on:
   push:
     branches: [main]
-  workflow_dispatch: {}
 
 jobs:
   test-unit:
@@ -101,7 +100,6 @@ jobs:
 
   deploy:
     needs: [test-unit, test-integration, test-web, test-agent]
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Set up SSH
