@@ -22,13 +22,20 @@ else
     ENV_FILE="$REPO_ROOT/.env"
 fi
 
-# Check postgres is running (skip with --no-check for CI environments)
-if [[ " $* " != *" --no-check "* ]]; then
-    if ! systemctl is-active --quiet postgresql; then
-        err "Postgres is not running. Start it with: make db-start"
-        exit 1
+# ci: a Postgres service container, reached over TCP as the postgres
+# superuser via PGHOST/PGUSER/PGPASSWORD -- no systemd, no local peer auth.
+if [ "${YURNIK_ENV:-}" = "ci" ]; then
+    PSQL=(psql)
+else
+    # Check postgres is running (skip with --no-check for local CI-like use)
+    if [[ " $* " != *" --no-check "* ]]; then
+        if ! systemctl is-active --quiet postgresql; then
+            err "Postgres is not running. Start it with: make db-start"
+            exit 1
+        fi
+        ok "Postgres is running"
     fi
-    ok "Postgres is running"
+    PSQL=(sudo -u postgres psql)
 fi
 
 # Generate passwords
@@ -37,9 +44,9 @@ API_PASSWORD=$(openssl rand -base64 24 | tr -d '+/=\n' | cut -c1-32)
 
 # Run SQL
 info "Initialising database..."
-sudo -u postgres psql -f "$SQL_FILE"
-sudo -u postgres psql -c "ALTER ROLE yurnik_admin WITH PASSWORD '$ADMIN_PASSWORD';"
-sudo -u postgres psql -c "ALTER ROLE yurnik_api WITH PASSWORD '$API_PASSWORD';"
+"${PSQL[@]}" -f "$SQL_FILE"
+"${PSQL[@]}" -c "ALTER ROLE yurnik_admin WITH PASSWORD '$ADMIN_PASSWORD';"
+"${PSQL[@]}" -c "ALTER ROLE yurnik_api WITH PASSWORD '$API_PASSWORD';"
 ok "Database initialised"
 
 # Prepare the env file

@@ -3,6 +3,7 @@ name: Deploy
 on:
   push:
     branches: [main]
+  workflow_dispatch: {}
 
 jobs:
   test-unit:
@@ -15,8 +16,7 @@ jobs:
           go-version-file: api/go.mod
 
       - name: Unit tests
-        working-directory: api
-        run: go test ./... -count=1
+        run: make test-api
 
   test-integration:
     needs: test-unit
@@ -37,6 +37,12 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    env:
+      YURNIK_ENV: ci
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+
     steps:
       - uses: actions/checkout@v4
 
@@ -44,28 +50,56 @@ jobs:
         with:
           go-version-file: api/go.mod
 
-      - name: Init database roles
-        env:
-          PGPASSWORD: postgres
-        run: |
-          psql -h localhost -U postgres -f scripts/db-init.sql
-          psql -h localhost -U postgres -c "ALTER ROLE yurnik_admin WITH PASSWORD 'ci'; ALTER ROLE yurnik_api WITH PASSWORD 'ci';"
+      - name: Init database
+        run: make db-init
 
       - name: Apply migrations
-        working-directory: api
-        env:
-          DATABASE_ADMIN_URL: postgres://yurnik_admin:ci@localhost:5432/yurnik
-        run: go run ./cmd/migrate up
+        run: make db-migrate
 
       - name: Integration tests
-        working-directory: api
-        env:
-          TEST_DATABASE_URL: postgres://yurnik_api:ci@localhost:5432/yurnik
-          TEST_DATABASE_ADMIN_URL: postgres://yurnik_admin:ci@localhost:5432/yurnik
-        run: go test -tags integration ./... -v -count=1
+        run: make test-integration
+
+  test-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/package.json
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: make lint
+
+      - name: Unit tests
+        run: make test-web
+
+      - name: Build
+        run: make build-web
+
+  test-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Unit tests
+        run: make test-agent
 
   deploy:
-    needs: [test-unit, test-integration]
+    needs: [test-unit, test-integration, test-web, test-agent]
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - name: Set up SSH
