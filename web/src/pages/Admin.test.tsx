@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { vi } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as reportsService from "@/services/reports";
 import * as authService from "@/services/auth";
 import * as adminService from "@/services/admin";
@@ -83,5 +84,27 @@ describe("Admin — Reports tab", () => {
 
     expect(await screen.findByText("Bob")).toBeInTheDocument();
     expect(screen.getByText("Alice")).toBeInTheDocument();
+  });
+
+  // Regression test: the reports list used to be populated only as a side
+  // effect inside queryFn, so a warm/cached ["admin", "reports"] entry (e.g.
+  // from revisiting the tab) never reached the page, leaving it stuck empty.
+  it("renders cached reports immediately on a warm cache, without re-fetching", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
+    });
+    queryClient.setQueryData(["auth", "me"], ADMIN_PLAYER);
+    queryClient.setQueryData(["admin", "reports"], { reports: [MOCK_REPORT] });
+    vi.mocked(reportsService.listReports).mockRejectedValue(new Error("should not be called"));
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/admin"]}>
+          <Admin />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText("Alice")).toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Check, ChevronLeft, Pencil, UserPlus } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -44,16 +44,18 @@ export default function PlayerProfile() {
   const [nextActivityCursor, setNextActivityCursor] = useState<string | undefined>();
   const [loadingMoreActivity, setLoadingMoreActivity] = useState(false);
 
-  useQuery({
+  const { data: activityPage } = useQuery({
     queryKey: ["activity", "player", handle],
-    queryFn: async () => {
-      const page = await getPlayerActivity(handle!);
-      setAllActivity(page.items);
-      setNextActivityCursor(page.nextCursor);
-      return page;
-    },
+    queryFn: () => getPlayerActivity(handle!),
     enabled: !!handle,
   });
+
+  useEffect(() => {
+    if (activityPage) {
+      setAllActivity(activityPage.items);
+      setNextActivityCursor(activityPage.nextCursor);
+    }
+  }, [activityPage]);
 
   async function loadMoreActivity() {
     if (!nextActivityCursor || loadingMoreActivity) return;
@@ -73,16 +75,18 @@ export default function PlayerProfile() {
   const [nextFollowersCursor, setNextFollowersCursor] = useState<string | undefined>();
   const [loadingMoreFollowers, setLoadingMoreFollowers] = useState(false);
 
-  useQuery({
+  const { data: followersPage } = useQuery({
     queryKey: ["follow-list", profile?.player.id, "followers"],
-    queryFn: async () => {
-      const page = await getFollowers(profile!.player.handle);
-      setAllFollowers(page.players);
-      setNextFollowersCursor(page.nextCursor);
-      return page;
-    },
+    queryFn: () => getFollowers(profile!.player.handle),
     enabled: !!profile,
   });
+
+  useEffect(() => {
+    if (followersPage) {
+      setAllFollowers(followersPage.players);
+      setNextFollowersCursor(followersPage.nextCursor);
+    }
+  }, [followersPage]);
 
   async function loadMoreFollowers() {
     if (!nextFollowersCursor || loadingMoreFollowers) return;
@@ -100,16 +104,18 @@ export default function PlayerProfile() {
   const [nextFollowingCursor, setNextFollowingCursor] = useState<string | undefined>();
   const [loadingMoreFollowing, setLoadingMoreFollowing] = useState(false);
 
-  useQuery({
+  const { data: followingPage } = useQuery({
     queryKey: ["follow-list", profile?.player.id, "following"],
-    queryFn: async () => {
-      const page = await getFollowing(profile!.player.handle);
-      setAllFollowing(page.players);
-      setNextFollowingCursor(page.nextCursor);
-      return page;
-    },
+    queryFn: () => getFollowing(profile!.player.handle),
     enabled: !!profile,
   });
+
+  useEffect(() => {
+    if (followingPage) {
+      setAllFollowing(followingPage.players);
+      setNextFollowingCursor(followingPage.nextCursor);
+    }
+  }, [followingPage]);
 
   async function loadMoreFollowing() {
     if (!nextFollowingCursor || loadingMoreFollowing) return;

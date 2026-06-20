@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, Clock, MonitorDown, Plus, Trash2, X } from "lucide-react";
 import GenreChip from "@/components/GenreChip";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -317,15 +317,17 @@ export default function Journeys() {
   const [nextHistoryCursor, setNextHistoryCursor] = useState<string | undefined>();
   const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
 
-  useQuery({
+  const { data: historyPage } = useQuery({
     queryKey: ["journeys", "user"],
-    queryFn: async () => {
-      const page = await getUserJourneys();
-      setAllHistory(page.journeys);
-      setNextHistoryCursor(page.nextCursor);
-      return page;
-    },
+    queryFn: () => getUserJourneys(),
   });
+
+  useEffect(() => {
+    if (historyPage) {
+      setAllHistory(historyPage.journeys);
+      setNextHistoryCursor(historyPage.nextCursor);
+    }
+  }, [historyPage]);
 
   async function loadMoreHistory() {
     if (!nextHistoryCursor || loadingMoreHistory) return;

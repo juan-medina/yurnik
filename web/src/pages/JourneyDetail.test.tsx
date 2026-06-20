@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MOCK_COMMENTS, MOCK_OTHERS_ON_JOURNEY, MY_PLAYER_ID, MY_PLAYER, JOURNEYS, PLAYERS } from "@/test/fixtures";
 import { formatLocalDate } from "@/lib/time";
 import { _reset as resetPlayers } from "@/services/players";
@@ -257,5 +258,42 @@ describe("JourneyDetail", () => {
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
     });
+  });
+
+  // Regression test: the comments list used to be populated only as a side
+  // effect inside queryFn, so a warm/cached ["journey", id, "comments"] entry
+  // (e.g. from revisiting the journey) never reached the page, leaving
+  // comments stuck empty despite real cached data.
+  it("renders cached comments immediately on a warm cache, without re-fetching", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("not found", { status: 404 })));
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
+    });
+    queryClient.setQueryData(["auth", "me"], MY_PLAYER);
+    queryClient.setQueryData(["journey", "s1"], {
+      id: s1.id,
+      igdbId: 1,
+      player: s1.player,
+      game: s1.game,
+      genres: s1.genres,
+      duration: "1h",
+      playedAt: s1.playedAt,
+      log: s1.log,
+    });
+    queryClient.setQueryData(["journey", "s1", "players"], { following: [], others: [] });
+    queryClient.setQueryData(["journey", "s1", "comments"], { comments: [...MOCK_COMMENTS] });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/journey/s1"]}>
+          <Routes>
+            <Route path="/journey/:id" element={<JourneyDetail />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText(MOCK_COMMENTS[0].text)).toBeInTheDocument();
   });
 });

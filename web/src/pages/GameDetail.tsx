@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { ChevronLeft, Check, UserPlus, ExternalLink, Monitor, Gamepad2, Smartphone, Telescope } from "lucide-react";
 import { siPlaystation, siSteam, siAndroid, siApple, siLinux } from "simple-icons";
@@ -331,16 +331,18 @@ export default function GameDetail() {
   const [nextJourneyCursor, setNextJourneyCursor] = useState<string | undefined>();
   const [loadingMore, setLoadingMore] = useState(false);
 
-  useQuery({
+  const { data: journeysPage } = useQuery({
     queryKey: ["game", igdbId, "journeys"],
-    queryFn: async () => {
-      const page = await getGameJourneys(igdbId!);
-      setAllJourneys(page);
-      setNextJourneyCursor(page.nextCursor);
-      return page;
-    },
+    queryFn: () => getGameJourneys(igdbId!),
     enabled: !!igdbId,
   });
+
+  useEffect(() => {
+    if (journeysPage) {
+      setAllJourneys(journeysPage);
+      setNextJourneyCursor(journeysPage.nextCursor);
+    }
+  }, [journeysPage]);
 
   async function loadMoreJourneys() {
     if (!nextJourneyCursor || loadingMore) return;

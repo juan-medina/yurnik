@@ -133,16 +133,18 @@ export default function Echoes() {
     retry: false,
   });
 
-  useQuery({
-    queryKey: ["echoes"],
-    queryFn: async () => {
-      const page = await getEchoes();
-      setAllEchoes(page.echoes);
-      setNextCursor(page.nextCursor);
-      return page;
-    },
+  const { data: echoesPage } = useQuery({
+    queryKey: ["echoes", "page"],
+    queryFn: () => getEchoes(),
     enabled: !!player,
   });
+
+  useEffect(() => {
+    if (echoesPage) {
+      setAllEchoes(echoesPage.echoes);
+      setNextCursor(echoesPage.nextCursor);
+    }
+  }, [echoesPage]);
 
   const markReadMutation = useMutation({ mutationFn: markAllRead });
 

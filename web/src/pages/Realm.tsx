@@ -11,29 +11,25 @@ import type { FeedItem } from "@/models/feed";
 
 export default function Realm() {
   const { t } = useTranslation();
-  const [allItems, setAllItems] = useState<FeedItem[] | null>(null);
+  const [extraItems, setExtraItems] = useState<FeedItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const { isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["feed"],
-    queryFn: async () => {
-      const page = await getFeedItems();
-      setAllItems(page.items);
-      setNextCursor(page.nextCursor);
-      return page;
-    },
+    queryFn: () => getFeedItems(),
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
   });
   const { data: currentPlayer } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
 
   async function loadMore() {
-    if (!nextCursor || loadingMore) return;
+    const cursor = nextCursor ?? data?.nextCursor;
+    if (!cursor || loadingMore) return;
     setLoadingMore(true);
     try {
-      const page = await getFeedItems(nextCursor);
-      setAllItems((prev) => [...(prev ?? []), ...page.items]);
+      const page = await getFeedItems(cursor);
+      setExtraItems((prev) => [...prev, ...page.items]);
       setNextCursor(page.nextCursor);
     } finally {
       setLoadingMore(false);
@@ -42,7 +38,8 @@ export default function Realm() {
 
   if (isLoading) return null;
 
-  const items = allItems ?? [];
+  const items = [...(data?.items ?? []), ...extraItems];
+  const hasMore = nextCursor !== undefined ? !!nextCursor : !!data?.nextCursor;
 
   const emptyState = (
     <div className="mx-auto max-w-2xl flex flex-col items-center justify-center py-24 gap-3 text-center">
@@ -60,7 +57,7 @@ export default function Realm() {
   return (
     <div className="mx-auto max-w-2xl">
       <ActivityFeed items={items} viewerId={currentPlayer?.id} showPlayer emptyState={emptyState} />
-      {nextCursor && (
+      {hasMore && (
         <div className="border-t border-border px-4 py-3">
           <button
             type="button"

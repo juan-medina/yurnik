@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
-import { MOCK_PENDING_JOURNEYS } from "@/test/fixtures";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MOCK_PENDING_JOURNEYS, PLAYERS } from "@/test/fixtures";
 import { renderWithProviders } from "@/test/utils";
 import Journeys from "./Journeys";
 
@@ -273,5 +274,42 @@ describe("Journeys — history load more", () => {
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
     });
+  });
+
+  // Regression test: the journey history list used to be populated only as a
+  // side effect inside queryFn, so a warm/cached ["journeys", "user"] entry
+  // (e.g. from revisiting the tab) never reached the page, leaving history
+  // stuck empty despite real cached data.
+  it("renders cached history immediately on a warm cache, without re-fetching", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("not found", { status: 404 })));
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
+    });
+    queryClient.setQueryData(["auth", "me"], { id: "me", handle: "tester", name: "Tester", color: "#ff0000" });
+    queryClient.setQueryData(["pending-journeys"], []);
+    queryClient.setQueryData(["journeys", "user"], {
+      journeys: [
+        {
+          id: "j_warm",
+          igdbId: 999,
+          player: PLAYERS[0],
+          game: "Subnautica",
+          genres: [],
+          duration: "3h",
+          playedAt: new Date("2026-06-01"),
+        },
+      ],
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <Journeys />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText("Subnautica")).toBeInTheDocument();
   });
 });

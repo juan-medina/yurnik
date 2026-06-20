@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MOCK_FRIENDS_ON_JOURNEY, MOCK_HORIZON, MY_PLAYER, MY_PLAYER_ID, PLAYERS, JOURNEYS } from "@/test/fixtures";
 import { _reset as resetPlayers } from "@/services/players";
 import { renderWithProviders } from "@/test/utils";
@@ -161,5 +162,125 @@ describe("PlayerProfile", () => {
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
     });
+  });
+
+  // Regression tests: activity/followers/following used to be populated only
+  // as a side effect inside queryFn, so a warm/cached entry for any of these
+  // keys (e.g. from revisiting the profile) never reached the page, leaving
+  // the section stuck empty despite real cached data.
+  it("renders cached activity immediately on a warm cache, without re-fetching", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("not found", { status: 404 })));
+    const target = PLAYERS[1];
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
+    });
+    queryClient.setQueryData(["auth", "me"], MY_PLAYER);
+    queryClient.setQueryData(["player-profile", target.handle], {
+      player: target,
+      journeyCount: 0,
+      totalSeconds: 0,
+      recentGames: [],
+      genreHours: [],
+      horizon: [],
+    });
+    queryClient.setQueryData(["activity", "player", target.handle], {
+      items: [
+        {
+          kind: "journey",
+          journey: {
+            id: "j_warm",
+            igdbId: 999,
+            player: target,
+            game: "Subnautica",
+            genres: [],
+            duration: "3h",
+            playedAt: new Date("2026-06-01"),
+          },
+        },
+      ],
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[`/player/${target.handle}`]}>
+          <Routes>
+            <Route path="/player/:handle" element={<PlayerProfile />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText("Subnautica")).toBeInTheDocument();
+  });
+
+  it("renders cached followers immediately on a warm cache, without re-fetching", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("not found", { status: 404 })));
+    const target = PLAYERS[1];
+    const follower = PLAYERS[2];
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
+    });
+    queryClient.setQueryData(["auth", "me"], MY_PLAYER);
+    queryClient.setQueryData(["player-profile", target.handle], {
+      player: target,
+      journeyCount: 0,
+      totalSeconds: 0,
+      recentGames: [],
+      genreHours: [],
+      horizon: [],
+    });
+    queryClient.setQueryData(["activity", "player", target.handle], { items: [] });
+    queryClient.setQueryData(["follow-list", target.id, "followers"], { players: [follower] });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[`/player/${target.handle}`]}>
+          <Routes>
+            <Route path="/player/:handle" element={<PlayerProfile />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /Followers/ }));
+    expect(await screen.findByText(follower.name)).toBeInTheDocument();
+  });
+
+  it("renders cached following immediately on a warm cache, without re-fetching", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("not found", { status: 404 })));
+    const target = PLAYERS[1];
+    const followee = PLAYERS[3];
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
+    });
+    queryClient.setQueryData(["auth", "me"], MY_PLAYER);
+    queryClient.setQueryData(["player-profile", target.handle], {
+      player: target,
+      journeyCount: 0,
+      totalSeconds: 0,
+      recentGames: [],
+      genreHours: [],
+      horizon: [],
+    });
+    queryClient.setQueryData(["activity", "player", target.handle], { items: [] });
+    queryClient.setQueryData(["follow-list", target.id, "following"], { players: [followee] });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[`/player/${target.handle}`]}>
+          <Routes>
+            <Route path="/player/:handle" element={<PlayerProfile />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await user.click(await screen.findByRole("button", { name: /Following/ }));
+    expect(await screen.findByText(followee.name)).toBeInTheDocument();
   });
 });

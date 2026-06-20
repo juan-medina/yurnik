@@ -201,18 +201,20 @@ export default function JourneyDetail() {
     refetchIntervalInBackground: false,
   });
 
-  useQuery({
+  const { data: commentsPage } = useQuery({
     queryKey: ["journey", id, "comments"],
-    queryFn: async () => {
-      const page = await getComments(id!);
-      setAllComments(page.comments);
-      setNextCommentsCursor(page.nextCursor);
-      return page;
-    },
+    queryFn: () => getComments(id!),
     enabled: !!id,
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
   });
+
+  useEffect(() => {
+    if (commentsPage) {
+      setAllComments(commentsPage.comments);
+      setNextCommentsCursor(commentsPage.nextCursor);
+    }
+  }, [commentsPage]);
 
   async function loadMoreComments() {
     if (!nextCommentsCursor || loadingMoreComments) return;

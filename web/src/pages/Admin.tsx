@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -73,15 +73,17 @@ function ReportsTab() {
   const [nextCursor, setNextCursor] = useState<string | undefined>();
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const { isLoading } = useQuery({
+  const { data: reportsPage, isLoading } = useQuery({
     queryKey: ["admin", "reports"],
-    queryFn: async () => {
-      const page = await listReports();
-      setAllReports(page.reports);
-      setNextCursor(page.nextCursor);
-      return page;
-    },
+    queryFn: () => listReports(),
   });
+
+  useEffect(() => {
+    if (reportsPage) {
+      setAllReports(reportsPage.reports);
+      setNextCursor(reportsPage.nextCursor);
+    }
+  }, [reportsPage]);
 
   async function loadMore() {
     if (!nextCursor || loadingMore) return;

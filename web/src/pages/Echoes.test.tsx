@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
-import { MOCK_ECHOES } from "@/test/fixtures";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MOCK_ECHOES, MY_PLAYER } from "@/test/fixtures";
 import * as echoesService from "@/services/echoes";
 import { renderWithProviders } from "@/test/utils";
 import Echoes from "./Echoes";
@@ -97,5 +98,32 @@ describe("Echoes", () => {
     renderEchoes();
     await screen.findAllByText(/commented on your/);
     expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
+  });
+
+  // Regression test: the echo list used to be populated only as a side
+  // effect inside queryFn, so a warm/cached entry under this page's own
+  // query key never reached the page, leaving it stuck empty despite real
+  // cached data. (A separate, related bug — this page sharing the
+  // ["echoes"] key with the global nav-badge hook — is covered by
+  // Shell.test.tsx, which renders both consumers together.)
+  it("renders cached echoes immediately on a warm cache, without re-fetching", async () => {
+    vi.mocked(echoesService.markAllRead).mockResolvedValue(undefined);
+    vi.mocked(echoesService.getEchoes).mockRejectedValue(new Error("should not be called"));
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
+    });
+    queryClient.setQueryData(["auth", "me"], MY_PLAYER);
+    queryClient.setQueryData(["echoes", "page"], { echoes: [...MOCK_ECHOES] });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <Echoes />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findAllByText(/commented on your/)).not.toHaveLength(0);
   });
 });

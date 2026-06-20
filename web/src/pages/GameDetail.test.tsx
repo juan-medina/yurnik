@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MOCK_GAME_DETAIL, MOCK_FRIENDS_ON_JOURNEY, MOCK_OTHERS_ON_JOURNEY } from "@/test/fixtures";
 import { formatLocalDate } from "@/lib/time";
 import { _reset as resetPlayers } from "@/services/players";
@@ -227,5 +228,37 @@ describe("GameDetail", () => {
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
     });
+  });
+
+  // Regression test: the journeys-for-this-game list used to be populated
+  // only as a side effect inside queryFn, so a warm/cached
+  // ["game", igdbId, "journeys"] entry never reached the page, leaving the
+  // self/following/others lists stuck empty despite real cached data.
+  it("renders cached journeys immediately on a warm cache, without re-fetching", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("not found", { status: 404 })));
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
+    });
+    queryClient.setQueryData(["auth", "me"], { id: "me", handle: "tester", name: "Tester", color: "#ff0000" });
+    queryClient.setQueryData(["game", "1"], MOCK_GAME_DETAIL);
+    queryClient.setQueryData(["game", "1", "journeys"], {
+      self: [],
+      following: [],
+      others: MOCK_OTHERS_ON_JOURNEY,
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/game/1"]}>
+          <Routes>
+            <Route path="/game/:igdbId" element={<GameDetail />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByRole("heading", { name: /Elden Ring/ })).toBeInTheDocument();
+    expect(screen.getByText("Others")).toBeInTheDocument();
   });
 });
