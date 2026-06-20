@@ -13,6 +13,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
 
       - name: Unit tests
         run: make test-api
@@ -47,6 +48,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
 
       - name: Init database
         run: make db-init
@@ -82,7 +84,7 @@ jobs:
       - name: Unit tests
         run: make test-web
 
-  test-agent:
+  test-and-build-agent:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,11 +93,21 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('agent/**/*.csproj', 'agent/Yurnik.sln') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
       - name: Unit tests
         run: make test-agent
 
+      - name: Build
+        run: make build-agent
+
   build-web:
-    needs: [test-unit, test-integration, test-web, test-agent]
+    needs: [test-unit, test-integration, test-web, test-and-build-agent]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -117,21 +129,8 @@ jobs:
       - name: Build
         run: make build-web
 
-  build-agent:
-    needs: [test-unit, test-integration, test-web, test-agent]
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Build
-        run: make build-agent
-
   deploy-api:
-    needs: [build-web, build-agent]
+    needs: [build-web, test-and-build-agent]
     runs-on: ubuntu-latest
     steps:
       - name: Set up SSH
