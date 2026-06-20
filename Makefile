@@ -1,4 +1,4 @@
-.PHONY: run-api run-agent run-web test test-api test-agent test-web test-integration build build-api build-web build-agent deploy-api release-agent gen-keys export-user lint setup db-init db-migrate db-start db-stop
+.PHONY: run-api run-agent run-web test test-api test-agent test-web test-integration build build-api build-web build-agent deploy-api deploy-web release-agent gen-keys export-user lint setup db-init db-migrate db-start db-stop
 
 ifeq ($(OS),Windows_NT)
 PLATFORM := windows
@@ -54,6 +54,9 @@ build-agent:
 
 deploy-api:
 	bash scripts/deploy-api.sh
+
+deploy-web:
+	cd web && pnpm run deploy
 
 release-agent:
 	powershell -ExecutionPolicy Bypass -File agent/release.ps1
