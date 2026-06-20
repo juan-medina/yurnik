@@ -3,8 +3,8 @@
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 
-const PRIVACY_EMAIL = "privacy@yurnik.example";
-export const CONTACT_EMAIL = "contact@yurnik.example";
+const PRIVACY_EMAIL = "privacy@yurnik.social";
+export const CONTACT_EMAIL = "contact@yurnik.social";
 
 /** Replaces occurrences of email in text with a mailto anchor. */
 function makeEmailLink(text: string, email: string): React.ReactNode {

@@ -73,7 +73,7 @@
   "admin_delete_journey_log": "Eliminar registro",
   "admin_delete_comment": "Eliminar comentario",
   "account_suspended_title": "Cuenta suspendida",
-  "account_suspended_body": "Tu cuenta ha sido suspendida. Si crees que es un error, contáctanos en contact@yurnik.example.",
+  "account_suspended_body": "Tu cuenta ha sido suspendida. Si crees que es un error, contáctanos en contact@yurnik.social.",
 
   "topbar_menu": "Abrir menú de navegación",
   "topbar_switch_light": "Cambiar a modo claro",
@@ -354,11 +354,11 @@
   "terms_conduct_title": "Uso aceptable",
   "terms_conduct_body": "Usa Yurnik para compartir tu propia actividad de juego e interactuar con otros jugadores de buena fe. No publiques spam, acoso, contenido ilegal ni nada que suponga un mal uso de la plataforma. Los envíos automatizados o excesivos pueden ser limitados o bloqueados.",
   "terms_termination_title": "Cancelación de la cuenta",
-  "terms_termination_body": "Podemos suspender o eliminar una cuenta que infrinja estos términos. Si tu cuenta ha sido suspendida y crees que fue un error, puedes contactarnos en contact@yurnik.example. También puedes solicitar la eliminación de tu cuenta y datos asociados en cualquier momento; consulta la Política de privacidad para saber cómo se gestionan tus datos.",
+  "terms_termination_body": "Podemos suspender o eliminar una cuenta que infrinja estos términos. Si tu cuenta ha sido suspendida y crees que fue un error, puedes contactarnos en contact@yurnik.social. También puedes solicitar la eliminación de tu cuenta y datos asociados en cualquier momento; consulta la Política de privacidad para saber cómo se gestionan tus datos.",
   "terms_changes_title": "Cambios en estos términos",
   "terms_changes_body": "Estos términos pueden actualizarse a medida que el proyecto evoluciona. Actualizaremos la fecha al principio de esta página cuando se realicen cambios. Seguir usando Yurnik tras un cambio implica que aceptas los nuevos términos.",
   "terms_contact_title": "Contacto",
-  "terms_contact_body": "Las preguntas sobre estos términos pueden enviarse a privacy@yurnik.example.",
+  "terms_contact_body": "Las preguntas sobre estos términos pueden enviarse a privacy@yurnik.social.",
 
   "privacy_title": "Política de privacidad",
   "privacy_intro_title": "Resumen",
@@ -374,7 +374,7 @@
   "privacy_rights_title": "Tus derechos",
   "privacy_rights_body": "Si te encuentras en la UE, tienes derechos según el RGPD, incluyendo el acceso a tus datos, la corrección de datos inexactos, la eliminación y la portabilidad de datos. Para ejercer cualquiera de estos derechos, contáctanos con los datos indicados a continuación.",
   "privacy_contact_title": "Contacto",
-  "privacy_contact_body": "Para preguntas sobre privacidad o para realizar una solicitud sobre tus datos, contacta con privacy@yurnik.example.",
+  "privacy_contact_body": "Para preguntas sobre privacidad o para realizar una solicitud sobre tus datos, contacta con privacy@yurnik.social.",
   "load_more": "Cargar más",
   "loading": "Cargando…"
 }
