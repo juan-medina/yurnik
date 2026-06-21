@@ -542,11 +542,12 @@ func (h *Handler) getPlayerActivity(w http.ResponseWriter, r *http.Request) {
 }
 
 type recentGameItem struct {
-	IGDBID      int     `json:"igdb_id"`
-	Name        string  `json:"name"`
-	CoverURL    *string `json:"cover_url,omitempty"`
-	ReleaseYear *int    `json:"release_year,omitempty"`
-	LastPlayed  string  `json:"last_played"`
+	IGDBID        int     `json:"igdb_id"`
+	Name          string  `json:"name"`
+	CoverURL      *string `json:"cover_url,omitempty"`
+	ReleaseYear   *int    `json:"release_year,omitempty"`
+	LastPlayed    string  `json:"last_played"`
+	SecondsPlayed int     `json:"seconds_played"`
 }
 
 type genreHoursItem struct {
@@ -600,11 +601,12 @@ func buildProfileSummaryResponse(user db.User, followers, following int, isFollo
 	}
 	for _, g := range summary.RecentGames {
 		resp.RecentGames = append(resp.RecentGames, recentGameItem{
-			IGDBID:      g.IGDBID,
-			Name:        g.Name,
-			CoverURL:    g.CoverURL,
-			ReleaseYear: g.ReleaseYear,
-			LastPlayed:  g.LastPlayed.UTC().Format(time.RFC3339),
+			IGDBID:        g.IGDBID,
+			Name:          g.Name,
+			CoverURL:      g.CoverURL,
+			ReleaseYear:   g.ReleaseYear,
+			LastPlayed:    g.LastPlayed.UTC().Format(time.RFC3339),
+			SecondsPlayed: g.SecondsPlayed,
 		})
 	}
 	for _, gh := range summary.GenreHours {

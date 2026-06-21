@@ -22,6 +22,7 @@ export type RecentGame = {
   coverUrl?: string;
   releaseYear?: number;
   lastPlayed: Date;
+  secondsPlayed: number;
 };
 
 export type GenreHours = {

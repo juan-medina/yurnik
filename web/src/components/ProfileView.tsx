@@ -189,17 +189,24 @@ export default function ProfileView({
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
             {recentGames.map((g) => (
               <Link key={g.igdbId} to={`/game/${g.igdbId}`} className="group block">
-                {g.coverUrl ? (
-                  <img
-                    src={g.coverUrl}
-                    alt={g.name}
-                    className="mb-2 aspect-[3/4] w-full rounded-md object-cover transition-opacity group-hover:opacity-80"
-                  />
-                ) : (
-                  <div className="mb-2 flex aspect-[3/4] w-full items-center justify-center rounded-md bg-muted transition-opacity group-hover:opacity-80">
-                    <span className="px-1 text-center text-xs text-muted-foreground">{g.name}</span>
-                  </div>
-                )}
+                <div className="relative mb-2 aspect-[3/4] w-full">
+                  {g.coverUrl ? (
+                    <img
+                      src={g.coverUrl}
+                      alt={g.name}
+                      className="h-full w-full rounded-md object-cover transition-opacity group-hover:opacity-80"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center rounded-md bg-muted transition-opacity group-hover:opacity-80">
+                      <span className="px-1 text-center text-xs text-muted-foreground">{g.name}</span>
+                    </div>
+                  )}
+                  {g.secondsPlayed > 0 && (
+                    <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                      {formatSeconds(g.secondsPlayed)}
+                    </span>
+                  )}
+                </div>
                 <p className="truncate text-xs font-medium group-hover:underline" title={g.name}>
                   {g.name}
                 </p>
