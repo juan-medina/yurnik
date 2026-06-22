@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { Telescope, Trash2, GripVertical, Sparkles } from "lucide-react";
+import { Telescope, Trash2, GripVertical, Sparkles, Dices } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
@@ -28,6 +28,7 @@ import { getCurrentPlayer, signIn } from "@/services/auth";
 import { getHorizon, addToHorizon, removeFromHorizon, reorderHorizon } from "@/services/horizon";
 import { GameSelector, GameCover } from "@/components/GameSelector";
 import GenreChip from "@/components/GenreChip";
+import RollModal from "@/components/RollModal";
 import { cn } from "@/lib/utils";
 import { genreColor } from "@/lib/genres";
 import type { Game } from "@/models/game";
@@ -177,6 +178,7 @@ export default function Horizon() {
   const queryClient = useQueryClient();
   const [selectorKey, setSelectorKey] = useState(0);
   const [activeGenre, setActiveGenre] = useState<string | null>(null);
+  const [rolling, setRolling] = useState(false);
 
   const { data: currentPlayer, isLoading: loadingPlayer } = useQuery({
     queryKey: ["auth", "me"],
@@ -277,35 +279,47 @@ export default function Horizon() {
 
           {entries.length > 0 ? (
             <>
-              {allGenres.length > 1 && (
-                <div className="mb-4 flex flex-wrap gap-1.5">
-                  <button
-                    onClick={() => setActiveGenre(null)}
-                    className={cn(
-                      "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                      activeGenre === null
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                    )}
-                  >
-                    {t("players_all")}
-                  </button>
-                  {allGenres.map((genre) => (
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                {allGenres.length > 1 ? (
+                  <div className="flex flex-wrap gap-1.5">
                     <button
-                      key={genre}
-                      onClick={() => setActiveGenre(activeGenre === genre ? null : genre)}
+                      onClick={() => setActiveGenre(null)}
                       className={cn(
-                        "rounded-full px-3 py-1 text-xs font-medium transition-opacity",
-                        activeGenre === genre
+                        "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                        activeGenre === null
                           ? "bg-primary text-primary-foreground"
-                          : cn(genreColor(genre), "hover:opacity-80"),
+                          : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                       )}
                     >
-                      {genre}
+                      {t("players_all")}
                     </button>
-                  ))}
-                </div>
-              )}
+                    {allGenres.map((genre) => (
+                      <button
+                        key={genre}
+                        onClick={() => setActiveGenre(activeGenre === genre ? null : genre)}
+                        className={cn(
+                          "rounded-full px-3 py-1 text-xs font-medium transition-opacity",
+                          activeGenre === genre
+                            ? "bg-primary text-primary-foreground"
+                            : cn(genreColor(genre), "hover:opacity-80"),
+                        )}
+                      >
+                        {genre}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <span />
+                )}
+                <button
+                  type="button"
+                  onClick={() => setRolling(true)}
+                  className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <Dices size={14} />
+                  {t("horizon_roll")}
+                </button>
+              </div>
 
               {activeGenre ? (
                 <div className="divide-y divide-border rounded-lg border border-border bg-card px-4">
@@ -357,6 +371,10 @@ export default function Horizon() {
             </div>
           )}
         </>
+      )}
+
+      {rolling && filtered.length > 0 && (
+        <RollModal entries={filtered} onClose={() => setRolling(false)} />
       )}
 
       <div className="h-8" />

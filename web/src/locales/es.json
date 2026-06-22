@@ -277,6 +277,11 @@
   "horizon_remove": "Quitar del horizonte",
   "horizon_next_up": "A continuación",
   "horizon_drag_handle": "Arrastra para reordenar",
+  "horizon_roll": "Tirar dados",
+  "horizon_roll_rolling": "Eligiendo…",
+  "horizon_roll_result": "Tu elección es",
+  "horizon_roll_view": "Ver juego",
+  "horizon_roll_again": "Volver a tirar",
 
   "game_search_placeholder": "Buscar un juego…",
   "game_no_results": "No se han encontrado juegos para «{{query}}»",
@@ -382,6 +387,8 @@
   "loading": "Cargando…",
 
   "whats_new_title": "Novedades",
+  "whats_new_2026_06_22_roll_title": "¿No te decides? Tira los dados",
+  "whats_new_2026_06_22_roll_body": "¿No sabes qué jugar después? Pulsa el botón de dados en tu Horizonte para elegir un juego al azar, limitado al filtro de género que tengas activo. ¿No te convence la elección? Vuelve a tirar.",
   "whats_new_2026_06_22_title": "Menciona a tus amigos en los comentarios",
   "whats_new_2026_06_22_body": "Escribe @ seguido de un nombre en un comentario para mencionar a alguien. Recibirán una notificación, así que nunca se perderán que los han llamado a la conversación.",
   "whats_new_2026_06_21_title": "Cuánto tiempo has jugado",

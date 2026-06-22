@@ -68,6 +68,38 @@ describe("Horizon", () => {
     expect(await screen.findByRole("button", { name: /sign in/i })).toBeInTheDocument();
   });
 
+  it("rolling within a genre filter picks a game from that filter only", async () => {
+    const user = userEvent.setup();
+    renderHorizon();
+    await screen.findByText(MOCK_HORIZON[0].name);
+
+    await user.click(screen.getByRole("button", { name: "Roguelike" }));
+    await screen.findByText(MOCK_HORIZON[1].name);
+
+    await user.click(screen.getByRole("button", { name: /roll/i }));
+
+    expect(
+      await screen.findByRole("link", { name: /view game/i }, { timeout: 2000 }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(MOCK_HORIZON[0].name)).not.toBeInTheDocument();
+  });
+
+  it("rolling again re-spins and settles on a new pick", async () => {
+    const user = userEvent.setup();
+    renderHorizon();
+    await screen.findByText(MOCK_HORIZON[0].name);
+
+    await user.click(screen.getByRole("button", { name: /roll/i }));
+    await screen.findByRole("link", { name: /view game/i }, { timeout: 2000 });
+
+    await user.click(screen.getByRole("button", { name: /roll again/i }));
+    expect(screen.getByText(/rolling/i)).toBeInTheDocument();
+
+    expect(
+      await screen.findByRole("link", { name: /view game/i }, { timeout: 2000 }),
+    ).toBeInTheDocument();
+  });
+
   it("removing an entry takes it off the list", async () => {
     const user = userEvent.setup();
     renderHorizon();

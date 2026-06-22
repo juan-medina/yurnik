@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import LegalLayout from "@/components/layout/LegalLayout";
 
 const ENTRIES = [
+  { key: "2026_06_22_roll", date: "2026-06-22" },
   { key: "2026_06_22", date: "2026-06-22" },
   { key: "2026_06_21", date: "2026-06-21" },
   { key: "2026_06_17", date: "2026-06-17" },

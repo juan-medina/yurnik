@@ -277,6 +277,11 @@
   "horizon_remove": "Remove from horizon",
   "horizon_next_up": "Next up",
   "horizon_drag_handle": "Drag to reorder",
+  "horizon_roll": "Roll",
+  "horizon_roll_rolling": "Rolling…",
+  "horizon_roll_result": "Your pick is",
+  "horizon_roll_view": "View game",
+  "horizon_roll_again": "Roll again",
 
   "game_search_placeholder": "Search for a game…",
   "game_no_results": "No games found for “{{query}}”",
@@ -385,6 +390,8 @@
   "loading": "Loading…",
 
   "whats_new_title": "What's New",
+  "whats_new_2026_06_22_roll_title": "Can't decide? Roll for it",
+  "whats_new_2026_06_22_roll_body": "Stuck choosing what's next? Hit the dice button on your Horizon to randomly pick a game — narrowed to whatever genre filter you've got active. Don't like the pick? Roll again.",
   "whats_new_2026_06_22_title": "Mention friends in comments",
   "whats_new_2026_06_22_body": "Type @ followed by a name in a comment to mention someone. They'll get notified, so they never miss being called into the conversation.",
   "whats_new_2026_06_21_title": "See how long you played",
