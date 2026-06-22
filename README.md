@@ -49,7 +49,7 @@ Three components, one Postgres database. The code is the reference for details �
 
 The web app and the tray agent are both clients of the same API — they call it independently over HTTPS/JSON, the agent is never a dependency of the web app or vice versa.
 
-- **`web/`** — the React SPA, deployed to Cloudflare Pages. Everything a user does — log in, confirm or browse journeys, follow players, search games, manage exclusions — goes through this. It is fully functional with no client installed.
+- **`web/`** — the React SPA, deployed to Cloudflare Workers. Everything a user does — log in, confirm or browse journeys, follow players, search games, manage exclusions — goes through this. It is fully functional with no client installed.
 - **`api/`** — a single Go binary, the only thing that talks to Postgres, Discord and IGDB. It serves all `/api/v1` routes, handles login and session issuing, proxies and caches IGDB lookups, and holds pending (unconfirmed) journeys until the user acts on them or they're evicted.
 - **`agent/`** — an optional Windows tray app (C#). It watches for games starting/stopping (via graphics API detection), calls the API directly to create pending journeys, and notifies the user when a game closes so they can confirm it via the web app. It has no UI beyond the tray icon and receives its session token from the web app via the `yurnik://` URL scheme.
 
@@ -135,19 +135,27 @@ make gen-keys # generate a session signing key
 
 ```sh
 make deploy-api    # deploy the API to the production server
-make release-agent # package and publish a new agent release
+make deploy-web    # build and deploy the web frontend to Cloudflare Workers
+make release-agent # tag and publish a new agent release
 ```
 
-`deploy-api` and `release-agent` are not normally run by hand — they are invoked by CI (see below). `deploy-api` does require the production environment (SSH access to the VPS), so running it locally isn't meaningful anyway.
+`deploy-api` and `deploy-web` are not normally run by hand — they are invoked by CI (see below). `deploy-api` does require the production environment (SSH access to the VPS) and `deploy-web` requires Cloudflare API credentials, so running either locally isn't meaningful anyway.
+
+`release-agent` (`agent/release.ps1`) is the opposite: it's a local helper run by hand, not by CI. It reads the version from `agent/version.props`, creates and pushes a `vX.Y.Z` git tag, then uses `gh release create` (with `agent/release-notes.md`) to create the GitHub release. Pushing that tag is what triggers the Release Agent workflow (see below), which builds the actual agent binary and uploads it to the release `release-agent` just created. Requires `git` and the GitHub CLI (`gh`) locally, a clean working tree, and no unpushed commits.
+
+```sh
+# Usage: make export-user USER=<handle-or-uuid> [OUT=<output-file>]
+make export-user USER=somehandle
+```
+
+Produces a single JSON file with all data Yurnik holds about one user (handle or UUID), for fulfilling GDPR right-of-access requests. Read-only — no writes, no HTTP endpoint. Defaults to printing to stdout; pass `OUT=<file>` to write to a file instead.
 
 ## CI/CD
 
 Two GitHub Actions workflows:
 
-- **Deploy** (`.github/workflows/deploy.yml`) — runs on every push to `main`. Runs the Go unit tests, then spins up a throwaway Postgres instance to run the integration tests against. If both pass, it SSHes into the production VPS, pulls the latest code and runs `make deploy-api`, which builds the API binary, runs migrations and restarts the service.
+- **Deploy** (`.github/workflows/deploy.yml`) — runs on every push to `main`. Runs the Go unit tests, the web lint/unit tests, and the agent's xUnit tests in parallel, plus a throwaway-Postgres integration test run. If all pass, it builds the web frontend, then SSHes into the production VPS to pull the latest code and run `make deploy-api` (builds the API binary, runs migrations, restarts the service), and finally runs `make deploy-web` to build and deploy the frontend to Cloudflare Workers via `wrangler deploy`.
 - **Release Agent** (`.github/workflows/release-agent.yml`) — runs when a `vX.Y.Z` tag is pushed. Runs the agent's xUnit tests, publishes a self-contained win-x64 build, packages it with Velopack (`vpk`), and publishes it as a GitHub release that `release-agent` produces — this is how end users get agent updates.
-
-The web frontend is not part of either workflow — Cloudflare Pages builds and deploys it directly from Git on every push to `main`.
 
 ## License
 
