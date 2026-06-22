@@ -19,6 +19,7 @@ const AgentAuth = lazy(() => import("@/pages/AgentAuth"));
 const Lore = lazy(() => import("@/pages/Lore"));
 const Terms = lazy(() => import("@/pages/Terms"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
+const WhatsNew = lazy(() => import("@/pages/WhatsNew"));
 const Admin = lazy(() => import("@/pages/Admin"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
@@ -30,6 +31,7 @@ const router = createBrowserRouter([
   { path: "/lore", element: withSuspense(<Lore />) },
   { path: "/terms", element: withSuspense(<Terms />) },
   { path: "/privacy", element: withSuspense(<Privacy />) },
+  { path: "/whats-new", element: withSuspense(<WhatsNew />) },
   { path: "/auth/complete", element: withSuspense(<AuthComplete />) },
   { path: "/auth/agent", element: withSuspense(<AgentAuth />) },
   {

@@ -226,6 +226,9 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
           </a>
         </p>
         <p className="mt-2 flex items-center justify-center gap-3">
+          <Link to="/whats-new" className="transition-colors hover:text-foreground">
+            {t("legal_whats_new")}
+          </Link>
           <Link to="/terms" className="transition-colors hover:text-foreground">
             {t("legal_terms")}
           </Link>

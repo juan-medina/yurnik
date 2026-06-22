@@ -339,6 +339,7 @@
 
   "legal_terms": "Términos de servicio",
   "legal_privacy": "Política de privacidad",
+  "legal_whats_new": "Novedades",
   "legal_agree_prefix": "Al continuar, aceptas nuestros",
   "legal_and": "y nuestra",
   "legal_last_updated": "Última actualización: {{date}}",
@@ -376,5 +377,19 @@
   "privacy_contact_title": "Contacto",
   "privacy_contact_body": "Para preguntas sobre privacidad o para realizar una solicitud sobre tus datos, contacta con privacy@yurnik.social.",
   "load_more": "Cargar más",
-  "loading": "Cargando…"
+  "loading": "Cargando…",
+
+  "whats_new_title": "Novedades",
+  "whats_new_2026_06_21_title": "Cuánto tiempo has jugado",
+  "whats_new_2026_06_21_body": "Tus perfil muestra cuánto tiempo les has dedicado a tus juegos recientes.",
+  "whats_new_2026_06_17_title": "Reporta contenido que te preocupe",
+  "whats_new_2026_06_17_body": "Ahora puedes reportar un registro de partida o comentario que incumpla las normas. Nuestro equipo revisa cada reporte.",
+  "whats_new_2026_06_15_title": "Elimina tu cuenta cuando quieras",
+  "whats_new_2026_06_15_body": "Ahora puedes eliminar tu cuenta y todos tus datos de forma permanente desde tu configuración. También publicamos nuestros Términos de Servicio y Política de Privacidad para que sepas exactamente qué hacemos con tu información.",
+  "whats_new_2026_06_11_title": "Organiza lo siguiente con Horizon",
+  "whats_new_2026_06_11_body": "Horizon te permite mantener una lista de los juegos que planeas jugar a continuación y reordenarla como quieras. También recibirás notificaciones de escritorio y un feed de actividad con seguidos y comentarios en tiempo real.",
+  "whats_new_2026_06_09_title": "Explora Yurnik sin iniciar sesión",
+  "whats_new_2026_06_09_body": "Ahora puedes explorar perfiles de jugadores y páginas de juegos sin una cuenta de Discord. Inicia sesión cuando estés listo para registrar tus propias partidas.",
+  "whats_new_2026_06_05_title": "Haz tu perfil único",
+  "whats_new_2026_06_05_body": "Ahora puedes establecer un nombre visible y avatar personalizados en lugar de usar los de Discord, y las páginas de juegos ahora muestran el año de lanzamiento y el género."
 }

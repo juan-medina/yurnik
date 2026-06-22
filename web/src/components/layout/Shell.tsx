@@ -45,6 +45,9 @@ export default function Shell() {
           </ErrorBoundary>
         </main>
         <footer className="flex items-center justify-center gap-3 border-t border-border px-4 py-2 text-xs text-muted-foreground/60">
+          <Link to="/whats-new" className="transition-colors hover:text-foreground">
+            {t("legal_whats_new")}
+          </Link>
           <Link to="/terms" className="transition-colors hover:text-foreground">
             {t("legal_terms")}
           </Link>

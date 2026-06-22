@@ -342,6 +342,7 @@
 
   "legal_terms": "Terms of Service",
   "legal_privacy": "Privacy Policy",
+  "legal_whats_new": "What's New",
   "legal_agree_prefix": "By continuing, you agree to our",
   "legal_and": "and",
   "legal_last_updated": "Last updated: {{date}}",
@@ -379,5 +380,19 @@
   "privacy_contact_title": "Contact",
   "privacy_contact_body": "For privacy questions or to make a request about your data, contact privacy@yurnik.social.",
   "load_more": "Load more",
-  "loading": "Loading…"
+  "loading": "Loading…",
+
+  "whats_new_title": "What's New",
+  "whats_new_2026_06_21_title": "See how long you played",
+  "whats_new_2026_06_21_body": "Your recent games now show how much time you've put into them, right alongside your journey log.",
+  "whats_new_2026_06_17_title": "Report content you're concerned about",
+  "whats_new_2026_06_17_body": "You can now report a journey log or comment that breaks the rules. Our team reviews every report.",
+  "whats_new_2026_06_15_title": "Delete your account, anytime",
+  "whats_new_2026_06_15_body": "You can now permanently delete your account and all your data from your settings. We also published our Terms of Service and Privacy Policy so you know exactly what we do with your information.",
+  "whats_new_2026_06_11_title": "Track what's next with Horizon",
+  "whats_new_2026_06_11_body": "Horizon lets you keep a list of games you're planning to play next, and reorder it however you like. You'll also get desktop notifications and an activity feed showing follows and comments as they happen.",
+  "whats_new_2026_06_09_title": "Browse Yurnik without signing in",
+  "whats_new_2026_06_09_body": "You can now look around player profiles and game pages without a Discord account. Sign in whenever you're ready to start logging your own journeys.",
+  "whats_new_2026_06_05_title": "Make your profile yours",
+  "whats_new_2026_06_05_body": "You can now set a custom display name and avatar instead of using the ones from Discord, and game pages now show release year and genre."
 }
