@@ -15,9 +15,9 @@ export default {
     const isBot = botRegex.test(userAgent);
 
     const getAssetResponse = async () => {
-      // Fetch the main index.html asset using the ASSETS binding
-      const indexReq = new Request(new URL('/index.html', request.url), request);
-      return env.ASSETS.fetch(indexReq);
+      // SPA fallback serves index.html content directly for unmatched paths,
+      // unlike an explicit /index.html request which Cloudflare 307-redirects to /
+      return env.ASSETS.fetch(request);
     };
 
     // 1. Journey Detail (/journey/:id)
