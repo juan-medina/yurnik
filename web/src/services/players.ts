@@ -159,4 +159,15 @@ export async function unfollowPlayer(playerId: string): Promise<void> {
   if (!resp.ok) throw new Error(`unfollow: ${resp.status}`);
 }
 
+// searchPlayers returns handle-prefix matches for @mention autocomplete.
+export async function searchPlayers(query: string): Promise<Player[]> {
+  if (!query) return [];
+  const url = new URL(`${API_BASE}/api/players/search`);
+  url.searchParams.set("q", query);
+  const resp = await apiFetch(url.toString(), { credentials: "include" });
+  if (!resp.ok) return [];
+  const data: { players: RawPlayer[] } = await resp.json();
+  return (data.players ?? []).map(rawToPlayer);
+}
+
 export function _reset(): void {}

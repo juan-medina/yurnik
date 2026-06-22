@@ -189,6 +189,8 @@
   "echoes_commented_suffix": "",
   "echoes_replied": " también ha comentado en ",
   "echoes_replied_suffix": "",
+  "echoes_mentioned": " te ha mencionado en un comentario en ",
+  "echoes_mentioned_suffix": "",
   "echoes_followed": " ha empezado a seguirte",
   "echoes_removed": "eliminada",
   "echoes_empty_all": "Aún no hay ecos.",

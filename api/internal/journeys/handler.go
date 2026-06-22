@@ -53,6 +53,10 @@ const writeVelocityMinInterval = 20 * time.Second
 // writeVelocityMaxPenalty caps how long a repeat offender's cooldown can grow to.
 const writeVelocityMaxPenalty = 5 * time.Minute
 
+// maxMentionsPerComment caps how many @mentions a single comment can resolve.
+// Beyond this is treated as spam, not a legitimate group shout-out.
+const maxMentionsPerComment = 10
+
 // Handler handles journey routes.
 type Handler struct {
 	pool     *pgxpool.Pool
@@ -85,6 +89,18 @@ func (h *Handler) checkVelocity(w http.ResponseWriter, userID string) bool {
 	return true
 }
 
+// mentionResp is the JSON shape for a resolved @mention within a comment.
+// StartOffset/Length are rune offsets into Text, so the frontend can splice
+// in the mentioned user's current handle/name at render time regardless of
+// whether they've renamed since the comment was posted.
+type mentionResp struct {
+	UserID      string `json:"user_id"`
+	Handle      string `json:"handle"`
+	Name        string `json:"name"`
+	StartOffset int    `json:"start_offset"`
+	Length      int    `json:"length"`
+}
+
 // commentResp is the JSON shape for a single comment.
 type commentResp struct {
 	ID     string `json:"id"`
@@ -95,8 +111,9 @@ type commentResp struct {
 		AvatarURL *string `json:"avatar_url,omitempty"`
 		Color     string  `json:"color"`
 	} `json:"player"`
-	Text        string `json:"text"`
-	CommentedAt string `json:"commented_at"`
+	Text        string        `json:"text"`
+	CommentedAt string        `json:"commented_at"`
+	Mentions    []mentionResp `json:"mentions,omitempty"`
 }
 
 func toCommentResp(c db.JourneyComment) commentResp {
@@ -109,6 +126,15 @@ func toCommentResp(c db.JourneyComment) commentResp {
 	r.Player.Color = c.PlayerColor
 	r.Text = c.Body
 	r.CommentedAt = c.CreatedAt.UTC().Format(time.RFC3339)
+	for _, m := range c.Mentions {
+		r.Mentions = append(r.Mentions, mentionResp{
+			UserID:      m.UserID,
+			Handle:      m.Handle,
+			Name:        m.Name,
+			StartOffset: m.StartOffset,
+			Length:      m.Length,
+		})
+	}
 	return r
 }
 
@@ -302,6 +328,26 @@ func (h *Handler) postComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// @mentions: resolved to a stable user_id, never matched by handle text,
+	// so a later Discord rename is reflected automatically when rendered.
+	mentionTokens := db.ParseMentions(body.Text, maxMentionsPerComment)
+	resolvedMentions, err := db.ResolveMentions(r.Context(), h.pool, mentionTokens)
+	if err != nil {
+		log.Printf("journeys/postComment: resolve mentions: %v", err)
+	}
+	var mentionedUserIDs []string
+	if len(resolvedMentions) > 0 {
+		mentionedUserIDs, err = db.InsertCommentMentions(r.Context(), h.pool, comment.ID, userID, mentionTokens, resolvedMentions)
+		if err != nil {
+			log.Printf("journeys/postComment: insert mentions: %v", err)
+		}
+		if byComment, err := db.ListCommentMentions(r.Context(), h.pool, []string{comment.ID}); err == nil {
+			comment.Mentions = byComment[comment.ID]
+		} else {
+			log.Printf("journeys/postComment: list mentions for response: %v", err)
+		}
+	}
+
 	// Best-effort echo/activity — never block the response on these failures.
 	if meta, err := db.GetJourneyMeta(r.Context(), h.pool, id); err == nil {
 		if err := db.UpsertCommentEcho(r.Context(), h.pool, meta.OwnerID, userID, id, meta.GameName); err != nil {
@@ -322,6 +368,12 @@ func (h *Handler) postComment(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			log.Printf("journeys/postComment: list prior commenters: %v", err)
+		}
+
+		for _, recipientID := range mentionedUserIDs {
+			if err := db.UpsertMentionEcho(r.Context(), h.pool, recipientID, userID, id, meta.GameName); err != nil {
+				log.Printf("journeys/postComment: upsert mention echo: %v", err)
+			}
 		}
 	}
 

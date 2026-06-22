@@ -189,6 +189,8 @@
   "echoes_commented_suffix": " journey",
   "echoes_replied": " also commented on ",
   "echoes_replied_suffix": "",
+  "echoes_mentioned": " mentioned you in a comment on ",
+  "echoes_mentioned_suffix": "",
   "echoes_followed": " started following you",
   "echoes_removed": "removed",
   "echoes_empty_all": "No echoes yet.",

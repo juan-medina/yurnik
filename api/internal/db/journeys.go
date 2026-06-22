@@ -583,6 +583,7 @@ type JourneyComment struct {
 	PlayerName      string
 	PlayerAvatarURL *string
 	PlayerColor     string
+	Mentions        []CommentMention
 }
 
 // EncodeCommentCursor encodes a (created_at, id) pair as a stable cursor for
@@ -645,7 +646,22 @@ func ListComments(ctx context.Context, pool *pgxpool.Pool, journeyID string, lim
 		}
 		comments = append(comments, c)
 	}
-	return comments, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	ids := make([]string, len(comments))
+	for i, c := range comments {
+		ids[i] = c.ID
+	}
+	mentionsByComment, err := ListCommentMentions(ctx, pool, ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range comments {
+		comments[i].Mentions = mentionsByComment[comments[i].ID]
+	}
+	return comments, nil
 }
 
 // LastCommentBody returns the body of the most recently created comment by

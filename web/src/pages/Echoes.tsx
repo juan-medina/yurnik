@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { MessageSquare, UserPlus } from "lucide-react";
+import { AtSign, MessageSquare, UserPlus } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
@@ -27,7 +27,9 @@ function ActorAvatars({ actors }: { actors: Player[] }) {
 
 function EchoIcon({ type }: { type: Echo["type"] }) {
   const icon =
-    type === "new_comment" || type === "new_comment_reply" ? (
+    type === "new_mention" ? (
+      <AtSign size={13} />
+    ) : type === "new_comment" || type === "new_comment_reply" ? (
       <MessageSquare size={13} />
     ) : (
       <UserPlus size={13} />
@@ -53,9 +55,11 @@ function EchoRow({ echo }: { echo: Echo }) {
   const [showActors, setShowActors] = useState(false);
 
   const isCommentEcho = echo.type === "new_comment" || echo.type === "new_comment_reply";
+  const isMentionEcho = echo.type === "new_mention";
+  const linksToJourney = isCommentEcho || isMentionEcho;
   const isFollowerBatch = echo.type === "new_follower" && echo.actorCount > 1;
-  const journeyDeleted = isCommentEcho && echo.subjectId === null;
-  const to = isCommentEcho
+  const journeyDeleted = linksToJourney && echo.subjectId === null;
+  const to = linksToJourney
     ? `/journey/${echo.subjectId}`
     : `/player/${echo.actors[0]?.handle}`;
 
@@ -72,7 +76,18 @@ function EchoRow({ echo }: { echo: Echo }) {
       <div className="min-w-0 flex-1">
         <p className="text-sm">
           <span className="font-semibold">{actorLabel}</span>
-          {isCommentEcho ? (
+          {isMentionEcho ? (
+            <>
+              {t("echoes_mentioned")}
+              <span className="font-medium">{echo.subjectTitle}</span>
+              {t("echoes_mentioned_suffix")}
+              {journeyDeleted && (
+                <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground">
+                  {t("echoes_removed")}
+                </span>
+              )}
+            </>
+          ) : isCommentEcho ? (
             <>
               {echo.type === "new_comment" ? t("echoes_commented") : t("echoes_replied")}
               <span className="font-medium">{echo.subjectTitle}</span>
@@ -178,7 +193,7 @@ export default function Echoes() {
   };
 
   const visible = allEchoes.filter((e) => {
-    if (filter === "comments") return e.type === "new_comment" || e.type === "new_comment_reply";
+    if (filter === "comments") return e.type === "new_comment" || e.type === "new_comment_reply" || e.type === "new_mention";
     if (filter === "followers") return e.type === "new_follower";
     return true;
   });

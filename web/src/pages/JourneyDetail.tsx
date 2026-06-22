@@ -21,6 +21,7 @@ import { JourneyForm } from "@/components/JourneyForm";
 import { LimitedTextarea } from "@/components/LimitedTextarea";
 import { formatCommentAge, formatJourneyDate } from "@/lib/time";
 import type { Comment, JourneyPlayer } from "@/models";
+import { renderCommentText } from "@/lib/mentions";
 
 
 function JourneyPlayerRow({ entry, currentPlayerId }: { entry: JourneyPlayer; currentPlayerId?: string }) {
@@ -162,7 +163,7 @@ function CommentRow({ comment, journeyId, currentPlayerId, isAdmin, highlighted,
           </>
         )}
       </div>
-      <p className="pl-8 break-words whitespace-pre-wrap text-sm text-foreground/80">{comment.text}</p>
+      <p className="pl-8 break-words whitespace-pre-wrap text-sm text-foreground/80">{renderCommentText(comment.text, comment.mentions)}</p>
       {reporting && (
         <ReportModal
           targetType="comment"
@@ -525,6 +526,7 @@ export default function JourneyDetail() {
             onChange={setCommentText}
             placeholder={t("journey_comment_placeholder")}
             rows={2}
+            enableMentions
             toolbarRight={
               <button
                 disabled={!commentText.trim() || postCommentMutation.isPending || commentCooldown.remaining > 0}

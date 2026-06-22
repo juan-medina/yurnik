@@ -47,11 +47,20 @@ export type GameActivity = {
   entries: JourneyEntry[];
 };
 
+export type CommentMention = {
+  userId: string;
+  handle: string;
+  name: string;
+  startOffset: number;
+  length: number;
+};
+
 export type Comment = {
   id: string;
   player: Player;
   text: string;
   commentedAt: Date;
+  mentions: CommentMention[];
 };
 
 export type JourneyPlayer = {

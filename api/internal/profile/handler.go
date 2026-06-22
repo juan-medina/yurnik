@@ -35,6 +35,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/me/avatar", h.uploadAvatar)
 	mux.HandleFunc("DELETE /api/me/avatar", h.deleteAvatar)
 	mux.HandleFunc("GET /api/feed", h.getFeed)
+	mux.HandleFunc("GET /api/players/search", h.searchPlayers)
 	mux.HandleFunc("GET /api/players/{handle}", h.getPlayer)
 	mux.HandleFunc("GET /api/players/{handle}/profile", h.getPlayerProfile)
 	mux.HandleFunc("GET /api/players/{handle}/activity", h.getPlayerActivity)
@@ -119,6 +120,31 @@ func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
 		HasCustomName:   user.HasCustomName,
 		IsAdmin:         user.IsAdmin,
 	})
+}
+
+// maxSearchResults caps @mention autocomplete results — a typeahead dropdown
+// only ever shows a handful of candidates.
+const maxSearchResults = 8
+
+// searchPlayers returns handle-prefix matches for @mention autocomplete.
+// Requires auth so it can't be used as an unauthenticated user enumeration
+// endpoint; an empty or missing q returns no results.
+func (h *Handler) searchPlayers(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.authenticate(w, r); !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	q := strings.TrimPrefix(r.URL.Query().Get("q"), "@")
+	users, err := db.SearchUsersByHandlePrefix(r.Context(), h.pool, q, maxSearchResults)
+	if err != nil {
+		log.Printf("profile/searchPlayers: %v", err)
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"players": usersToPlayerItems(users)})
 }
 
 func (h *Handler) getPlayer(w http.ResponseWriter, r *http.Request) {

@@ -167,6 +167,38 @@ func GetUserByHandle(ctx context.Context, pool *pgxpool.Pool, handle string) (Us
 	return u, err
 }
 
+// SearchUsersByHandlePrefix returns up to limit users whose handle starts
+// with prefix (case-insensitive), ordered by handle length then
+// alphabetically so the closest/shortest match comes first. Used for
+// @mention autocomplete while typing.
+func SearchUsersByHandlePrefix(ctx context.Context, pool *pgxpool.Pool, prefix string, limit int) ([]User, error) {
+	if prefix == "" {
+		return nil, nil
+	}
+	rows, err := pool.Query(ctx, `
+		SELECT id, provider, handle, COALESCE(display_name, name), COALESCE(custom_avatar_url, avatar_url), bio, color,
+		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL, is_admin, suspended_at
+		FROM users
+		WHERE handle ILIKE $1 || '%' AND suspended_at IS NULL
+		ORDER BY length(handle), handle
+		LIMIT $2
+	`, prefix, limit)
+	if err != nil {
+		return nil, fmt.Errorf("search users by handle prefix: %w", err)
+	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var u User
+		if err := rows.Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName, &u.IsAdmin, &u.SuspendedAt); err != nil {
+			return nil, fmt.Errorf("scan searched user: %w", err)
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}
+
 // ResetProfile clears custom_avatar_url and display_name, reverting to the Discord values.
 func ResetProfile(ctx context.Context, pool *pgxpool.Pool, id string) error {
 	_, err := pool.Exec(ctx, `

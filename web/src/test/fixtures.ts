@@ -151,21 +151,25 @@ export const MOCK_COMMENTS: Comment[] = [
     id: "c1", player: PLAYERS[1],
     text: "40 attempts is wild, respect. I gave up at 20.",
     commentedAt: minsAgo(18),
+    mentions: [],
   },
   {
     id: "c2", player: PLAYERS[2],
     text: "Which build were you running? I keep dying in phase 2.",
     commentedAt: minsAgo(15),
+    mentions: [],
   },
   {
     id: "c3", player: PLAYERS[0],
     text: "Bleed build, Rivers of Blood. Phase 2 just takes patience — stop panic rolling.",
     commentedAt: minsAgo(12),
+    mentions: [],
   },
   {
     id: "c4", player: PLAYERS[3],
     text: "She's the hardest optional boss in the game. Congrats fr",
     commentedAt: minsAgo(5),
+    mentions: [],
   },
 ];
 

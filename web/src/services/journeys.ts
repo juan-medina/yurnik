@@ -181,11 +181,20 @@ export async function excludePendingJourney(pendingId: string): Promise<void> {
   if (!resp.ok) throw new Error(`exclude pending journey: ${resp.status}`);
 }
 
+type RawCommentMention = {
+  user_id: string;
+  handle: string;
+  name: string;
+  start_offset: number;
+  length: number;
+};
+
 type RawComment = {
   id: string;
   player: { id: string; handle: string; name: string; avatar_url?: string; color: string };
   text: string;
   commented_at: string;
+  mentions?: RawCommentMention[];
 };
 
 export async function getJourney(id: string): Promise<Journey | undefined> {
@@ -225,6 +234,13 @@ function toComment(c: RawComment): Comment {
     },
     text: c.text,
     commentedAt: new Date(c.commented_at),
+    mentions: (c.mentions ?? []).map((m) => ({
+      userId: m.user_id,
+      handle: m.handle,
+      name: m.name,
+      startOffset: m.start_offset,
+      length: m.length,
+    })),
   };
 }
 

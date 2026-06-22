@@ -128,6 +128,32 @@ func UpsertCommentReplyEcho(ctx context.Context, pool *pgxpool.Pool, recipientID
 	return err
 }
 
+// UpsertMentionEcho creates or updates a new_mention echo for recipientID when
+// actorID @mentions them in a comment on journeyID. No-op if actorID ==
+// recipientID (self-mention). Mentioning the same user again on the same
+// journey batches into the existing echo, same as new_comment.
+func UpsertMentionEcho(ctx context.Context, pool *pgxpool.Pool, recipientID, actorID, journeyID, subjectTitle string) error {
+	if recipientID == actorID {
+		return nil
+	}
+	var echoID int64
+	err := pool.QueryRow(ctx, `
+		INSERT INTO echoes (recipient_id, type, subject_id, subject_title, updated_at)
+		VALUES ($1, 'new_mention', $2, $3, now())
+		ON CONFLICT (recipient_id, subject_id) WHERE type = 'new_mention'
+		DO UPDATE SET updated_at = now(), subject_title = EXCLUDED.subject_title, seen_at = NULL
+		RETURNING id
+	`, recipientID, journeyID, subjectTitle).Scan(&echoID)
+	if err != nil {
+		return fmt.Errorf("upsert mention echo: %w", err)
+	}
+	_, err = pool.Exec(ctx, `
+		INSERT INTO echo_actors (echo_id, actor_id) VALUES ($1, $2)
+		ON CONFLICT DO NOTHING
+	`, echoID, actorID)
+	return err
+}
+
 // UpsertFollowerEcho creates or updates a new_follower echo for recipientID when
 // actorID follows them. New activity resets seen_at.
 func UpsertFollowerEcho(ctx context.Context, pool *pgxpool.Pool, recipientID, actorID string) error {
