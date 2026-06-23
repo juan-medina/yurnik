@@ -1,3 +1,8 @@
+// SPDX-FileCopyrightText: 2026 Juan Medina
+// SPDX-License-Identifier: MIT
+
+import { botUserAgentRegex } from "./crawler-user-agents";
+
 declare const HTMLRewriter: any;
 
 interface Env {
@@ -11,8 +16,7 @@ export default {
   async fetch(request: Request, env: Env, _ctx: any): Promise<Response> {
     const url = new URL(request.url);
     const userAgent = request.headers.get("user-agent") || "";
-    const botRegex = /bot|crawl|spider|slurp|facebook|twitter|discord|whatsapp|telegram|slack/i;
-    const isBot = botRegex.test(userAgent);
+    const isBot = botUserAgentRegex.test(userAgent);
 
     const getAssetResponse = async () => {
       // SPA fallback serves index.html content directly for unmatched paths,
