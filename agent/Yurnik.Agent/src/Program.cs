@@ -64,9 +64,9 @@ static class Program
 
         var sessionStore = new SessionStore(db);
         var eventQueue = new EventQueue(db);
-        var sessionMonitor = new SessionMonitor(sessionStore, eventQueue);
+        var sessionMonitor = new SessionMonitor(sessionStore, eventQueue, config.MinSessionDuration);
         var queueProcessor = new QueueProcessor(eventQueue, agentClient, authManager);
-        var processWatcher = new ProcessWatcher(sessionStore, eventQueue, exclusionStore, detectableGames);
+        var processWatcher = new ProcessWatcher(sessionStore, eventQueue, exclusionStore, detectableGames, config.MinSessionDuration);
         var updater = new Updater();
 
         using var trayApp = new TrayApp(config.WebBaseUrl, authManager, agentClient, processWatcher, sessionMonitor, queueProcessor, updater, detectableGames);

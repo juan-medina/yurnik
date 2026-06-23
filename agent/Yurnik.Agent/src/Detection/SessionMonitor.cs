@@ -19,17 +19,19 @@ sealed class SessionMonitor : IDisposable
     readonly SessionStore _sessions;
     readonly EventQueue _queue;
     readonly Func<int, bool> _isProcessAlive;
+    readonly TimeSpan _minSessionDuration;
     readonly CancellationTokenSource _cts = new();
     Task? _monitorTask;
 
-    public SessionMonitor(SessionStore sessions, EventQueue queue)
-        : this(sessions, queue, DefaultIsProcessAlive) { }
+    public SessionMonitor(SessionStore sessions, EventQueue queue, TimeSpan? minSessionDuration = null)
+        : this(sessions, queue, DefaultIsProcessAlive, minSessionDuration) { }
 
-    internal SessionMonitor(SessionStore sessions, EventQueue queue, Func<int, bool> isProcessAlive)
+    internal SessionMonitor(SessionStore sessions, EventQueue queue, Func<int, bool> isProcessAlive, TimeSpan? minSessionDuration = null)
     {
         _sessions = sessions;
         _queue = queue;
         _isProcessAlive = isProcessAlive;
+        _minSessionDuration = minSessionDuration ?? TimeSpan.FromMinutes(5);
     }
 
     public void Start()
@@ -66,8 +68,16 @@ sealed class SessionMonitor : IDisposable
             }
             else
             {
-                Log.Info($"Session ended: {session.ExeName} (pid {session.Pid}), last seen {session.LastRunningAt:HH:mm:ss}Z");
-                _queue.Enqueue(session.ExeName, session.WindowTitle, session.StartedAt, session.LastRunningAt);
+                var duration = session.LastRunningAt - session.StartedAt;
+                if (duration >= _minSessionDuration)
+                {
+                    Log.Info($"Session ended: {session.ExeName} (pid {session.Pid}), last seen {session.LastRunningAt:HH:mm:ss}Z");
+                    _queue.Enqueue(session.ExeName, session.WindowTitle, session.StartedAt, session.LastRunningAt);
+                }
+                else
+                {
+                    Log.Info($"Session discarded: {session.ExeName} ran for only {duration.TotalSeconds:F0}s (below threshold)");
+                }
                 _sessions.Delete(session.Pid);
             }
         }

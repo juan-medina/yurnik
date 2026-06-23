@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -174,5 +175,64 @@ func TestListExclusions_scopedPerUser(t *testing.T) {
 	}
 	if len(body.Exclusions) != 1 || body.Exclusions[0] != "discord.exe" {
 		t.Errorf("exclusions = %v, want [discord.exe]", body.Exclusions)
+	}
+}
+
+// TestCreatePending_ZeroDurationDiscarded verifies that a pending journey
+// with zero or negative duration is discarded (not inserted into DB) and
+// returns 200 OK with {"id":"discarded"}.
+func TestCreatePending_ZeroDurationDiscarded(t *testing.T) {
+	pool := connectTestDB(t)
+	_, jwtPriv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("generate jwt key: %v", err)
+	}
+	h := NewHandler(pool, jwtPriv)
+	ctx := context.Background()
+
+	userID := createTestUser(t, pool)
+	token, err := auth.CreateSessionJWT(userID, jwtPriv)
+	if err != nil {
+		t.Fatalf("create session jwt: %v", err)
+	}
+
+	payload := map[string]string{
+		"exe_name":     "game.exe",
+		"window_title": "My Game",
+		"started_at":   "2026-06-23T12:00:00Z",
+		"ended_at":     "2026-06-23T12:00:00Z", // 0 duration
+	}
+	bodyBytes, _ := json.Marshal(payload)
+
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/agent/pending-journeys", strings.NewReader(string(bodyBytes)))
+	r.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	h.createPending(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	var resp struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.ID != "discarded" {
+		t.Errorf("id = %s, want discarded", resp.ID)
+	}
+
+	// Verify it was not inserted in the DB.
+	// Since database schema is dynamically loaded/available, we can verify that the list is empty.
+	// Wait, is pending_journeys table available/created in test schema?
+	// The connectTestDB sets up usersSchema. But UpsertPendingJourney tests also run in DB package,
+	// and here, the real DB has the full schema migrated.
+	journeys, err := db.ListPendingJourneys(ctx, pool, userID)
+	if err != nil {
+		t.Fatalf("list pending journeys: %v", err)
+	}
+	if len(journeys) != 0 {
+		t.Errorf("got %d pending journeys in database, want 0", len(journeys))
 	}
 }

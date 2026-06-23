@@ -22,6 +22,10 @@ sealed class AgentConfig
     // the two are merged into a single session.
     public TimeSpan MergeThreshold { get; init; } = TimeSpan.FromMinutes(10);
 
+    // Minimum duration for a session to be enqueued. Sessions shorter than this
+    // (e.g. game crashes or accidental launches) are discarded.
+    public TimeSpan MinSessionDuration { get; init; } = TimeSpan.FromMinutes(5);
+
     // How often the agent checks /api/v1/agent/heartbeat to keep the session
     // token from expiring. The server renews tokens older than 24h, and the
     // session itself lasts 7 days, so a multi-day interval leaves ample margin.
@@ -40,6 +44,8 @@ sealed class AgentConfig
             Language   = dev?.Language   ?? base_?.Language,
             AuthRefreshInterval = TimeSpan.FromSeconds(
                 dev?.AuthRefreshIntervalSeconds ?? base_?.AuthRefreshIntervalSeconds ?? (3 * 24 * 60 * 60)),
+            MinSessionDuration = TimeSpan.FromSeconds(
+                dev?.MinSessionDurationSeconds ?? base_?.MinSessionDurationSeconds ?? 300),
         };
     }
 
@@ -51,7 +57,12 @@ sealed class AgentConfig
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
     }
 
-    record SettingsFile(string? ApiBaseUrl, string? WebBaseUrl, string? Language, int? AuthRefreshIntervalSeconds);
+    record SettingsFile(
+        string? ApiBaseUrl,
+        string? WebBaseUrl,
+        string? Language,
+        int? AuthRefreshIntervalSeconds,
+        int? MinSessionDurationSeconds);
 
     static string DefaultDbPath()
     {

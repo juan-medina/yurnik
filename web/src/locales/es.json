@@ -387,6 +387,8 @@
   "loading": "Cargando…",
 
   "whats_new_title": "Novedades",
+  "whats_new_2026_06_23_session_title": "Ignorar sesiones de juego cortas",
+  "whats_new_2026_06_23_session_body": "Para evitar que los lanzamientos accidentales y los bloqueos al inicio llenen tu historial de jornadas, el agente de escritorio ahora ignorará las sesiones de juego de menos de 5 minutos.",
   "whats_new_2026_06_23_agent_title": "Detección de juegos más fiable",
   "whats_new_2026_06_23_agent_body": "El agente de escritorio ahora detecta juegos que antes se le pasaban, incluidos los que se ejecutan con protección adicional, como anti-cheat o mods lanzados como administrador. Actualiza a la última versión del agente para tenerlo.",
   "whats_new_2026_06_22_og_title": "Mejores vistas previas de enlaces",

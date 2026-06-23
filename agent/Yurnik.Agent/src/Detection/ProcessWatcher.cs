@@ -28,9 +28,11 @@ sealed class ProcessWatcher(
     SessionStore sessions,
     EventQueue queue,
     ExclusionStore exclusions,
-    DetectableGamesCache detectableGames) : IDisposable
+    DetectableGamesCache detectableGames,
+    TimeSpan? minSessionDuration = null) : IDisposable
 {
     static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
+    readonly TimeSpan _minSessionDuration = minSessionDuration ?? TimeSpan.FromMinutes(5);
 
     // In-memory dedup set — avoids redundant DB writes within one agent run.
     // SessionStore uses INSERT OR IGNORE, so this is an optimisation only.
@@ -107,8 +109,16 @@ sealed class ProcessWatcher(
             if (session is not null)
             {
                 var endedAt = DateTimeOffset.UtcNow;
-                Log.Info($"Game ended: {session.ExeName} (pid {pid}) — \"{session.WindowTitle}\"");
-                queue.Enqueue(session.ExeName, session.WindowTitle, session.StartedAt, endedAt);
+                var duration = endedAt - session.StartedAt;
+                if (duration >= _minSessionDuration)
+                {
+                    Log.Info($"Game ended: {session.ExeName} (pid {pid}) — \"{session.WindowTitle}\"");
+                    queue.Enqueue(session.ExeName, session.WindowTitle, session.StartedAt, endedAt);
+                }
+                else
+                {
+                    Log.Info($"Session discarded: {session.ExeName} ran for only {duration.TotalSeconds:F0}s (below threshold)");
+                }
                 sessions.Delete(pid);
             }
         }

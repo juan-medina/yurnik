@@ -1,3 +1,1 @@
-Game detection is now more reliable — it no longer misses games that run with extra protection, such as anti-cheat or admin-launched mods.
-
-The agent also checks your exclusion list locally before reaching out to the server, so excluded apps are skipped instantly.
+Short game sessions (under 5 minutes) are now discarded by the agent to prevent launch errors, accidental clicks, and startup crashes from cluttering your gaming journey timeline.

@@ -390,6 +390,8 @@
   "loading": "Loading…",
 
   "whats_new_title": "What's New",
+  "whats_new_2026_06_23_session_title": "Ignore short game sessions",
+  "whats_new_2026_06_23_session_body": "To prevent accidental launches and startup crashes from cluttering your journey history, the desktop agent now ignores game sessions shorter than 5 minutes.",
   "whats_new_2026_06_23_agent_title": "More reliable game detection",
   "whats_new_2026_06_23_agent_body": "The desktop agent now catches games it used to miss — including ones that run with extra protection, like anti-cheat or admin-launched mods. Update to the latest agent version to get it.",
   "whats_new_2026_06_22_og_title": "Better link previews",

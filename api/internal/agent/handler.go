@@ -141,6 +141,12 @@ func (h *Handler) createPending(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if endedAt != nil && endedAt.Sub(startedAt) <= 0 {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"id": "discarded"})
+		return
+	}
+
 	excluded, err := db.IsExcluded(r.Context(), h.pool, userID, body.ExeName)
 	if err != nil {
 		log.Printf("agent/createPending: check exclusion: %v", err)

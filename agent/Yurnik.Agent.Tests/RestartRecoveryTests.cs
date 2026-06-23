@@ -49,7 +49,7 @@ public class RestartRecoveryTests : IDisposable
             var queue = new EventQueue(db);
 
             // Simulate the pid being dead (game closed during shutdown).
-            var monitor = new SessionMonitor(sessions, queue, _ => false);
+            var monitor = new SessionMonitor(sessions, queue, _ => false, TimeSpan.Zero);
             monitor.Check();
 
             // Session row is gone; journey is now in the outbox.
@@ -77,7 +77,8 @@ public class RestartRecoveryTests : IDisposable
             // Simulate a heartbeat tick that recorded the last known time.
             using var conn = db.OpenConnection();
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = "UPDATE sessions SET last_running_at = $ts WHERE pid = 1234";
+            cmd.CommandText = "UPDATE sessions SET started_at = $started, last_running_at = $ts WHERE pid = 1234";
+            cmd.Parameters.AddWithValue("$started", lastHeartbeat.AddHours(-1).ToUnixTimeSeconds());
             cmd.Parameters.AddWithValue("$ts", lastHeartbeat.ToUnixTimeSeconds());
             cmd.ExecuteNonQuery();
         }
@@ -89,7 +90,7 @@ public class RestartRecoveryTests : IDisposable
             var sessions = new SessionStore(db);
             var queue = new EventQueue(db);
 
-            var monitor = new SessionMonitor(sessions, queue, _ => false);
+            var monitor = new SessionMonitor(sessions, queue, _ => false, TimeSpan.Zero);
             monitor.Check();
 
             var queued = queue.Peek()[0];
@@ -118,7 +119,7 @@ public class RestartRecoveryTests : IDisposable
             var sessions = new SessionStore(db);
             var queue = new EventQueue(db);
 
-            var monitor = new SessionMonitor(sessions, queue, pid => pid == 2);
+            var monitor = new SessionMonitor(sessions, queue, pid => pid == 2, TimeSpan.Zero);
             monitor.Check();
 
             var remainingSessions = sessions.GetAll();
