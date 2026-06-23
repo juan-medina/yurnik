@@ -390,6 +390,10 @@
   "loading": "Loading…",
 
   "whats_new_title": "What's New",
+  "whats_new_2026_06_23_agent_title": "More reliable game detection",
+  "whats_new_2026_06_23_agent_body": "The desktop agent now catches games it used to miss — including ones that run with extra protection, like anti-cheat or admin-launched mods. Update to the latest agent version to get it.",
+  "whats_new_2026_06_22_og_title": "Better link previews",
+  "whats_new_2026_06_22_og_body": "Links to journeys, games, and profiles now show a proper preview — title, image, and description — when shared on Discord or social media.",
   "whats_new_2026_06_22_roll_title": "Can't decide? Roll for it",
   "whats_new_2026_06_22_roll_body": "Stuck choosing what's next? Hit the dice button on your Horizon to randomly pick a game — narrowed to whatever genre filter you've got active. Don't like the pick? Roll again.",
   "whats_new_2026_06_22_title": "Mention friends in comments",

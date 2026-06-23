@@ -3,7 +3,7 @@
 <Project>
   <PropertyGroup>
     <VersionMajor>0</VersionMajor>
-    <VersionMinor>3</VersionMinor>
+    <VersionMinor>4</VersionMinor>
     <VersionBuild>0</VersionBuild>
     <Version>$(VersionMajor).$(VersionMinor).$(VersionBuild)</Version>
   </PropertyGroup>
