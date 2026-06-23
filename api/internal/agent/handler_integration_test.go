@@ -10,15 +10,23 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sync/atomic"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/juan-medina/yurnik/internal/auth"
 	"github.com/juan-medina/yurnik/internal/db"
 )
+
+// testUserSeq disambiguates multiple createTestUser calls within the same
+// test — t.Name() alone is identical across calls in the same test, which
+// would otherwise collide on the (provider, provider_id) unique constraint
+// and silently merge two "different" users into one row.
+var testUserSeq atomic.Uint64
 
 const usersSchema = `
 CREATE TABLE IF NOT EXISTS users (
@@ -65,12 +73,15 @@ func createTestUser(t *testing.T, pool *pgxpool.Pool) string {
 	t.Helper()
 	ctx := context.Background()
 	var id string
+	seq := testUserSeq.Add(1)
+	providerID := fmt.Sprintf("%s-%d", t.Name(), seq)
+	handle := fmt.Sprintf("testuser%d", seq)
 	err := pool.QueryRow(ctx, `
 		INSERT INTO users (provider, provider_id, handle, name)
-		VALUES ('test', $1, 'testuser', 'Test User')
+		VALUES ('test', $1, $2, 'Test User')
 		ON CONFLICT (provider, provider_id) DO UPDATE SET name = EXCLUDED.name
 		RETURNING id
-	`, t.Name()).Scan(&id)
+	`, providerID, handle).Scan(&id)
 	if err != nil {
 		t.Fatalf("create test user: %v", err)
 	}
