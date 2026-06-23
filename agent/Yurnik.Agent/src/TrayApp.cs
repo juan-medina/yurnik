@@ -22,6 +22,7 @@ sealed class TrayApp : IDisposable
     readonly SessionMonitor _sessionMonitor;
     readonly QueueProcessor _processor;
     readonly Updater _updater;
+    readonly DetectableGamesCache _detectableGames;
     readonly string _webBaseUrl;
     readonly NotifyIcon _tray;
     readonly Icon _normalIcon;
@@ -33,7 +34,7 @@ sealed class TrayApp : IDisposable
     ToolStripMenuItem? _signInItem;
     ToolStripMenuItem? _signOutItem;
 
-    public TrayApp(string webBaseUrl, AuthManager auth, IYurnikClient client, ProcessWatcher watcher, SessionMonitor sessionMonitor, QueueProcessor processor, Updater updater)
+    public TrayApp(string webBaseUrl, AuthManager auth, IYurnikClient client, ProcessWatcher watcher, SessionMonitor sessionMonitor, QueueProcessor processor, Updater updater, DetectableGamesCache detectableGames)
     {
         _webBaseUrl = webBaseUrl;
         _auth = auth;
@@ -42,6 +43,7 @@ sealed class TrayApp : IDisposable
         _sessionMonitor = sessionMonitor;
         _processor = processor;
         _updater = updater;
+        _detectableGames = detectableGames;
 
         var iconStream = typeof(TrayApp).Assembly.GetManifestResourceStream("Yurnik.Agent.Resources.tray.ico");
         _normalIcon = iconStream is not null ? new Icon(iconStream) : SystemIcons.Application;
@@ -278,5 +280,6 @@ sealed class TrayApp : IDisposable
         _watcher.Dispose();
         _sessionMonitor.Dispose();
         _processor.Dispose();
+        _detectableGames.Dispose();
     }
 }

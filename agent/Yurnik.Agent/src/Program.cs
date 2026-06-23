@@ -51,19 +51,25 @@ static class Program
         var db = new Database(config.DbPath);
         db.Migrate();
 
+        var exclusionStore = new ExclusionStore(db);
+        var detectableGamesPath = Path.Combine(
+            Path.GetDirectoryName(config.DbPath)!, "detectable_games.json");
+        var detectableGames = new DetectableGamesCache(detectableGamesPath);
+        detectableGames.Start();
+
         var credentialStore = new CredentialStore();
         var agentClient = new YurnikClient(config.ApiBaseUrl);
-        var authManager = new AuthManager(config, credentialStore, agentClient);
+        var authManager = new AuthManager(config, credentialStore, agentClient, exclusionStore);
         authManager.Start();
 
         var sessionStore = new SessionStore(db);
         var eventQueue = new EventQueue(db);
         var sessionMonitor = new SessionMonitor(sessionStore, eventQueue);
         var queueProcessor = new QueueProcessor(eventQueue, agentClient, authManager);
-        var processWatcher = new ProcessWatcher(sessionStore, eventQueue);
+        var processWatcher = new ProcessWatcher(sessionStore, eventQueue, exclusionStore, detectableGames);
         var updater = new Updater();
 
-        using var trayApp = new TrayApp(config.WebBaseUrl, authManager, agentClient, processWatcher, sessionMonitor, queueProcessor, updater);
+        using var trayApp = new TrayApp(config.WebBaseUrl, authManager, agentClient, processWatcher, sessionMonitor, queueProcessor, updater, detectableGames);
         trayApp.Run();
 
         Log.Info("Yurnik agent stopped");

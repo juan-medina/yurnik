@@ -9,6 +9,7 @@ interface IYurnikClient
     void ClearToken();
     Task<HeartbeatResult> HeartbeatAsync();
     Task<MeResult> GetMeAsync();
+    Task<ExclusionsResult> GetExclusionsAsync();
     Task<CreatePendingResult> CreatePendingJourneyAsync(
         string exeName, string windowTitle, DateTimeOffset startedAt, DateTimeOffset endedAt);
 }

@@ -64,11 +64,15 @@ sealed class Database
                 ended_at     INTEGER NOT NULL,
                 attempts     INTEGER NOT NULL DEFAULT 0
             );
+
+            CREATE TABLE IF NOT EXISTS exclusions (
+                exe_name TEXT PRIMARY KEY
+            );
             """;
         schemaCmd.ExecuteNonQuery();
 
         using var pragmaCmd = conn.CreateCommand();
-        pragmaCmd.CommandText = "PRAGMA user_version = 2;";
+        pragmaCmd.CommandText = "PRAGMA user_version = 3;";
         pragmaCmd.ExecuteNonQuery();
 
         Log.Info("Database migrations complete");

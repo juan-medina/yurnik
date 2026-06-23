@@ -8,49 +8,36 @@ using Yurnik.Agent.Queue;
 namespace Yurnik.Agent.Detection;
 
 /// <summary>
-/// Watches for processes that load a graphics API DLL (DirectX, OpenGL, Vulkan).
-/// When a matching process is first seen, inserts a session row into SessionStore.
-/// Session end is detected by SessionMonitor via periodic pid liveness checks.
+/// Watches for processes that are known games. When a matching process is
+/// first seen, inserts a session row into SessionStore. Session end is
+/// detected by SessionMonitor via periodic pid liveness checks.
 ///
-/// Detection strategy:
-///   - Poll running processes every 5 seconds
-///   - For each process, check loaded modules for known graphics DLLs
-///   - Track which pids we have already seen this run to avoid redundant DB writes
+/// Detection strategy (cheapest and most reliable signal first):
+///   1. Skip exes on the user's exclusion list (local cache, no API call)
+///   2. Match against Discord's public detectable-games executable list
+///   3. Match the exe's install path against known launcher directories
+///      (Steam, Epic, Ubisoft, Rockstar, ...)
+///   4. Otherwise, not a game — drop it
 ///
-/// This is the simplest approach that works without requiring elevated privileges.
-/// WMI process events would be faster but require more setup and can be unreliable.
+/// None of these steps inspect the running process's loaded modules, so
+/// detection keeps working even when the target is elevated or protected
+/// by anti-cheat — both of which deny live module enumeration from a
+/// non-elevated, untrusted caller.
 /// </summary>
-sealed class ProcessWatcher : IDisposable
+sealed class ProcessWatcher(
+    SessionStore sessions,
+    EventQueue queue,
+    ExclusionStore exclusions,
+    DetectableGamesCache detectableGames) : IDisposable
 {
-    static readonly string[] GraphicsDlls =
-    [
-        "d3d9.dll", "d3d10.dll", "d3d10_1.dll",
-        "d3d11.dll", "d3d12.dll",
-        "opengl32.dll",
-        "vulkan-1.dll",
-    ];
-
-    static readonly string WindowsDir =
-        Environment.GetFolderPath(Environment.SpecialFolder.Windows)
-            .TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-
     static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
-
-    readonly SessionStore _sessions;
-    readonly EventQueue _queue;
-    readonly CancellationTokenSource _cts = new();
 
     // In-memory dedup set — avoids redundant DB writes within one agent run.
     // SessionStore uses INSERT OR IGNORE, so this is an optimisation only.
     readonly HashSet<int> _seen = [];
 
+    readonly CancellationTokenSource _cts = new();
     Task? _pollTask;
-
-    public ProcessWatcher(SessionStore sessions, EventQueue queue)
-    {
-        _sessions = sessions;
-        _queue = queue;
-    }
 
     public void Start()
     {
@@ -83,7 +70,14 @@ sealed class ProcessWatcher : IDisposable
         {
             try
             {
-                if (!HasGraphicsDll(process)) continue;
+                var exePath = ProcessPath.TryGetExecutablePath(process.Id);
+                var exeName = exePath is not null ? Path.GetFileName(exePath) : process.ProcessName + ".exe";
+
+                if (exclusions.Contains(exeName)) continue;
+
+                var isKnownGame = detectableGames.IsKnownGame(exeName)
+                    || (exePath is not null && KnownGamePaths.IsKnownGamePath(exePath));
+                if (!isKnownGame) continue;
 
                 currentPids.Add(process.Id);
 
@@ -92,11 +86,7 @@ sealed class ProcessWatcher : IDisposable
                 var windowTitle = process.MainWindowTitle;
                 if (string.IsNullOrWhiteSpace(windowTitle)) continue;
 
-                var exePath = process.MainModule?.FileName ?? "";
-                if (exePath.StartsWith(WindowsDir, StringComparison.OrdinalIgnoreCase)) continue;
-
-                var exeName = Path.GetFileName(exePath.Length > 0 ? exePath : process.ProcessName);
-                _sessions.Insert(process.Id, exeName, windowTitle);
+                sessions.Insert(process.Id, exeName, windowTitle);
                 _seen.Add(process.Id);
                 Log.Info($"Game started: {exeName} (pid {process.Id}) — \"{windowTitle}\"");
             }
@@ -113,35 +103,17 @@ sealed class ProcessWatcher : IDisposable
         // Any pid we were tracking that is no longer running has exited — close immediately.
         foreach (var pid in _seen.Except(currentPids).ToList())
         {
-            var session = _sessions.GetAll().FirstOrDefault(s => s.Pid == pid);
+            var session = sessions.GetAll().FirstOrDefault(s => s.Pid == pid);
             if (session is not null)
             {
                 var endedAt = DateTimeOffset.UtcNow;
                 Log.Info($"Game ended: {session.ExeName} (pid {pid}) — \"{session.WindowTitle}\"");
-                _queue.Enqueue(session.ExeName, session.WindowTitle, session.StartedAt, endedAt);
-                _sessions.Delete(pid);
+                queue.Enqueue(session.ExeName, session.WindowTitle, session.StartedAt, endedAt);
+                sessions.Delete(pid);
             }
         }
 
         _seen.IntersectWith(currentPids);
-    }
-
-    static bool HasGraphicsDll(Process process)
-    {
-        try
-        {
-            foreach (ProcessModule module in process.Modules)
-            {
-                var name = module.ModuleName?.ToLowerInvariant();
-                if (name is not null && Array.Exists(GraphicsDlls, d => d == name))
-                    return true;
-            }
-        }
-        catch
-        {
-            // 32-bit processes on 64-bit OS, system processes, access denied — all normal.
-        }
-        return false;
     }
 
     public void Dispose() => Stop();

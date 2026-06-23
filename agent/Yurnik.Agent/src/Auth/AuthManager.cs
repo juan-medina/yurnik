@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 using Yurnik.Agent.Api;
+using Yurnik.Agent.Detection;
 using Yurnik.Agent.Infrastructure;
 
 namespace Yurnik.Agent.Auth;
@@ -32,6 +33,7 @@ sealed class AuthManager : IAuthState, IDisposable
     readonly AgentConfig _config;
     readonly CredentialStore _store;
     readonly IYurnikClient _client;
+    readonly ExclusionStore _exclusions;
 
     // yurnik:// callbacks arrive as a second process instance passing args.
     // We listen on a named pipe so the second instance can hand off the URL.
@@ -44,11 +46,12 @@ sealed class AuthManager : IAuthState, IDisposable
 
     public event Action<bool>? AuthStateChanged;
 
-    public AuthManager(AgentConfig config, CredentialStore store, IYurnikClient client)
+    public AuthManager(AgentConfig config, CredentialStore store, IYurnikClient client, ExclusionStore exclusions)
     {
         _config = config;
         _store = store;
         _client = client;
+        _exclusions = exclusions;
         _listener = new UrlSchemeListener(OnYurnikUrl);
     }
 
@@ -85,6 +88,7 @@ sealed class AuthManager : IAuthState, IDisposable
 
         Log.Info("Token validated — authenticated");
         SetAuthenticated(true);
+        await SyncExclusionsAsync();
         return true;
     }
 
@@ -169,6 +173,7 @@ sealed class AuthManager : IAuthState, IDisposable
                     {
                         Log.Debug("Session refresh: token still valid, no renewal needed");
                     }
+                    await SyncExclusionsAsync();
                     failures = 0;
                     delay = _config.AuthRefreshInterval;
                     break;
@@ -211,11 +216,30 @@ sealed class AuthManager : IAuthState, IDisposable
         _store.SaveToken(token);
         _client.SetToken(token);
         SetAuthenticated(true);
+        _ = SyncExclusionsAsync();
     }
 
     void SetAuthenticated(bool value)
     {
         IsAuthenticated = value;
         AuthStateChanged?.Invoke(value);
+    }
+
+    /// <summary>
+    /// Refreshes the local exclusion cache from the API. Best-effort — a
+    /// failure here just means the cache stays stale until the next sync
+    /// (login or heartbeat), not a fatal error for the agent.
+    /// </summary>
+    async Task SyncExclusionsAsync()
+    {
+        var result = await _client.GetExclusionsAsync();
+        if (result.Status != ApiResult.Ok || result.ExeNames is null)
+        {
+            Log.Warn($"Exclusion sync skipped: {result.Status}");
+            return;
+        }
+
+        _exclusions.ReplaceAll(result.ExeNames);
+        Log.Info($"Exclusion list synced: {result.ExeNames.Count} entries");
     }
 }

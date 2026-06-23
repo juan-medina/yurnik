@@ -13,6 +13,7 @@ enum ApiResult { Ok, Unauthorized, TransientFailure, RateLimited }
 
 record CreatePendingResult(ApiResult Status, string? JourneyId);
 record MeResult(ApiResult Status, string? Handle, string? Name);
+record ExclusionsResult(ApiResult Status, List<string>? ExeNames);
 
 /// <summary>
 /// Returned by HeartbeatAsync. Status distinguishes a rejected token (Unauthorized)
@@ -121,6 +122,42 @@ sealed class YurnikClient(string baseUrl) : IYurnikClient
         {
             Log.Error("GetMe failed", ex);
             return new MeResult(ApiResult.TransientFailure, null, null);
+        }
+    }
+
+    /// <summary>
+    /// Returns the user's exe exclusion list, so the agent can cache it locally
+    /// and skip known non-games without round-tripping for every detection.
+    /// </summary>
+    public async Task<ExclusionsResult> GetExclusionsAsync()
+    {
+        try
+        {
+            var resp = await _http.GetAsync("api/v1/agent/exclusions");
+
+            if (resp.StatusCode == HttpStatusCode.Unauthorized)
+                return new ExclusionsResult(ApiResult.Unauthorized, null);
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                Log.Warn($"GetExclusions: unexpected status {resp.StatusCode}");
+                return new ExclusionsResult(ApiResult.TransientFailure, null);
+            }
+
+            var json = await resp.Content.ReadAsStringAsync();
+            var doc = JsonDocument.Parse(json);
+            var exeNames = doc.RootElement.GetProperty("exclusions")
+                .EnumerateArray()
+                .Select(e => e.GetString())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => s!)
+                .ToList();
+            return new ExclusionsResult(ApiResult.Ok, exeNames);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("GetExclusions failed", ex);
+            return new ExclusionsResult(ApiResult.TransientFailure, null);
         }
     }
 

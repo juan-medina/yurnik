@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -116,5 +117,51 @@ func TestAuthenticateBearer_deletedUser(t *testing.T) {
 	h.heartbeat(w, r)
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("heartbeat after deletion: status = %d, want %d", w.Code, http.StatusUnauthorized)
+	}
+}
+
+// TestListExclusions_scopedPerUser verifies the exclusions endpoint returns
+// only the authenticated user's own exclusions, not another user's.
+func TestListExclusions_scopedPerUser(t *testing.T) {
+	pool := connectTestDB(t)
+	_, jwtPriv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("generate jwt key: %v", err)
+	}
+	h := NewHandler(pool, jwtPriv)
+	ctx := context.Background()
+
+	userA := createTestUser(t, pool)
+	userB := createTestUser(t, pool)
+
+	if err := db.InsertExclusion(ctx, pool, userA, "discord.exe"); err != nil {
+		t.Fatalf("insert exclusion for userA: %v", err)
+	}
+	if err := db.InsertExclusion(ctx, pool, userB, "obs64.exe"); err != nil {
+		t.Fatalf("insert exclusion for userB: %v", err)
+	}
+
+	tokenA, err := auth.CreateSessionJWT(userA, jwtPriv)
+	if err != nil {
+		t.Fatalf("create session jwt: %v", err)
+	}
+
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/agent/exclusions", nil)
+	r.Header.Set("Authorization", "Bearer "+tokenA)
+	w := httptest.NewRecorder()
+	h.listExclusions(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	var body struct {
+		Exclusions []string `json:"exclusions"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(body.Exclusions) != 1 || body.Exclusions[0] != "discord.exe" {
+		t.Errorf("exclusions = %v, want [discord.exe]", body.Exclusions)
 	}
 }

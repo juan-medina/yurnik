@@ -26,6 +26,7 @@ class FakeYurnikClient : IYurnikClient
     public void ClearToken() { }
     public Task<HeartbeatResult> HeartbeatAsync() => Task.FromResult(new HeartbeatResult(ApiResult.Ok));
     public Task<MeResult> GetMeAsync() => Task.FromResult(new MeResult(ApiResult.Ok, "testuser", "Test User"));
+    public Task<ExclusionsResult> GetExclusionsAsync() => Task.FromResult(new ExclusionsResult(ApiResult.Ok, []));
 
     public Task<CreatePendingResult> CreatePendingJourneyAsync(
         string exeName, string windowTitle, DateTimeOffset startedAt, DateTimeOffset endedAt)
