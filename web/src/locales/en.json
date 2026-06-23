@@ -390,26 +390,61 @@
   "loading": "Loading…",
 
   "whats_new_title": "What's New",
-  "whats_new_2026_06_23_session_title": "Ignore short game sessions",
-  "whats_new_2026_06_23_session_body": "To prevent accidental launches and startup crashes from cluttering your journey history, the desktop agent now ignores game sessions shorter than 5 minutes.",
-  "whats_new_2026_06_23_agent_title": "More reliable game detection",
-  "whats_new_2026_06_23_agent_body": "The desktop agent now catches games it used to miss — including ones that run with extra protection, like anti-cheat or admin-launched mods. Update to the latest agent version to get it.",
-  "whats_new_2026_06_22_og_title": "Better link previews",
-  "whats_new_2026_06_22_og_body": "Links to journeys, games, and profiles now show a proper preview — title, image, and description — when shared on Discord or social media.",
-  "whats_new_2026_06_22_roll_title": "Can't decide? Roll for it",
-  "whats_new_2026_06_22_roll_body": "Stuck choosing what's next? Hit the dice button on your Horizon to randomly pick a game — narrowed to whatever genre filter you've got active. Don't like the pick? Roll again.",
-  "whats_new_2026_06_22_title": "Mention friends in comments",
-  "whats_new_2026_06_22_body": "Type @ followed by a name in a comment to mention someone. They'll get notified, so they never miss being called into the conversation.",
-  "whats_new_2026_06_21_title": "See how long you played",
-  "whats_new_2026_06_21_body": "Your recent games now show how much time you've put into them, right alongside your journey log.",
-  "whats_new_2026_06_17_title": "Report content you're concerned about",
-  "whats_new_2026_06_17_body": "You can now report a journey log or comment that breaks the rules. Our team reviews every report.",
-  "whats_new_2026_06_15_title": "Delete your account, anytime",
-  "whats_new_2026_06_15_body": "You can now permanently delete your account and all your data from your settings. We also published our Terms of Service and Privacy Policy so you know exactly what we do with your information.",
-  "whats_new_2026_06_11_title": "Track what's next with Horizon",
-  "whats_new_2026_06_11_body": "Horizon lets you keep a list of games you're planning to play next, and reorder it however you like. You'll also get desktop notifications and an activity feed showing follows and comments as they happen.",
-  "whats_new_2026_06_09_title": "Browse Yurnik without signing in",
-  "whats_new_2026_06_09_body": "You can now look around player profiles and game pages without a Discord account. Sign in whenever you're ready to start logging your own journeys.",
-  "whats_new_2026_06_05_title": "Make your profile yours",
-  "whats_new_2026_06_05_body": "You can now set a custom display name and avatar instead of using the ones from Discord, and game pages now show release year and genre."
+  "whats_new_entries": [
+    {
+      "date": "2026-06-23",
+      "title": "Ignore short game sessions",
+      "body": "To prevent accidental launches and startup crashes from cluttering your journey history, the desktop agent now ignores game sessions shorter than 5 minutes."
+    },
+    {
+      "date": "2026-06-23",
+      "title": "More reliable game detection",
+      "body": "The desktop agent now catches games it used to miss — including ones that run with extra protection, like anti-cheat or admin-launched mods. Update to the latest agent version to get it."
+    },
+    {
+      "date": "2026-06-22",
+      "title": "Better link previews",
+      "body": "Links to journeys, games, and profiles now show a proper preview — title, image, and description — when shared on Discord or social media."
+    },
+    {
+      "date": "2026-06-22",
+      "title": "Can't decide? Roll for it",
+      "body": "Stuck choosing what's next? Hit the dice button on your Horizon to randomly pick a game — narrowed to whatever genre filter you've got active. Don't like the pick? Roll again."
+    },
+    {
+      "date": "2026-06-22",
+      "title": "Mention friends in comments",
+      "body": "Type @ followed by a name in a comment to mention someone. They'll get notified, so they never miss being called into the conversation."
+    },
+    {
+      "date": "2026-06-21",
+      "title": "See how long you played",
+      "body": "Your recent games now show how much time you've put into them, right alongside your journey log."
+    },
+    {
+      "date": "2026-06-17",
+      "title": "Report content you're concerned about",
+      "body": "You can now report a journey log or comment that breaks the rules. Our team reviews every report."
+    },
+    {
+      "date": "2026-06-15",
+      "title": "Delete your account, anytime",
+      "body": "You can now permanently delete your account and all your data from your settings. We also published our Terms of Service and Privacy Policy so you know exactly what we do with your information."
+    },
+    {
+      "date": "2026-06-11",
+      "title": "Track what's next with Horizon",
+      "body": "Horizon lets you keep a list of games you're planning to play next, and reorder it however you like. You'll also get desktop notifications and an activity feed showing follows and comments as they happen."
+    },
+    {
+      "date": "2026-06-09",
+      "title": "Browse Yurnik without signing in",
+      "body": "You can now look around player profiles and game pages without a Discord account. Sign in whenever you're ready to start logging your own journeys."
+    },
+    {
+      "date": "2026-06-05",
+      "title": "Make your profile yours",
+      "body": "You can now set a custom display name and avatar instead of using the ones from Discord, and game pages now show release year and genre."
+    }
+  ]
 }

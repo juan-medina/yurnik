@@ -3,21 +3,13 @@
 import { useTranslation } from "react-i18next";
 import LegalLayout from "@/components/layout/LegalLayout";
 
-const ENTRIES = [
-  { key: "2026_06_23_session", date: "2026-06-23" },
-  { key: "2026_06_23_agent", date: "2026-06-23" },
-  { key: "2026_06_22_og", date: "2026-06-22" },
-  { key: "2026_06_22_roll", date: "2026-06-22" },
-  { key: "2026_06_22", date: "2026-06-22" },
-  { key: "2026_06_21", date: "2026-06-21" },
-  { key: "2026_06_17", date: "2026-06-17" },
-  { key: "2026_06_15", date: "2026-06-15" },
-  { key: "2026_06_11", date: "2026-06-11" },
-  { key: "2026_06_09", date: "2026-06-09" },
-  { key: "2026_06_05", date: "2026-06-05" },
-] as const;
+interface WhatsNewEntry {
+  date: string;
+  title: string;
+  body: string;
+}
 
-function Entry({ date, title, body }: { date: string; title: string; body: string }) {
+function Entry({ date, title, body }: WhatsNewEntry) {
   return (
     <section>
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground/70">{date}</p>
@@ -29,17 +21,20 @@ function Entry({ date, title, body }: { date: string; title: string; body: strin
 
 export default function WhatsNew() {
   const { t } = useTranslation();
+  const rawEntries = t("whats_new_entries", { returnObjects: true });
+  const entries = Array.isArray(rawEntries) ? (rawEntries as WhatsNewEntry[]) : [];
 
   return (
     <LegalLayout title={t("whats_new_title")} updated={t("legal_updated_date")}>
-      {ENTRIES.map(({ key, date }) => (
+      {entries.map((entry, index) => (
         <Entry
-          key={key}
-          date={date}
-          title={t(`whats_new_${key}_title`)}
-          body={t(`whats_new_${key}_body`)}
+          key={index}
+          date={entry.date}
+          title={entry.title}
+          body={entry.body}
         />
       ))}
     </LegalLayout>
   );
 }
+
