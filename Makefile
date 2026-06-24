@@ -1,4 +1,4 @@
-.PHONY: run-api run-maintenance run-agent run-web test test-api test-maintenance test-agent test-web test-integration test-integration-api test-integration-maintenance build build-api build-maintenance build-web build-agent deploy-api deploy-web release-agent gen-keys export-user lint setup db-init db-migrate db-start db-stop
+.PHONY: run-api run-maintenance run-agent run-web test test-api test-maintenance test-agent test-web test-integration test-integration-api test-integration-maintenance build build-api build-maintenance build-web build-agent deploy-api deploy-maintenance deploy-web release-agent gen-keys export-user lint setup db-init db-migrate db-start db-stop
 
 ifeq ($(OS),Windows_NT)
 PLATFORM := windows
@@ -80,6 +80,9 @@ build-agent:
 
 deploy-api:
 	bash scripts/deploy-api.sh
+
+deploy-maintenance:
+	bash scripts/deploy-maintenance.sh
 
 deploy-web:
 	cd web && pnpm run deploy
