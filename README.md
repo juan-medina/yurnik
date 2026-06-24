@@ -98,16 +98,20 @@ Each component runs in its own terminal:
 make run-api    # Go API server
 make run-web    # React dev server
 make run-agent  # tray agent
+make run-maintenance # daily data cleanup job (run locally to test)
 ```
 
 ### Testing
 
 ```sh
-make test             # run every test suite below
-make test-api         # Go tests (api/)
-make test-agent       # .NET/xUnit tests (agent/)
-make test-web         # Vitest tests (web/)
-make test-integration # API tests against a real Postgres instance
+make test                        # run every test suite below
+make test-api                    # Go unit tests for API
+make test-maintenance            # Go unit tests for maintenance binary
+make test-agent                  # .NET/xUnit tests (agent/)
+make test-web                    # Vitest tests (web/)
+make test-integration            # run all integration tests below
+make test-integration-api        # API tests against a real Postgres instance
+make test-integration-maintenance # Maintenance tests against a real Postgres instance
 ```
 
 ### Linting
@@ -123,6 +127,7 @@ make build       # build api, web and agent
 make build-api   # Go binary
 make build-web   # production frontend bundle
 make build-agent # .NET release build
+make build-maintenance # Go maintenance binary
 ```
 
 ### Other
@@ -154,7 +159,7 @@ Produces a single JSON file with all data Yurnik holds about one user (handle or
 
 Two GitHub Actions workflows:
 
-- **Deploy** (`.github/workflows/deploy.yml`) — runs on every push to `main`. Runs the Go unit tests, the web lint/unit tests, and the agent's xUnit tests in parallel, plus a throwaway-Postgres integration test run. If all pass, it builds the web frontend, then SSHes into the production VPS to pull the latest code and run `make deploy-api` (builds the API binary, runs migrations, restarts the service), and finally runs `make deploy-web` to build and deploy the frontend to Cloudflare Workers via `wrangler deploy`.
+- **Deploy** (`.github/workflows/deploy.yml`) — runs on every push to `main`. Runs the Go unit tests (API and Maintenance), the web lint/unit tests, and the agent's xUnit tests in parallel, plus throwaway-Postgres integration tests for both API and Maintenance. If all pass, it builds the API, Maintenance, and web frontend, then SSHes into the production VPS to pull the latest code and run `make deploy-api` (builds the Go binaries again for the VPS environment, runs migrations, restarts the service), and finally runs `make deploy-web` to build and deploy the frontend to Cloudflare Workers via `wrangler deploy`.
 - **Release Agent** (`.github/workflows/release-agent.yml`) — runs when a `vX.Y.Z` tag is pushed. Runs the agent's xUnit tests, publishes a self-contained win-x64 build, packages it with Velopack (`vpk`), and publishes it as a GitHub release that `release-agent` produces — this is how end users get agent updates.
 
 ## License

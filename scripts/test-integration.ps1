@@ -8,4 +8,8 @@ $env:TEST_DATABASE_URL = $env:DATABASE_URL
 $env:TEST_DATABASE_ADMIN_URL = $env:DATABASE_ADMIN_URL
 
 Set-Location (Join-Path $PSScriptRoot "..\api")
-go test -tags integration ./... -v -count=1
+if ($args.Length -gt 0) {
+    go test -tags integration $args -v -count=1
+} else {
+    go test -tags integration ./... -v -count=1
+}

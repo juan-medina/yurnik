@@ -9,7 +9,7 @@ Consistent terms used throughout this document, the codebase, and the UI. When i
 | Term | Meaning |
 |------|---------|
 | **Journey** | A single confirmed gaming session — one game, one player, one block of time. The core unit of Yurnik. |
-| **Pending journey** | A journey that has been detected or started but not yet confirmed by the user. Private, stored in Postgres only, never published. Evicted after 7 days. |
+| **Pending journey** | A journey that has been detected or started but not yet confirmed by the user. Private, stored in Postgres only, never published. Evicted after 30 days. |
 | **Log** | The owner's optional narrative note on a journey. Written at confirmation time and editable by the owner afterwards. |
 | **Player** | A user of Yurnik. Identified by their internal UUID. |
 | **Realm** | The home feed — confirmed journeys from players you follow, in reverse chronological order. |
@@ -48,7 +48,7 @@ The frontend is a plain SPA deployed to Cloudflare Pages. Static assets are serv
 
 ## Database — Postgres
 
-Postgres runs on the same Hetzner VPS as the API server. The `pg_cron` extension runs the nightly eviction job for expired unconfirmed journeys.
+Postgres runs on the same Hetzner VPS as the API server. A daily standalone maintenance binary (`yurnik-maintenance`) handles data eviction (e.g. unconfirmed journeys, old echoes).
 
 ## Authentication — Discord OAuth
 
@@ -94,7 +94,7 @@ users              — one row per player, keyed on internal UUID
                      is_admin flag grants access to admin routes
                      suspended_at non-null means the account is suspended
 journeys           — confirmed journeys, all data, permanent
-pending_journeys   — unconfirmed journeys, evicted after 7 days
+pending_journeys   — unconfirmed journeys, evicted after 30 days
 follows            — follow graph, written on follow, deleted on unfollow
 comments           — flat, chronological, attached to a journey
 exe_exclusions     — per user, executables to never detect
@@ -157,6 +157,8 @@ echo_actors(echo_id, actor_id, created_at)
 `seen_at` is null until the user opens the notification panel, at which point `POST /echoes/seen` stamps `seen_at = now()` on all unseen echoes for that user in one query. There is no per-echo read action — opening the panel clears the badge.
 
 `updated_at` is bumped each time a new actor is added to an existing echo, so the panel can show the time of most recent activity.
+
+Echoes that have received no new activity for 60 days (i.e. `updated_at` is older than 60 days) are evicted by the daily maintenance job to prevent the table from growing indefinitely. Because of the batched model, a popular journey with frequent new comments will keep its echo alive as long as people keep engaging with it.
 
 New follower echoes are written in the same transaction as the `follows` row. New comment echoes are written in the same transaction as the `comments` row, unless the commenter is the journey owner.
 

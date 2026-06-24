@@ -31,11 +31,9 @@ Pay-as-you-go platforms were ruled out because they have no hard billing ceiling
 
 ## Database — Postgres
 
-Postgres runs as a systemd service on the same VPS as the Go binary. The `pg_cron` extension handles the nightly eviction job for expired unconfirmed journeys — enable it once after install:
+Postgres runs as a systemd service on the same VPS as the Go binary.
 
-```sql
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-```
+Data eviction (cleaning up unconfirmed journeys older than 30 days, old echoes older than 60 days) is handled by a standalone maintenance binary (`yurnik-maintenance`). It runs daily via a systemd timer on the VPS.
 
 Backups run via a daily cron job on the VPS:
 

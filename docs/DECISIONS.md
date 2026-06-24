@@ -52,7 +52,7 @@ The React SPA is static — HTML, CSS, and JavaScript with no server-side render
 
 ## API and database co-hosted on the Hetzner VPS
 
-Postgres runs on the same VPS as the Go binary rather than on a managed database service. At side-project scale the database and API together are well within what a small shared-CPU instance handles comfortably, and co-hosting eliminates the network hop between the API and the database. A managed service would add a recurring cost with no meaningful benefit at this volume. The `pg_cron` extension is enabled on the local instance for the nightly eviction job — it is a standard Postgres extension and requires no external service.
+Postgres runs on the same VPS as the Go binary rather than on a managed database service. At side-project scale the database and API together are well within what a small shared-CPU instance handles comfortably, and co-hosting eliminates the network hop between the API and the database. A managed service would add a recurring cost with no meaningful benefit at this volume. Data eviction runs as a standalone maintenance binary via a daily systemd timer — this keeps business logic in Go rather than in Postgres extensions while requiring no external services.
 
 ---
 

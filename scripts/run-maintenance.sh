@@ -12,22 +12,10 @@ else
     ENV_FILE="$REPO_ROOT/.env"
 fi
 
-if [ ! -f "$ENV_FILE" ]; then
-    echo "  [x]  $ENV_FILE not found — run make db-init first" >&2
-    exit 1
-fi
-
 set -a
 # shellcheck source=/dev/null
 source "$ENV_FILE"
 set +a
 
-export TEST_DATABASE_URL="$DATABASE_URL"
-export TEST_DATABASE_ADMIN_URL="$DATABASE_ADMIN_URL"
-
 cd "$REPO_ROOT/api"
-if [ $# -eq 0 ]; then
-    go test -tags integration ./... -v -count=1
-else
-    go test -tags integration "$@" -v -count=1
-fi
+go run ./cmd/maintenance

@@ -1,4 +1,4 @@
-.PHONY: run-api run-agent run-web test test-api test-agent test-web test-integration build build-api build-web build-agent deploy-api deploy-web release-agent gen-keys export-user lint setup db-init db-migrate db-start db-stop
+.PHONY: run-api run-maintenance run-agent run-web test test-api test-maintenance test-agent test-web test-integration test-integration-api test-integration-maintenance build build-api build-maintenance build-web build-agent deploy-api deploy-web release-agent gen-keys export-user lint setup db-init db-migrate db-start db-stop
 
 ifeq ($(OS),Windows_NT)
 PLATFORM := windows
@@ -13,16 +13,26 @@ else
 	bash scripts/run-api.sh
 endif
 
+run-maintenance:
+ifeq ($(PLATFORM),windows)
+	powershell -ExecutionPolicy Bypass -File scripts/run-maintenance.ps1
+else
+	bash scripts/run-maintenance.sh
+endif
+
 run-agent:
 	cd agent && dotnet run --project Yurnik.Agent
 
 run-web:
 	powershell -ExecutionPolicy Bypass -File scripts/run-web.ps1
 
-test: test-api test-agent test-web
+test: test-api test-maintenance test-agent test-web
 
 test-api:
-	cd api && go test ./... -v
+	cd api && go test ./cmd/api/... ./internal/... -v
+
+test-maintenance:
+	cd api && go test ./cmd/maintenance/... -v
 
 test-agent:
 	cd agent && dotnet test Yurnik.sln
@@ -30,20 +40,36 @@ test-agent:
 test-web:
 	cd web && pnpm test --run
 
-test-integration:
+test-integration-api:
 ifeq ($(PLATFORM),windows)
-	powershell -ExecutionPolicy Bypass -File scripts/test-integration.ps1
+	powershell -ExecutionPolicy Bypass -File scripts/test-integration.ps1 ./cmd/api/... ./internal/...
 else
-	bash scripts/test-integration.sh
+	bash scripts/test-integration.sh ./cmd/api/... ./internal/...
 endif
 
-build: build-api build-web build-agent
+test-integration-maintenance:
+ifeq ($(PLATFORM),windows)
+	powershell -ExecutionPolicy Bypass -File scripts/test-integration.ps1 ./cmd/maintenance/...
+else
+	bash scripts/test-integration.sh ./cmd/maintenance/...
+endif
+
+test-integration: test-integration-api test-integration-maintenance
+
+build: build-api build-maintenance build-web build-agent
 
 build-api:
 ifeq ($(YURNIK_ENV),production)
 	cd api && go build -o /usr/local/bin/yurnik-api ./cmd/api
 else
 	cd api && go build -o bin/api ./cmd/api
+endif
+
+build-maintenance:
+ifeq ($(YURNIK_ENV),production)
+	cd api && go build -o /usr/local/bin/yurnik-maintenance ./cmd/maintenance
+else
+	cd api && go build -o bin/maintenance ./cmd/maintenance
 endif
 
 build-web:

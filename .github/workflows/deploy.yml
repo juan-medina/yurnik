@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 jobs:
-  test-unit:
+  test-unit-api:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +18,20 @@ jobs:
       - name: Unit tests
         run: make test-api
 
-  test-integration:
+  test-unit-maintenance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+
+      - name: Unit tests
+        run: make test-maintenance
+
+  test-integration-api:
     runs-on: ubuntu-latest
 
     services:
@@ -57,7 +70,48 @@ jobs:
         run: make db-migrate
 
       - name: Integration tests
-        run: make test-integration
+        run: make test-integration-api
+
+  test-integration-maintenance:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: yurnik
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      YURNIK_ENV: ci
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+
+      - name: Init database
+        run: make db-init
+
+      - name: Apply migrations
+        run: make db-migrate
+
+      - name: Integration tests
+        run: make test-integration-maintenance
 
   test-web:
     runs-on: ubuntu-latest
@@ -106,8 +160,32 @@ jobs:
       - name: Build
         run: make build-agent
 
+  build-api:
+    needs: [test-unit-api, test-integration-api]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+      - name: Build API
+        run: make build-api
+
+  build-maintenance:
+    needs: [test-unit-maintenance, test-integration-maintenance]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+      - name: Build Maintenance
+        run: make build-maintenance
+
   build-web:
-    needs: [test-unit, test-integration, test-web]
+    needs: [test-web]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -130,7 +208,7 @@ jobs:
         run: make build-web
 
   deploy-api:
-    needs: [build-web, test-and-build-agent]
+    needs: [build-api, build-maintenance, build-web, test-and-build-agent]
     runs-on: ubuntu-latest
     steps:
       - name: Set up SSH
