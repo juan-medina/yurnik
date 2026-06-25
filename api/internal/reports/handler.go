@@ -60,6 +60,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/admin/users/{id}/suspend", h.suspend)
 	mux.HandleFunc("DELETE /api/admin/users/{id}/suspend", h.unsuspend)
 	mux.HandleFunc("GET /api/admin/users/suspended", h.listSuspended)
+	mux.HandleFunc("GET /api/admin/users/stats", h.userStats)
+	mux.HandleFunc("GET /api/admin/users", h.listRecentUsers)
 	mux.HandleFunc("POST /api/admin/users/{id}/reset-profile", h.resetProfile)
 	mux.HandleFunc("DELETE /api/admin/journeys/{id}/log", h.adminDeleteJourneyLog)
 	mux.HandleFunc("DELETE /api/admin/comments/{id}", h.adminDeleteComment)
@@ -297,6 +299,75 @@ func (h *Handler) listSuspended(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"users": items})
+}
+
+func (h *Handler) userStats(w http.ResponseWriter, r *http.Request) {
+	if !h.requireAdmin(w, r) {
+		return
+	}
+	stats, err := db.GetUserStats(r.Context(), h.pool)
+	if err != nil {
+		log.Printf("admin/user-stats: %v", err)
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"today": stats.Today,
+		"week":  stats.Week,
+		"total": stats.Total,
+	})
+}
+
+func (h *Handler) listRecentUsers(w http.ResponseWriter, r *http.Request) {
+	if !h.requireAdmin(w, r) {
+		return
+	}
+
+	limit := 50
+	cursor := r.URL.Query().Get("cursor")
+
+	users, err := db.ListUsersByCreatedDesc(r.Context(), h.pool, limit+1, cursor)
+	if err != nil {
+		log.Printf("admin/list-recent-users: %v", err)
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	var nextCursor string
+	if len(users) == limit+1 {
+		last := users[limit-1]
+		nextCursor = db.EncodeUserCursor(last.CreatedAt, last.ID)
+		users = users[:limit]
+	}
+
+	type recentUserItem struct {
+		ID        string  `json:"id"`
+		Handle    string  `json:"handle"`
+		Name      string  `json:"name"`
+		AvatarURL *string `json:"avatar_url,omitempty"`
+		Color     string  `json:"color"`
+		CreatedAt string  `json:"created_at"`
+	}
+
+	items := make([]recentUserItem, 0, len(users))
+	for _, u := range users {
+		items = append(items, recentUserItem{
+			ID:        u.ID,
+			Handle:    u.Handle,
+			Name:      u.Name,
+			AvatarURL: u.AvatarURL,
+			Color:     u.Color,
+			CreatedAt: u.CreatedAt.UTC().Format(time.RFC3339),
+		})
+	}
+
+	result := map[string]any{"users": items}
+	if nextCursor != "" {
+		result["next_cursor"] = nextCursor
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(result)
 }
 
 func (h *Handler) adminDeleteJourneyLog(w http.ResponseWriter, r *http.Request) {

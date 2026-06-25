@@ -27,6 +27,21 @@ export type SuspendedUser = {
   suspendedAt: Date;
 };
 
+export type RecentUser = {
+  id: string;
+  handle: string;
+  name: string;
+  avatarUrl?: string;
+  color: string;
+  createdAt: Date;
+};
+
+export type UserStats = {
+  today: number;
+  week: number;
+  total: number;
+};
+
 export type AdminReport = {
   id: string;
   reporterHandle: string;

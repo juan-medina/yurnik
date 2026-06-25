@@ -6,12 +6,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ExternalLink } from "lucide-react";
 import { listReports } from "@/services/reports";
-import { suspendUser, unsuspendUser, listSuspendedUsers, resetProfile, adminDeleteJourneyLog, adminDeleteComment } from "@/services/admin";
+import { suspendUser, unsuspendUser, listSuspendedUsers, resetProfile, adminDeleteJourneyLog, adminDeleteComment, getUserStats, listRecentUsers } from "@/services/admin";
 import { getCurrentPlayer } from "@/services/auth";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { initials } from "@/lib/display";
 import NotFound from "@/pages/NotFound";
-import type { AdminReport, ReportReason, ReportTargetType, SuspendedUser } from "@/models";
+import type { AdminReport, ReportReason, ReportTargetType, SuspendedUser, RecentUser } from "@/models";
 
 const REASON_KEYS: Record<ReportReason, string> = {
   spam: "admin_report_reason_spam",
@@ -207,7 +207,100 @@ function SuspendedTab() {
   );
 }
 
-type Tab = "reports" | "suspended";
+function UsersTab() {
+  const { t } = useTranslation();
+  const [allUsers, setAllUsers] = useState<RecentUser[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | undefined>();
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const { data: stats } = useQuery({
+    queryKey: ["admin", "user-stats"],
+    queryFn: getUserStats,
+  });
+
+  const { data: usersPage, isLoading } = useQuery({
+    queryKey: ["admin", "users"],
+    queryFn: () => listRecentUsers(),
+  });
+
+  useEffect(() => {
+    if (usersPage) {
+      setAllUsers(usersPage.users);
+      setNextCursor(usersPage.nextCursor);
+    }
+  }, [usersPage]);
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await listRecentUsers(nextCursor);
+      setAllUsers((prev) => [...prev, ...page.users]);
+      setNextCursor(page.nextCursor);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  return (
+    <div>
+      {stats && (
+        <div className="mb-4 grid grid-cols-3 gap-2">
+          <div className="rounded-lg border border-border bg-card px-3 py-2 text-center">
+            <div className="text-lg font-bold">{stats.today}</div>
+            <div className="text-xs text-muted-foreground">{t("admin_users_today")}</div>
+          </div>
+          <div className="rounded-lg border border-border bg-card px-3 py-2 text-center">
+            <div className="text-lg font-bold">{stats.week}</div>
+            <div className="text-xs text-muted-foreground">{t("admin_users_week")}</div>
+          </div>
+          <div className="rounded-lg border border-border bg-card px-3 py-2 text-center">
+            <div className="text-lg font-bold">{stats.total}</div>
+            <div className="text-xs text-muted-foreground">{t("admin_users_total")}</div>
+          </div>
+        </div>
+      )}
+
+      {isLoading ? null : allUsers.length === 0 ? (
+        <div className="rounded-lg border border-border bg-card px-4 py-12 text-center text-sm text-muted-foreground">
+          {t("admin_users_empty")}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-border bg-card divide-y divide-border">
+          {allUsers.map((u) => (
+            <div key={u.id} className="flex items-center gap-3 px-4 py-3">
+              <Link to={`/player/${u.handle}`} className="shrink-0">
+                <Avatar src={u.avatarUrl} name={u.name} color={u.color} />
+              </Link>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <Link to={`/player/${u.handle}`} className="text-sm font-semibold hover:underline">
+                    {u.name}
+                  </Link>
+                  <span className="text-xs text-muted-foreground">@{u.handle}</span>
+                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground/60">{t("admin_users_joined")} {formatDate(u.createdAt)}</p>
+              </div>
+            </div>
+          ))}
+          {nextCursor && (
+            <div className="px-4 py-3">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="w-full rounded-md py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
+              >
+                {loadingMore ? t("loading") : t("load_more")}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type Tab = "reports" | "suspended" | "users";
 
 export default function Admin() {
   const { t } = useTranslation();
@@ -266,6 +359,7 @@ export default function Admin() {
   const tabs: { id: Tab; label: string }[] = [
     { id: "reports", label: t("admin_tab_reports") },
     { id: "suspended", label: t("admin_tab_suspended") },
+    { id: "users", label: t("admin_tab_users") },
   ];
 
   return (
@@ -288,7 +382,7 @@ export default function Admin() {
         ))}
       </div>
 
-      {tab === "reports" ? <ReportsTab /> : <SuspendedTab />}
+      {tab === "reports" ? <ReportsTab /> : tab === "suspended" ? <SuspendedTab /> : <UsersTab />}
 
       {confirmSuspendId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">

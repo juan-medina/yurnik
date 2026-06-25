@@ -40,6 +40,16 @@ type SuspendedUser struct {
 	SuspendedAt time.Time
 }
 
+// RecentUser holds the fields needed to display a recently-signed-up user in the admin UI.
+type RecentUser struct {
+	ID        string
+	Handle    string
+	Name      string
+	AvatarURL *string
+	Color     string
+	CreatedAt time.Time
+}
+
 // UserIdentity holds the identity fields returned by the OAuth provider.
 // Passed to UpsertUser on every login.
 type UserIdentity struct {
@@ -240,6 +250,86 @@ func ListSuspendedUsers(ctx context.Context, pool *pgxpool.Pool) ([]SuspendedUse
 		users = append(users, u)
 	}
 	return users, rows.Err()
+}
+
+// EncodeUserCursor encodes a pagination cursor from created_at and user id.
+func EncodeUserCursor(createdAt time.Time, id string) string {
+	return createdAt.UTC().Format(time.RFC3339Nano) + "|" + id
+}
+
+func splitUserCursor(cursor string) (time.Time, string, error) {
+	idx := strings.LastIndex(cursor, "|")
+	if idx < 0 {
+		return time.Time{}, "", fmt.Errorf("invalid user cursor")
+	}
+	t, err := time.Parse(time.RFC3339Nano, cursor[:idx])
+	if err != nil {
+		return time.Time{}, "", fmt.Errorf("invalid user cursor time: %w", err)
+	}
+	return t, cursor[idx+1:], nil
+}
+
+// ListUsersByCreatedDesc returns up to limit users ordered by signup time,
+// most recent first. cursor (optional) is an opaque token from
+// EncodeUserCursor for keyset pagination.
+func ListUsersByCreatedDesc(ctx context.Context, pool *pgxpool.Pool, limit int, cursor string) ([]RecentUser, error) {
+	const baseQuery = `
+		SELECT id, handle, COALESCE(display_name, name), COALESCE(custom_avatar_url, avatar_url), color, created_at
+		FROM users
+	`
+	var rows pgx.Rows
+	var err error
+	if cursor == "" {
+		rows, err = pool.Query(ctx, baseQuery+`
+			ORDER BY created_at DESC, id DESC
+			LIMIT $1
+		`, limit)
+	} else {
+		var cursorTime time.Time
+		var cursorID string
+		cursorTime, cursorID, err = splitUserCursor(cursor)
+		if err != nil {
+			return nil, fmt.Errorf("list users by created desc: %w", err)
+		}
+		rows, err = pool.Query(ctx, baseQuery+`
+			WHERE (created_at, id) < ($1, $2)
+			ORDER BY created_at DESC, id DESC
+			LIMIT $3
+		`, cursorTime, cursorID, limit)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var users []RecentUser
+	for rows.Next() {
+		var u RecentUser
+		if err := rows.Scan(&u.ID, &u.Handle, &u.Name, &u.AvatarURL, &u.Color, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}
+
+// UserStats holds signup counts for the admin dashboard.
+type UserStats struct {
+	Today int
+	Week  int
+	Total int
+}
+
+// GetUserStats returns the number of users created today (since UTC midnight),
+// in the last 7 days, and in total.
+func GetUserStats(ctx context.Context, pool *pgxpool.Pool) (UserStats, error) {
+	var s UserStats
+	err := pool.QueryRow(ctx, `
+		SELECT
+			(SELECT COUNT(*) FROM users WHERE created_at >= date_trunc('day', now())),
+			(SELECT COUNT(*) FROM users WHERE created_at >= now() - interval '7 days'),
+			(SELECT COUNT(*) FROM users)
+	`).Scan(&s.Today, &s.Week, &s.Total)
+	return s, err
 }
 
 // UpdateBio sets the bio for the given user ID.
