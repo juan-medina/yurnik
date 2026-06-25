@@ -32,7 +32,8 @@ describe("Horizon", () => {
     renderHorizon();
     await screen.findByText(MOCK_HORIZON[0].name);
 
-    await user.click(screen.getByRole("button", { name: "Roguelike" }));
+    await user.click(screen.getByRole("button", { name: /genre/i }));
+    await user.click(await screen.findByRole("button", { name: "Roguelike" }));
 
     expect(await screen.findByText(MOCK_HORIZON[1].name)).toBeInTheDocument();
     expect(screen.queryByText(MOCK_HORIZON[0].name)).not.toBeInTheDocument();
@@ -73,7 +74,8 @@ describe("Horizon", () => {
     renderHorizon();
     await screen.findByText(MOCK_HORIZON[0].name);
 
-    await user.click(screen.getByRole("button", { name: "Roguelike" }));
+    await user.click(screen.getByRole("button", { name: /genre/i }));
+    await user.click(await screen.findByRole("button", { name: "Roguelike" }));
     await screen.findByText(MOCK_HORIZON[1].name);
 
     await user.click(screen.getByRole("button", { name: /roll/i }));

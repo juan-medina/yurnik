@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { Telescope, Trash2, GripVertical, Sparkles, Dices } from "lucide-react";
+import { Telescope, Trash2, GripVertical, Sparkles, Dices, ChevronDown } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
@@ -29,8 +29,9 @@ import { getHorizon, addToHorizon, removeFromHorizon, reorderHorizon } from "@/s
 import { GameSelector, GameCover } from "@/components/GameSelector";
 import GenreChip from "@/components/GenreChip";
 import RollModal from "@/components/RollModal";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { genreColor } from "@/lib/genres";
+import { genreBarColor } from "@/lib/genres";
 import type { Game } from "@/models/game";
 import type { HorizonEntry } from "@/models/player";
 
@@ -142,6 +143,59 @@ function DragPreview({ entry }: { entry: HorizonEntry }) {
   );
 }
 
+function FilterDropdown({
+  label, allLabel, value, options, onChange, colorFor,
+}: { label: string; allLabel: string; value: string | null; options: string[]; onChange: (value: string | null) => void; colorFor?: (option: string) => string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+            (value || open) && "bg-accent text-foreground",
+          )}
+        >
+          {value && colorFor && (
+            <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: colorFor(value) }} />
+          )}
+          {value ?? label}
+          <ChevronDown size={14} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-44 p-1" align="start">
+        <button
+          type="button"
+          onClick={() => { onChange(null); setOpen(false); }}
+          className={cn(
+            "block w-full rounded-sm px-2 py-1.5 text-left text-sm",
+            value === null ? "bg-accent font-medium text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+          )}
+        >
+          {allLabel}
+        </button>
+        {options.map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => { onChange(value === option ? null : option); setOpen(false); }}
+            className={cn(
+              "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm",
+              value === option ? "bg-accent font-medium text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+            )}
+          >
+            {colorFor && (
+              <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: colorFor(option) }} />
+            )}
+            {option}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function FilteredRow({ entry, onRemove, removing }: { entry: HorizonEntry; onRemove: () => void; removing: boolean }) {
   const { t } = useTranslation();
   return (
@@ -178,6 +232,7 @@ export default function Horizon() {
   const queryClient = useQueryClient();
   const [selectorKey, setSelectorKey] = useState(0);
   const [activeGenre, setActiveGenre] = useState<string | null>(null);
+  const [activeYear, setActiveYear] = useState<string | null>(null);
   const [rolling, setRolling] = useState(false);
 
   const { data: currentPlayer, isLoading: loadingPlayer } = useQuery({
@@ -225,7 +280,15 @@ export default function Horizon() {
     [entries],
   );
 
-  const filtered = activeGenre ? entries.filter((e) => e.genres.includes(activeGenre)) : entries;
+  const allYears = useMemo(
+    () => Array.from(new Set(entries.flatMap((e) => (e.releaseYear ? [String(e.releaseYear)] : [])))).sort((a, b) => Number(b) - Number(a)),
+    [entries],
+  );
+
+  const filtered = entries.filter(
+    (e) => (!activeGenre || e.genres.includes(activeGenre)) && (!activeYear || String(e.releaseYear) === activeYear),
+  );
+  const isFiltered = !!activeGenre || !!activeYear;
 
   function handleSelect(game: Game) {
     const igdbId = parseInt(game.id, 10);
@@ -279,7 +342,28 @@ export default function Horizon() {
 
           {entries.length > 0 ? (
             <>
-              <div className="mb-4 flex items-center justify-end">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  {allGenres.length > 1 && (
+                    <FilterDropdown
+                      label={t("horizon_filter_genre")}
+                      allLabel={t("players_all")}
+                      value={activeGenre}
+                      options={allGenres}
+                      onChange={setActiveGenre}
+                      colorFor={genreBarColor}
+                    />
+                  )}
+                  {allYears.length > 1 && (
+                    <FilterDropdown
+                      label={t("horizon_filter_year")}
+                      allLabel={t("players_all")}
+                      value={activeYear}
+                      options={allYears}
+                      onChange={setActiveYear}
+                    />
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={() => setRolling(true)}
@@ -290,37 +374,7 @@ export default function Horizon() {
                 </button>
               </div>
 
-              {allGenres.length > 1 && (
-                <div className="mb-4 flex flex-wrap gap-1.5">
-                  <button
-                    onClick={() => setActiveGenre(null)}
-                    className={cn(
-                      "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                      activeGenre === null
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                    )}
-                  >
-                    {t("players_all")}
-                  </button>
-                  {allGenres.map((genre) => (
-                    <button
-                      key={genre}
-                      onClick={() => setActiveGenre(activeGenre === genre ? null : genre)}
-                      className={cn(
-                        "rounded-full px-3 py-1 text-xs font-medium transition-opacity",
-                        activeGenre === genre
-                          ? "bg-primary text-primary-foreground"
-                          : cn(genreColor(genre), "hover:opacity-80"),
-                      )}
-                    >
-                      {genre}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {activeGenre ? (
+              {isFiltered ? (
                 <div className="divide-y divide-border rounded-lg border border-border bg-card px-4">
                   {filtered.map((entry) => (
                     <FilteredRow
