@@ -33,14 +33,35 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { genreBarColor } from "@/lib/genres";
 import { formatReleaseDate } from "@/lib/time";
+import type { Game } from "@/models/game";
+import type { HorizonEntry } from "@/models/player";
+
+// A game counts as upcoming if it has a confirmed future release date, or if
+// it has no confirmed date at all (TBA) and isn't already known to be out —
+// i.e. its release year, if any, isn't in the past.
+export function isUpcoming(entry: HorizonEntry): boolean {
+  if (entry.releaseDate) {
+    const todayMs = new Date(new Date().toDateString()).getTime();
+    return entry.releaseDate.getTime() >= todayMs;
+  }
+  if (entry.releaseYear) return entry.releaseYear >= new Date().getFullYear();
+  return true;
+}
+
+// Sort key for the upcoming list: dated entries sort by their exact date,
+// year-only entries sort after all dated ones (by year), and fully TBA
+// entries (no date, no year) sort last of all.
+export function upcomingSortKey(entry: HorizonEntry): number {
+  if (entry.releaseDate) return entry.releaseDate.getTime();
+  if (entry.releaseYear) return new Date(entry.releaseYear, 11, 31).getTime();
+  return Infinity;
+}
 
 function ReleaseLabel({ entry, className }: { entry: HorizonEntry; className: string }) {
   if (entry.releaseDate) return <span className={className}>({formatReleaseDate(entry.releaseDate)})</span>;
   if (entry.releaseYear) return <span className={className}>({entry.releaseYear})</span>;
   return null;
 }
-import type { Game } from "@/models/game";
-import type { HorizonEntry } from "@/models/player";
 
 function HorizonRow({
   entry, hero, onRemove, removing,
@@ -281,10 +302,7 @@ export default function Horizon() {
     [entries],
   );
 
-  const hasUpcoming = useMemo(() => {
-    const todayMs = new Date(new Date().toDateString()).getTime();
-    return entries.some((e) => e.releaseDate && e.releaseDate.getTime() >= todayMs);
-  }, [entries]);
+  const hasUpcoming = useMemo(() => entries.some(isUpcoming), [entries]);
 
   const allYears = useMemo(() => {
     const years = Array.from(new Set(entries.flatMap((e) => (e.releaseYear ? [String(e.releaseYear)] : []))))
@@ -296,10 +314,7 @@ export default function Horizon() {
 
   let filtered = genreFiltered;
   if (activeYear === "upcoming") {
-    const todayMs = new Date(new Date().toDateString()).getTime();
-    filtered = genreFiltered
-      .filter((e) => e.releaseDate && e.releaseDate.getTime() >= todayMs)
-      .sort((a, b) => a.releaseDate!.getTime() - b.releaseDate!.getTime());
+    filtered = genreFiltered.filter(isUpcoming).sort((a, b) => upcomingSortKey(a) - upcomingSortKey(b));
   } else if (activeYear) {
     filtered = genreFiltered.filter((e) => String(e.releaseYear) === activeYear);
   }
