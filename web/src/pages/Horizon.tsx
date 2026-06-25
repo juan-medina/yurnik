@@ -279,38 +279,7 @@ export default function Horizon() {
 
           {entries.length > 0 ? (
             <>
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                {allGenres.length > 1 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      onClick={() => setActiveGenre(null)}
-                      className={cn(
-                        "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                        activeGenre === null
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                      )}
-                    >
-                      {t("players_all")}
-                    </button>
-                    {allGenres.map((genre) => (
-                      <button
-                        key={genre}
-                        onClick={() => setActiveGenre(activeGenre === genre ? null : genre)}
-                        className={cn(
-                          "rounded-full px-3 py-1 text-xs font-medium transition-opacity",
-                          activeGenre === genre
-                            ? "bg-primary text-primary-foreground"
-                            : cn(genreColor(genre), "hover:opacity-80"),
-                        )}
-                      >
-                        {genre}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <span />
-                )}
+              <div className="mb-4 flex items-center justify-end">
                 <button
                   type="button"
                   onClick={() => setRolling(true)}
@@ -320,6 +289,36 @@ export default function Horizon() {
                   {t("horizon_roll")}
                 </button>
               </div>
+
+              {allGenres.length > 1 && (
+                <div className="mb-4 flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => setActiveGenre(null)}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                      activeGenre === null
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                    )}
+                  >
+                    {t("players_all")}
+                  </button>
+                  {allGenres.map((genre) => (
+                    <button
+                      key={genre}
+                      onClick={() => setActiveGenre(activeGenre === genre ? null : genre)}
+                      className={cn(
+                        "rounded-full px-3 py-1 text-xs font-medium transition-opacity",
+                        activeGenre === genre
+                          ? "bg-primary text-primary-foreground"
+                          : cn(genreColor(genre), "hover:opacity-80"),
+                      )}
+                    >
+                      {genre}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {activeGenre ? (
                 <div className="divide-y divide-border rounded-lg border border-border bg-card px-4">
