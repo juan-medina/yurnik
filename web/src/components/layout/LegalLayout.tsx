@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import Footer from "@/components/layout/Footer";
 
 const PRIVACY_EMAIL = "privacy@yurnik.social";
 export const CONTACT_EMAIL = "contact@yurnik.social";
@@ -79,6 +80,7 @@ export default function LegalLayout({ title, updated, children }: LegalLayoutPro
           </Link>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

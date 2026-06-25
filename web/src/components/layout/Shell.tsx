@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { useState } from "react";
-import { Outlet, Link } from "react-router";
+import { Outlet } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { getCurrentPlayer, AccountSuspendedError } from "@/services/auth";
@@ -11,6 +11,7 @@ import { useEchoNotifications } from "@/hooks/useEchoNotifications";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
+import Footer from "./Footer";
 
 export default function Shell() {
   const { t } = useTranslation();
@@ -44,17 +45,7 @@ export default function Shell() {
             <Outlet />
           </ErrorBoundary>
         </main>
-        <footer className="flex items-center justify-center gap-3 border-t border-border px-4 py-2 text-xs text-muted-foreground/60">
-          <Link to="/whats-new" className="transition-colors hover:text-foreground">
-            {t("legal_whats_new")}
-          </Link>
-          <Link to="/terms" className="transition-colors hover:text-foreground">
-            {t("legal_terms")}
-          </Link>
-          <Link to="/privacy" className="transition-colors hover:text-foreground">
-            {t("legal_privacy")}
-          </Link>
-        </footer>
+        <Footer />
       </div>
     </div>
   );
