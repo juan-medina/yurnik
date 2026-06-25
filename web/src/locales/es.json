@@ -392,6 +392,26 @@
   "whats_new_title": "Novedades",
   "whats_new_entries": [
     {
+      "date": "2026-06-25",
+      "title": "Mira cuándo se lanzan los juegos",
+      "body": "Los juegos ahora muestran su fecha de lanzamiento, y Horizonte tiene un filtro para títulos que aún no han salido."
+    },
+    {
+      "date": "2026-06-25",
+      "title": "Filtra Horizonte por género y año",
+      "body": "Ajusta tus elecciones en Horizonte por género y año de lanzamiento, además de los filtros que ya existían."
+    },
+    {
+      "date": "2026-06-25",
+      "title": "Etiquetas más ordenadas en Horizonte",
+      "body": "El botón de dados ya no se mezcla con las etiquetas de género, así que las entradas con muchas etiquetas se ven mejor."
+    },
+    {
+      "date": "2026-06-25",
+      "title": "Enlaces de IGDB corregidos",
+      "body": "Los enlaces a la página de IGDB de un juego apuntaban al lugar equivocado en algunos casos. Ahora siempre llevan a la página correcta."
+    },
+    {
       "date": "2026-06-23",
       "title": "Ignorar sesiones de juego cortas",
       "body": "Para evitar que los lanzamientos accidentales y los bloqueos al inicio llenen tu historial de jornadas, el agente de escritorio ahora ignorará las sesiones de juego de menos de 5 minutos."

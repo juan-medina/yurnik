@@ -395,6 +395,26 @@
   "whats_new_title": "What's New",
   "whats_new_entries": [
     {
+      "date": "2026-06-25",
+      "title": "See when games launch",
+      "body": "Games now show their release date, and Horizon has a filter for upcoming titles that haven't launched yet."
+    },
+    {
+      "date": "2026-06-25",
+      "title": "Filter Horizon by genre and year",
+      "body": "Narrow down your Horizon picks by genre and release year, on top of the existing filters."
+    },
+    {
+      "date": "2026-06-25",
+      "title": "Tidier tags on Horizon",
+      "body": "The roll button no longer crowds genre tags, so Horizon entries with lots of tags stay readable."
+    },
+    {
+      "date": "2026-06-25",
+      "title": "Fixed broken IGDB links",
+      "body": "Links to a game's IGDB page were pointing to the wrong place for some titles. They now go to the right page every time."
+    },
+    {
       "date": "2026-06-23",
       "title": "Ignore short game sessions",
       "body": "To prevent accidental launches and startup crashes from cluttering your journey history, the desktop agent now ignores game sessions shorter than 5 minutes."
