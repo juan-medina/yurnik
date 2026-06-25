@@ -51,6 +51,11 @@ export function formatCommentAge(date: Date): string {
   return i18next.t("time_days_ago", { count: diffDays });
 }
 
+export function formatReleaseDate(date: Date): string {
+  const lang = i18next.language;
+  return date.toLocaleDateString(lang, { month: "long", day: "numeric", year: "numeric" });
+}
+
 export function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);

@@ -12,7 +12,7 @@ import { getCurrentPlayer } from "@/services/auth";
 import { addToHorizon } from "@/services/horizon";
 import { playerHref } from "@/lib/display";
 import PlayerAvatar from "@/components/PlayerAvatar";
-import { formatJourneyDate } from "@/lib/time";
+import { formatJourneyDate, formatReleaseDate } from "@/lib/time";
 import GenreChip from "@/components/GenreChip";
 import SignInPromptModal from "@/components/SignInPromptModal";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -398,8 +398,10 @@ export default function GameDetail() {
               <div className="min-w-0 flex-1">
                 <h1 className="mb-1.5 text-xl font-bold">
                   {game.name}
-                  {game.releaseYear && (
-                    <span className="ml-2 text-sm font-normal text-muted-foreground">({game.releaseYear})</span>
+                  {(game.releaseDate || game.releaseYear) && (
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">
+                      ({game.releaseDate ? formatReleaseDate(game.releaseDate) : game.releaseYear})
+                    </span>
                   )}
                 </h1>
                 <div className="mb-2.5 flex flex-wrap gap-1">

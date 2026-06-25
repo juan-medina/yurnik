@@ -26,6 +26,7 @@ export async function getGameDetail(igdbId: string): Promise<GameDetail | undefi
   if (!resp.ok) throw new Error(`get game detail: ${resp.status}`);
   const g: {
     id: string; name: string; cover_url?: string; genres: string[]; release_year?: number;
+    release_date?: string;
     igdb_slug?: string;
     platforms: string[]; developer?: string; publisher?: string; summary?: string;
     screenshots: string[]; trailer_id?: string; store_links?: Record<string, string>;
@@ -37,6 +38,7 @@ export async function getGameDetail(igdbId: string): Promise<GameDetail | undefi
     coverUrl: g.cover_url,
     genres: g.genres,
     releaseYear: g.release_year,
+    releaseDate: g.release_date ? new Date(g.release_date) : undefined,
     igdbSlug: g.igdb_slug,
     platforms: g.platforms ?? [],
     developer: g.developer,

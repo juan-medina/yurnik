@@ -18,6 +18,7 @@ export type GameDetail = {
   coverUrl?: string;
   genres: string[];
   releaseYear?: number;
+  releaseDate?: Date;
   igdbSlug?: string;
   platforms: string[];
   developer?: string;

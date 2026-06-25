@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/juan-medina/yurnik/internal/auth"
@@ -92,6 +93,22 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 			if upsertErr := db.UpsertGameDetail(r.Context(), h.pool, detail); upsertErr != nil {
 				log.Printf("games/detail: upsert cache %d: %v", igdbID, upsertErr)
 			}
+			if fetched.ReleaseDate != nil {
+				basic.ReleaseYear = fetched.ReleaseYear
+				basic.ReleaseDate = fetched.ReleaseDate
+				refreshed := db.CachedGame{
+					IGDBID:      basic.IGDBID,
+					Name:        basic.Name,
+					CoverURL:    basic.CoverURL,
+					Genres:      basic.Genres,
+					ReleaseYear: basic.ReleaseYear,
+					ReleaseDate: basic.ReleaseDate,
+					Category:    basic.Category,
+				}
+				if upsertErr := db.UpsertGame(r.Context(), h.pool, refreshed); upsertErr != nil {
+					log.Printf("games/detail: upsert release date %d: %v", igdbID, upsertErr)
+				}
+			}
 		}
 	}
 
@@ -114,6 +131,7 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 		CoverURL         *string           `json:"cover_url,omitempty"`
 		Genres           []string          `json:"genres"`
 		ReleaseYear      *int              `json:"release_year,omitempty"`
+		ReleaseDate      *string           `json:"release_date,omitempty"`
 		Category         *int              `json:"category,omitempty"`
 		IGDBSlug         *string           `json:"igdb_slug,omitempty"`
 		Summary          *string           `json:"summary,omitempty"`
@@ -138,6 +156,12 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 		igdbSlug = &detail.Slug
 	}
 
+	var releaseDate *string
+	if basic.ReleaseDate != nil {
+		s := basic.ReleaseDate.UTC().Format(time.RFC3339)
+		releaseDate = &s
+	}
+
 	var inHorizon bool
 	if userID, ok := h.tryAuthenticate(r); ok {
 		inHorizon, err = db.IsInHorizon(r.Context(), h.pool, userID, igdbID)
@@ -153,6 +177,7 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 		CoverURL:         coverURL,
 		Genres:           genres,
 		ReleaseYear:      basic.ReleaseYear,
+		ReleaseDate:      releaseDate,
 		Category:         basic.Category,
 		IGDBSlug:         igdbSlug,
 		Summary:          detail.Summary,
@@ -278,6 +303,7 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 			CoverURL:    g.CoverURL,
 			Genres:      g.Genres,
 			ReleaseYear: g.ReleaseYear,
+			ReleaseDate: g.ReleaseDate,
 			Category:    g.Category,
 		}); err != nil {
 			log.Printf("games/search: cache %d: %v", g.IGDBID, err)

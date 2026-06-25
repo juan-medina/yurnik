@@ -32,6 +32,13 @@ import RollModal from "@/components/RollModal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { genreBarColor } from "@/lib/genres";
+import { formatReleaseDate } from "@/lib/time";
+
+function ReleaseLabel({ entry, className }: { entry: HorizonEntry; className: string }) {
+  if (entry.releaseDate) return <span className={className}>({formatReleaseDate(entry.releaseDate)})</span>;
+  if (entry.releaseYear) return <span className={className}>({entry.releaseYear})</span>;
+  return null;
+}
 import type { Game } from "@/models/game";
 import type { HorizonEntry } from "@/models/player";
 
@@ -94,9 +101,7 @@ function HorizonRow({
           <div className="min-w-0 flex-1">
             <Link to={`/game/${entry.igdbId}`} className="flex items-baseline gap-1.5">
               <span className="truncate text-lg font-bold">{entry.name}</span>
-              {entry.releaseYear && (
-                <span className="shrink-0 text-sm font-normal text-muted-foreground">({entry.releaseYear})</span>
-              )}
+              <ReleaseLabel entry={entry} className="shrink-0 text-sm font-normal text-muted-foreground" />
             </Link>
             <div className="mt-1.5 flex flex-wrap gap-1">
               {entry.genres.map((g) => <GenreChip key={g} genre={g} size="sm" />)}
@@ -120,9 +125,7 @@ function HorizonRow({
         <div className="min-w-0">
           <div className="flex items-baseline gap-1.5 text-sm font-medium">
             <span className="truncate">{entry.name}</span>
-            {entry.releaseYear && (
-              <span className="shrink-0 text-xs font-normal text-muted-foreground">({entry.releaseYear})</span>
-            )}
+            <ReleaseLabel entry={entry} className="shrink-0 text-xs font-normal text-muted-foreground" />
           </div>
           <div className="mt-0.5 flex flex-wrap gap-1">
             {entry.genres.map((g) => <GenreChip key={g} genre={g} size="sm" />)}
@@ -144,8 +147,8 @@ function DragPreview({ entry }: { entry: HorizonEntry }) {
 }
 
 function FilterDropdown({
-  label, allLabel, value, options, onChange, colorFor,
-}: { label: string; allLabel: string; value: string | null; options: string[]; onChange: (value: string | null) => void; colorFor?: (option: string) => string }) {
+  label, allLabel, value, options, onChange, colorFor, labelFor,
+}: { label: string; allLabel: string; value: string | null; options: string[]; onChange: (value: string | null) => void; colorFor?: (option: string) => string; labelFor?: (option: string) => string }) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -160,7 +163,7 @@ function FilterDropdown({
           {value && colorFor && (
             <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: colorFor(value) }} />
           )}
-          {value ?? label}
+          {value ? (labelFor ? labelFor(value) : value) : label}
           <ChevronDown size={14} />
         </button>
       </PopoverTrigger>
@@ -188,7 +191,7 @@ function FilterDropdown({
             {colorFor && (
               <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: colorFor(option) }} />
             )}
-            {option}
+            {labelFor ? labelFor(option) : option}
           </button>
         ))}
       </PopoverContent>
@@ -205,9 +208,7 @@ function FilteredRow({ entry, onRemove, removing }: { entry: HorizonEntry; onRem
         <div className="min-w-0">
           <div className="flex items-baseline gap-1.5 text-sm font-medium">
             <span className="truncate">{entry.name}</span>
-            {entry.releaseYear && (
-              <span className="shrink-0 text-xs font-normal text-muted-foreground">({entry.releaseYear})</span>
-            )}
+            <ReleaseLabel entry={entry} className="shrink-0 text-xs font-normal text-muted-foreground" />
           </div>
           <div className="mt-0.5 flex flex-wrap gap-1">
             {entry.genres.map((g) => <GenreChip key={g} genre={g} size="sm" />)}
@@ -280,14 +281,28 @@ export default function Horizon() {
     [entries],
   );
 
-  const allYears = useMemo(
-    () => Array.from(new Set(entries.flatMap((e) => (e.releaseYear ? [String(e.releaseYear)] : [])))).sort((a, b) => Number(b) - Number(a)),
-    [entries],
-  );
+  const hasUpcoming = useMemo(() => {
+    const todayMs = new Date(new Date().toDateString()).getTime();
+    return entries.some((e) => e.releaseDate && e.releaseDate.getTime() >= todayMs);
+  }, [entries]);
 
-  const filtered = entries.filter(
-    (e) => (!activeGenre || e.genres.includes(activeGenre)) && (!activeYear || String(e.releaseYear) === activeYear),
-  );
+  const allYears = useMemo(() => {
+    const years = Array.from(new Set(entries.flatMap((e) => (e.releaseYear ? [String(e.releaseYear)] : []))))
+      .sort((a, b) => Number(b) - Number(a));
+    return hasUpcoming ? ["upcoming", ...years] : years;
+  }, [entries, hasUpcoming]);
+
+  const genreFiltered = entries.filter((e) => !activeGenre || e.genres.includes(activeGenre));
+
+  let filtered = genreFiltered;
+  if (activeYear === "upcoming") {
+    const todayMs = new Date(new Date().toDateString()).getTime();
+    filtered = genreFiltered
+      .filter((e) => e.releaseDate && e.releaseDate.getTime() >= todayMs)
+      .sort((a, b) => a.releaseDate!.getTime() - b.releaseDate!.getTime());
+  } else if (activeYear) {
+    filtered = genreFiltered.filter((e) => String(e.releaseYear) === activeYear);
+  }
   const isFiltered = !!activeGenre || !!activeYear;
 
   function handleSelect(game: Game) {
@@ -361,6 +376,7 @@ export default function Horizon() {
                       value={activeYear}
                       options={allYears}
                       onChange={setActiveYear}
+                      labelFor={(option) => (option === "upcoming" ? t("horizon_filter_upcoming") : option)}
                     />
                   )}
                 </div>

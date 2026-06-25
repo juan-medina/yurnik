@@ -58,6 +58,7 @@ type entryResp struct {
 	CoverURL    *string  `json:"cover_url,omitempty"`
 	Genres      []string `json:"genres"`
 	ReleaseYear *int     `json:"release_year,omitempty"`
+	ReleaseDate *string  `json:"release_date,omitempty"`
 	AddedAt     string   `json:"added_at"`
 }
 
@@ -66,12 +67,18 @@ func toEntryResp(e db.HorizonEntry) entryResp {
 	if genres == nil {
 		genres = []string{}
 	}
+	var releaseDate *string
+	if e.ReleaseDate != nil {
+		s := e.ReleaseDate.UTC().Format(time.RFC3339)
+		releaseDate = &s
+	}
 	return entryResp{
 		IGDBID:      e.IGDBID,
 		Name:        e.Name,
 		CoverURL:    e.CoverURL,
 		Genres:      genres,
 		ReleaseYear: e.ReleaseYear,
+		ReleaseDate: releaseDate,
 		AddedAt:     e.AddedAt.UTC().Format(time.RFC3339),
 	}
 }

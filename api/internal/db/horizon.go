@@ -19,6 +19,7 @@ type HorizonEntry struct {
 	CoverURL    *string
 	Genres      []string
 	ReleaseYear *int
+	ReleaseDate *time.Time
 	AddedAt     time.Time
 }
 
@@ -51,7 +52,7 @@ func RemoveHorizonEntry(ctx context.Context, pool *pgxpool.Pool, playerID string
 // order (most recently added first, until reordered).
 func ListHorizonEntries(ctx context.Context, pool *pgxpool.Pool, playerID string) ([]HorizonEntry, error) {
 	rows, err := pool.Query(ctx, `
-		SELECT g.igdb_id, g.name, g.cover_url, g.genres, g.release_year, h.added_at
+		SELECT g.igdb_id, g.name, g.cover_url, g.genres, g.release_year, g.release_date, h.added_at
 		FROM horizon_entries h
 		JOIN igdb_games g ON g.igdb_id = h.igdb_id
 		WHERE h.player_id = $1
@@ -65,7 +66,7 @@ func ListHorizonEntries(ctx context.Context, pool *pgxpool.Pool, playerID string
 	var entries []HorizonEntry
 	for rows.Next() {
 		var e HorizonEntry
-		if err := rows.Scan(&e.IGDBID, &e.Name, &e.CoverURL, &e.Genres, &e.ReleaseYear, &e.AddedAt); err != nil {
+		if err := rows.Scan(&e.IGDBID, &e.Name, &e.CoverURL, &e.Genres, &e.ReleaseYear, &e.ReleaseDate, &e.AddedAt); err != nil {
 			return nil, fmt.Errorf("scan horizon entry: %w", err)
 		}
 		entries = append(entries, e)

@@ -20,6 +20,7 @@ type CachedGame struct {
 	CoverURL    string // empty string means no cover
 	Genres      []string
 	ReleaseYear *int
+	ReleaseDate *time.Time
 	Category    *int
 }
 
@@ -30,10 +31,10 @@ func GetGame(ctx context.Context, pool *pgxpool.Pool, igdbID int) (CachedGame, e
 	var g CachedGame
 	var coverURL *string
 	err := pool.QueryRow(ctx, `
-		SELECT igdb_id, name, cover_url, genres, release_year, category
+		SELECT igdb_id, name, cover_url, genres, release_year, release_date, category
 		FROM igdb_games
 		WHERE igdb_id = $1
-	`, igdbID).Scan(&g.IGDBID, &g.Name, &coverURL, &g.Genres, &g.ReleaseYear, &g.Category)
+	`, igdbID).Scan(&g.IGDBID, &g.Name, &coverURL, &g.Genres, &g.ReleaseYear, &g.ReleaseDate, &g.Category)
 	if err == pgx.ErrNoRows {
 		return CachedGame{}, fmt.Errorf("game not in cache: %d", igdbID)
 	}
@@ -125,15 +126,16 @@ func UpsertGame(ctx context.Context, pool *pgxpool.Pool, g CachedGame) error {
 		coverURL = &g.CoverURL
 	}
 	_, err := pool.Exec(ctx, `
-		INSERT INTO igdb_games (igdb_id, name, cover_url, genres, release_year, category, cached_at)
-		VALUES ($1, $2, $3, $4, $5, $6, now())
+		INSERT INTO igdb_games (igdb_id, name, cover_url, genres, release_year, release_date, category, cached_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, now())
 		ON CONFLICT (igdb_id) DO UPDATE
 		  SET name         = EXCLUDED.name,
 		      cover_url    = EXCLUDED.cover_url,
 		      genres       = EXCLUDED.genres,
 		      release_year = EXCLUDED.release_year,
+		      release_date = EXCLUDED.release_date,
 		      category     = EXCLUDED.category,
 		      cached_at    = now()
-	`, g.IGDBID, g.Name, coverURL, g.Genres, g.ReleaseYear, g.Category)
+	`, g.IGDBID, g.Name, coverURL, g.Genres, g.ReleaseYear, g.ReleaseDate, g.Category)
 	return err
 }

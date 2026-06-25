@@ -10,6 +10,7 @@ type RawHorizonEntry = {
   cover_url?: string;
   genres: string[];
   release_year?: number;
+  release_date?: string;
   added_at: string;
 };
 
@@ -23,6 +24,7 @@ export async function getHorizon(handle: string): Promise<HorizonEntry[]> {
     coverUrl: e.cover_url,
     genres: e.genres ?? [],
     releaseYear: e.release_year,
+    releaseDate: e.release_date ? new Date(e.release_date) : undefined,
   }));
 }
 

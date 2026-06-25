@@ -23,6 +23,7 @@ type Game struct {
 	CoverURL    string
 	Genres      []string
 	ReleaseYear *int
+	ReleaseDate *time.Time
 	Category    *int
 }
 
@@ -112,6 +113,8 @@ type GameDetails struct {
 	StoreLinks       map[string]string // key: "steam"|"epic"|"playstation"|"xbox"|"gog", value: URL
 	AggregatedRating *float64          // external critics, 0–100
 	Rating           *float64          // IGDB community, 0–100
+	ReleaseYear      *int
+	ReleaseDate      *time.Time
 }
 
 // GetDetails fetches the full detail record for a single IGDB game ID.
@@ -128,7 +131,7 @@ func (c *Client) GetDetails(ctx context.Context, igdbID int) (GameDetails, error
 	gameBody := fmt.Sprintf(
 		`fields slug,summary,screenshots.image_id,platforms.name,`+
 			`involved_companies.company.name,involved_companies.developer,involved_companies.publisher,`+
-			`videos.video_id,aggregated_rating,rating;`+
+			`videos.video_id,aggregated_rating,rating,first_release_date;`+
 			` where id = %d;`,
 		igdbID,
 	)
@@ -172,6 +175,7 @@ func (c *Client) GetDetails(ctx context.Context, igdbID int) (GameDetails, error
 		} `json:"videos"`
 		AggregatedRating *float64 `json:"aggregated_rating"`
 		Rating           *float64 `json:"rating"`
+		FirstReleaseDate *int64   `json:"first_release_date"`
 	}
 	if err := json.Unmarshal(rawBody, &raw); err != nil {
 		return GameDetails{}, fmt.Errorf("decode igdb details: %w", err)
@@ -204,6 +208,12 @@ func (c *Client) GetDetails(ctx context.Context, igdbID int) (GameDetails, error
 	}
 	d.AggregatedRating = g.AggregatedRating
 	d.Rating = g.Rating
+	if g.FirstReleaseDate != nil {
+		t := time.Unix(*g.FirstReleaseDate, 0).UTC()
+		y := t.Year()
+		d.ReleaseYear = &y
+		d.ReleaseDate = &t
+	}
 
 	d.StoreLinks = c.fetchStoreLinks(ctx, tok, igdbID)
 
@@ -322,8 +332,10 @@ func (c *Client) Search(ctx context.Context, query string, offset int) ([]Game, 
 			game.Genres = []string{}
 		}
 		if g.FirstReleaseDate != nil {
-			y := time.Unix(*g.FirstReleaseDate, 0).UTC().Year()
+			t := time.Unix(*g.FirstReleaseDate, 0).UTC()
+			y := t.Year()
 			game.ReleaseYear = &y
+			game.ReleaseDate = &t
 		}
 		games = append(games, game)
 	}

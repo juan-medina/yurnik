@@ -36,6 +36,7 @@ export type HorizonEntry = {
   coverUrl?: string;
   genres: string[];
   releaseYear?: number;
+  releaseDate?: Date;
 };
 
 export type PlayerProfile = {
