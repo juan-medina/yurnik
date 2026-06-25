@@ -134,8 +134,9 @@ const STORE_LABELS: { key: string; label: string; color: string; bg: string; ico
   { key: "nintendo",    label: "Nintendo",    color: "#E4000F", bg: "rgba(228,0,15,0.12)",    icon: <Gamepad2 size={12} /> },
 ];
 
-function igdbSlug(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+function igdbUrl(game: { name: string; igdbSlug?: string }): string {
+  if (game.igdbSlug) return `https://www.igdb.com/games/${game.igdbSlug}`;
+  return `https://www.igdb.com/search?q=${encodeURIComponent(game.name)}`;
 }
 
 function JourneyPlayerRow({ entry }: { entry: JourneyPlayer }) {
@@ -489,7 +490,7 @@ export default function GameDetail() {
                 </a>
               ))}
               <a
-                href={`https://www.igdb.com/games/${igdbSlug(game.name)}`}
+                href={igdbUrl(game)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"

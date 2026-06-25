@@ -49,6 +49,7 @@ func GetGame(ctx context.Context, pool *pgxpool.Pool, igdbID int) (CachedGame, e
 // CachedGameDetail holds the on-demand detail fields fetched from IGDB.
 type CachedGameDetail struct {
 	IGDBID           int
+	Slug             string
 	Summary          *string
 	Screenshots      []string
 	Platforms        []string
@@ -67,13 +68,14 @@ type CachedGameDetail struct {
 func GetGameDetail(ctx context.Context, pool *pgxpool.Pool, igdbID int) (CachedGameDetail, bool, error) {
 	var d CachedGameDetail
 	var storeLinksJSON []byte
+	var slug *string
 	err := pool.QueryRow(ctx, `
-		SELECT igdb_id, summary, screenshots, platforms, developer, publisher, trailer_id, store_links,
+		SELECT igdb_id, slug, summary, screenshots, platforms, developer, publisher, trailer_id, store_links,
 		       aggregated_rating, rating, cached_at
 		FROM igdb_game_details
 		WHERE igdb_id = $1
 	`, igdbID).Scan(
-		&d.IGDBID, &d.Summary, &d.Screenshots, &d.Platforms,
+		&d.IGDBID, &slug, &d.Summary, &d.Screenshots, &d.Platforms,
 		&d.Developer, &d.Publisher, &d.TrailerID, &storeLinksJSON,
 		&d.AggregatedRating, &d.Rating, &d.CachedAt,
 	)
@@ -82,6 +84,9 @@ func GetGameDetail(ctx context.Context, pool *pgxpool.Pool, igdbID int) (CachedG
 	}
 	if err != nil {
 		return CachedGameDetail{}, false, err
+	}
+	if slug != nil {
+		d.Slug = *slug
 	}
 	if len(storeLinksJSON) > 0 {
 		_ = json.Unmarshal(storeLinksJSON, &d.StoreLinks)
@@ -96,10 +101,11 @@ func UpsertGameDetail(ctx context.Context, pool *pgxpool.Pool, d CachedGameDetai
 		return fmt.Errorf("marshal store_links: %w", err)
 	}
 	_, err = pool.Exec(ctx, `
-		INSERT INTO igdb_game_details (igdb_id, summary, screenshots, platforms, developer, publisher, trailer_id, store_links, aggregated_rating, rating, cached_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
+		INSERT INTO igdb_game_details (igdb_id, slug, summary, screenshots, platforms, developer, publisher, trailer_id, store_links, aggregated_rating, rating, cached_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())
 		ON CONFLICT (igdb_id) DO UPDATE
-		  SET summary           = EXCLUDED.summary,
+		  SET slug              = EXCLUDED.slug,
+		      summary           = EXCLUDED.summary,
 		      screenshots       = EXCLUDED.screenshots,
 		      platforms         = EXCLUDED.platforms,
 		      developer         = EXCLUDED.developer,
@@ -109,7 +115,7 @@ func UpsertGameDetail(ctx context.Context, pool *pgxpool.Pool, d CachedGameDetai
 		      aggregated_rating = EXCLUDED.aggregated_rating,
 		      rating            = EXCLUDED.rating,
 		      cached_at         = now()
-	`, d.IGDBID, d.Summary, d.Screenshots, d.Platforms, d.Developer, d.Publisher, d.TrailerID, storeLinksJSON, d.AggregatedRating, d.Rating)
+	`, d.IGDBID, d.Slug, d.Summary, d.Screenshots, d.Platforms, d.Developer, d.Publisher, d.TrailerID, storeLinksJSON, d.AggregatedRating, d.Rating)
 	return err
 }
 

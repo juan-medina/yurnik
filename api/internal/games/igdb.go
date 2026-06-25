@@ -102,6 +102,7 @@ type igdbGame struct {
 // GameDetails holds the on-demand fields fetched for a single game page.
 type GameDetails struct {
 	IGDBID           int
+	Slug             string
 	Summary          *string
 	Screenshots      []string
 	Platforms        []string
@@ -125,7 +126,7 @@ func (c *Client) GetDetails(ctx context.Context, igdbID int) (GameDetails, error
 	}
 
 	gameBody := fmt.Sprintf(
-		`fields summary,screenshots.image_id,platforms.name,`+
+		`fields slug,summary,screenshots.image_id,platforms.name,`+
 			`involved_companies.company.name,involved_companies.developer,involved_companies.publisher,`+
 			`videos.video_id,aggregated_rating,rating;`+
 			` where id = %d;`,
@@ -153,6 +154,7 @@ func (c *Client) GetDetails(ctx context.Context, igdbID int) (GameDetails, error
 	rawBody, _ := io.ReadAll(resp.Body)
 	var raw []struct {
 		ID      int     `json:"id"`
+		Slug    string  `json:"slug"`
 		Summary *string `json:"summary"`
 		Screenshots []struct {
 			ImageID string `json:"image_id"`
@@ -179,7 +181,7 @@ func (c *Client) GetDetails(ctx context.Context, igdbID int) (GameDetails, error
 	}
 
 	g := raw[0]
-	d := GameDetails{IGDBID: igdbID, Summary: g.Summary}
+	d := GameDetails{IGDBID: igdbID, Slug: g.Slug, Summary: g.Summary}
 
 	for _, s := range g.Screenshots {
 		d.Screenshots = append(d.Screenshots,

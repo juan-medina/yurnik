@@ -78,6 +78,7 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 		} else {
 			detail = db.CachedGameDetail{
 				IGDBID:           fetched.IGDBID,
+				Slug:             fetched.Slug,
 				Summary:          fetched.Summary,
 				Screenshots:      fetched.Screenshots,
 				Platforms:        fetched.Platforms,
@@ -114,6 +115,7 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 		Genres           []string          `json:"genres"`
 		ReleaseYear      *int              `json:"release_year,omitempty"`
 		Category         *int              `json:"category,omitempty"`
+		IGDBSlug         *string           `json:"igdb_slug,omitempty"`
 		Summary          *string           `json:"summary,omitempty"`
 		Screenshots      []string          `json:"screenshots"`
 		Platforms        []string          `json:"platforms"`
@@ -129,6 +131,11 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 	var coverURL *string
 	if basic.CoverURL != "" {
 		coverURL = &basic.CoverURL
+	}
+
+	var igdbSlug *string
+	if detail.Slug != "" {
+		igdbSlug = &detail.Slug
 	}
 
 	var inHorizon bool
@@ -147,6 +154,7 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 		Genres:           genres,
 		ReleaseYear:      basic.ReleaseYear,
 		Category:         basic.Category,
+		IGDBSlug:         igdbSlug,
 		Summary:          detail.Summary,
 		Screenshots:      screenshots,
 		Platforms:        platforms,
