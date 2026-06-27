@@ -175,6 +175,7 @@
   "journeys_exclude_desc": "Future journeys from this executable will be ignored.",
   "journeys_exclude_btn": "Exclude",
   "journeys_never_detect": "Never detect this",
+  "journeys_auto_detect_note": "Once confirmed, the agent will automatically detect and confirm this game next time.",
 
   "players_title": "Players",
   "players_search_placeholder": "Search by game or genre…",
@@ -316,15 +317,15 @@
   "settings_remove_exe": "Remove {{exe}}?",
   "settings_remove": "Remove",
   "settings_remove_label": "Remove {{exe}}",
-  "settings_game_hints": "Game hints",
-  "settings_hints_desc": "Learned matches between executables and games. Remove a hint to let the agent re-detect from the window title.",
-  "settings_no_hints": "No hints yet.",
+  "settings_game_hints": "Auto-confirm games",
+  "settings_hints_desc": "Games the agent has learned to recognize. Remove a game to stop auto-confirming and let the agent detect it manually next time.",
+  "settings_no_hints": "No games will auto-confirm yet.",
   "settings_search_game": "Search for a game…",
   "settings_no_games": "No games found for “{{query}}”",
   "settings_edit": "Edit",
-  "settings_edit_hint_label": "Edit hint for {{exe}}",
-  "settings_remove_hint": "Remove hint for {{exe}}?",
-  "settings_remove_hint_label": "Remove hint for {{exe}}",
+  "settings_edit_hint_label": "Edit auto-confirm for {{exe}}",
+  "settings_remove_hint": "Stop auto-confirming {{exe}}?",
+  "settings_remove_hint_label": "Stop auto-confirming {{exe}}",
   "settings_language": "Language",
   "settings_language_auto": "Auto (detected)",
   "settings_language_en": "English",
@@ -401,6 +402,11 @@
 
   "whats_new_title": "What's New",
   "whats_new_entries": [
+    {
+      "date": "2026-06-27",
+      "title": "Journeys confirm automatically",
+      "body": "Tired of forgetting to confirm your game sessions? Once you confirm a game, the desktop agent will remember it and automatically confirm future journeys for that game as soon as you stop playing."
+    },
     {
       "date": "2026-06-25",
       "title": "See when games launch",

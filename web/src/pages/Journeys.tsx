@@ -203,10 +203,15 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
                   {journey.windowTitle && `"${journey.windowTitle}"`}
                 </div>
               )}
-              <div className="flex items-center gap-1">
+              <div className="mb-2 flex items-center gap-1">
                 <Clock size={12} />
                 <span>{t("journeys_ended", { time: formatJourneyDate(journey.endedAt) })}</span>
               </div>
+              {journey.exeName && (
+                <div className="rounded border border-primary/20 bg-primary/5 p-2 text-primary/90">
+                  {t("journeys_auto_detect_note")}
+                </div>
+              )}
             </div>
           }
         />

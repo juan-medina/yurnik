@@ -134,7 +134,7 @@ describe("Settings — game hints", () => {
     const user = userEvent.setup();
     renderSettings();
     await user.click(
-      await screen.findByRole("button", { name: `Remove hint for ${TEST_HINTS[0].exeName}` }),
+      await screen.findByRole("button", { name: `Stop auto-confirming ${TEST_HINTS[0].exeName}` }),
     );
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
@@ -144,11 +144,11 @@ describe("Settings — game hints", () => {
     const user = userEvent.setup();
     renderSettings();
     await user.click(
-      await screen.findByRole("button", { name: `Remove hint for ${TEST_HINTS[0].exeName}` }),
+      await screen.findByRole("button", { name: `Stop auto-confirming ${TEST_HINTS[0].exeName}` }),
     );
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(
-      screen.getByRole("button", { name: `Remove hint for ${TEST_HINTS[0].exeName}` }),
+      screen.getByRole("button", { name: `Stop auto-confirming ${TEST_HINTS[0].exeName}` }),
     ).toBeInTheDocument();
   });
 
@@ -156,7 +156,7 @@ describe("Settings — game hints", () => {
     const user = userEvent.setup();
     renderSettings();
     await user.click(
-      await screen.findByRole("button", { name: `Remove hint for ${TEST_HINTS[0].exeName}` }),
+      await screen.findByRole("button", { name: `Stop auto-confirming ${TEST_HINTS[0].exeName}` }),
     );
     await user.click(screen.getByRole("button", { name: "Remove" }));
     await waitFor(() =>
@@ -167,12 +167,12 @@ describe("Settings — game hints", () => {
   it("removing all hints shows empty state", async () => {
     const user = userEvent.setup();
     renderSettings();
-    await screen.findByRole("button", { name: `Remove hint for ${TEST_HINTS[0].exeName}` });
+    await screen.findByRole("button", { name: `Stop auto-confirming ${TEST_HINTS[0].exeName}` });
     for (const hint of TEST_HINTS) {
-      await user.click(screen.getByRole("button", { name: `Remove hint for ${hint.exeName}` }));
+      await user.click(screen.getByRole("button", { name: `Stop auto-confirming ${hint.exeName}` }));
       await user.click(screen.getByRole("button", { name: "Remove" }));
     }
-    expect(await screen.findByText("No hints yet.")).toBeInTheDocument();
+    expect(await screen.findByText("No games will auto-confirm yet.")).toBeInTheDocument();
   });
 });
 
@@ -181,7 +181,7 @@ describe("Settings — game hint editing", () => {
     const user = userEvent.setup();
     renderSettings();
     await user.click(
-      await screen.findByRole("button", { name: `Edit hint for ${TEST_HINTS[0].exeName}` }),
+      await screen.findByRole("button", { name: `Edit auto-confirm for ${TEST_HINTS[0].exeName}` }),
     );
     expect(screen.getByPlaceholderText("Search for a game…")).toBeInTheDocument();
   });
@@ -190,12 +190,12 @@ describe("Settings — game hint editing", () => {
     const user = userEvent.setup();
     renderSettings();
     await user.click(
-      await screen.findByRole("button", { name: `Edit hint for ${TEST_HINTS[0].exeName}` }),
+      await screen.findByRole("button", { name: `Edit auto-confirm for ${TEST_HINTS[0].exeName}` }),
     );
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByPlaceholderText("Search for a game…")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: `Edit hint for ${TEST_HINTS[0].exeName}` }),
+      screen.getByRole("button", { name: `Edit auto-confirm for ${TEST_HINTS[0].exeName}` }),
     ).toBeInTheDocument();
   });
 
@@ -203,7 +203,7 @@ describe("Settings — game hint editing", () => {
     const user = userEvent.setup();
     renderSettings();
     await user.click(
-      await screen.findByRole("button", { name: `Edit hint for ${TEST_HINTS[0].exeName}` }),
+      await screen.findByRole("button", { name: `Edit auto-confirm for ${TEST_HINTS[0].exeName}` }),
     );
     const matching = GAME_LIBRARY.find((g) => g.game !== TEST_HINTS[0].game)!;
     await user.type(screen.getByPlaceholderText("Search for a game…"), matching.game.slice(0, 4));
@@ -223,7 +223,7 @@ describe("Settings — game hint editing", () => {
 
     renderSettings();
     await user.click(
-      await screen.findByRole("button", { name: `Edit hint for ${hint.exeName}` }),
+      await screen.findByRole("button", { name: `Edit auto-confirm for ${hint.exeName}` }),
     );
     await user.type(screen.getByPlaceholderText("Search for a game…"), newGame.game.slice(0, 4));
     await user.click(await screen.findByRole("button", { name: newGame.game }));
