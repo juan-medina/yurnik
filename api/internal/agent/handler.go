@@ -34,7 +34,6 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/agent/heartbeat", h.heartbeat)
 	mux.HandleFunc("GET /api/v1/agent/exclusions", h.listExclusions)
 	mux.HandleFunc("POST /api/v1/agent/pending-journeys", h.createPending)
-	mux.HandleFunc("POST /api/v1/agent/pending-journeys/{id}/end", h.endPending)
 }
 
 // token requires a valid web session cookie and returns a signed agent JWT.
@@ -172,40 +171,32 @@ func (h *Handler) createPending(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{"id": id})
-}
-
-// endPending marks a pending journey as ended.
-func (h *Handler) endPending(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticateBearer(w, r)
-	if !ok {
-		return
-	}
-
-	id := r.PathValue("id")
-
-	var body struct {
-		EndedAt string `json:"ended_at"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
-		return
-	}
-
-	endedAt := time.Now().UTC()
-	if body.EndedAt != "" {
-		if t, err := time.Parse(time.RFC3339, body.EndedAt); err == nil {
-			endedAt = t.UTC()
+	if endedAt != nil && igdbID != nil {
+		duration := int(endedAt.Sub(startedAt).Seconds())
+		if duration >= 60 {
+			playedAt := time.Date(startedAt.Year(), startedAt.Month(), startedAt.Day(), 0, 0, 0, 0, time.UTC)
+			journeyID, errInsert := db.InsertJourney(r.Context(), h.pool, db.Journey{
+				UserID:          userID,
+				IGDBID:          *igdbID,
+				StartedAt:       startedAt,
+				EndedAt:         *endedAt,
+				DurationSeconds: duration,
+				PlayedAt:        playedAt,
+			})
+			if errInsert == nil {
+				_ = db.DeletePendingJourney(r.Context(), h.pool, id, userID)
+				id = journeyID
+			} else {
+				log.Printf("agent/createPending: auto-confirm failed to insert journey: %v", errInsert)
+			}
+		} else {
+			_ = db.DeletePendingJourney(r.Context(), h.pool, id, userID)
+			id = "discarded"
 		}
 	}
 
-	if err := db.EndPendingJourney(r.Context(), h.pool, id, userID, endedAt); err != nil {
-		http.Error(w, `{"error":"not_found"}`, http.StatusNotFound)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{"id": id})
 }
 
 // authenticateBearer parses Authorization: Bearer <token> and returns the user ID.

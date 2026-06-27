@@ -236,3 +236,141 @@ func TestCreatePending_ZeroDurationDiscarded(t *testing.T) {
 		t.Errorf("got %d pending journeys in database, want 0", len(journeys))
 	}
 }
+
+
+func TestCreatePending_AutoConfirm(t *testing.T) {
+	pool := connectTestDB(t)
+	_, jwtPriv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("generate jwt key: %v", err)
+	}
+	h := NewHandler(pool, jwtPriv)
+	ctx := context.Background()
+
+	userID := createTestUser(t, pool)
+	token, err := auth.CreateSessionJWT(userID, jwtPriv)
+	if err != nil {
+		t.Fatalf("create session jwt: %v", err)
+	}
+
+	// Setup game and hint
+	err = db.UpsertGame(ctx, pool, db.CachedGame{
+		IGDBID: 999111,
+		Name:   "Test Auto Confirm Game",
+		Genres: []string{},
+	})
+	if err != nil {
+		t.Fatalf("upsert game: %v", err)
+	}
+	err = db.UpsertGameHint(ctx, pool, userID, "autoconfirm.exe", 999111)
+	if err != nil {
+		t.Fatalf("upsert hint: %v", err)
+	}
+
+	payload := map[string]string{
+		"exe_name":     "autoconfirm.exe",
+		"window_title": "My Auto Confirm Game",
+		"started_at":   "2026-06-23T12:00:00Z",
+		"ended_at":     "2026-06-23T12:02:00Z", // 2 minutes duration
+	}
+	bodyBytes, _ := json.Marshal(payload)
+
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/agent/pending-journeys", strings.NewReader(string(bodyBytes)))
+	r.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	h.createPending(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	// Verify no pending journeys exist
+	pending, err := db.ListPendingJourneys(ctx, pool, userID)
+	if err != nil {
+		t.Fatalf("list pending journeys: %v", err)
+	}
+	if len(pending) != 0 {
+		t.Errorf("got %d pending journeys, want 0", len(pending))
+	}
+
+	// Verify one confirmed journey exists
+	journeys, err := db.ListJourneysByUser(ctx, pool, userID, 10, "")
+	if err != nil {
+		t.Fatalf("list journeys: %v", err)
+	}
+	if len(journeys) != 1 {
+		t.Errorf("got %d journeys, want 1", len(journeys))
+	} else {
+		if journeys[0].IGDBID != 999111 {
+			t.Errorf("journey IGDBID = %d, want 999111", journeys[0].IGDBID)
+		}
+		if journeys[0].DurationSeconds != 120 {
+			t.Errorf("journey DurationSeconds = %d, want 120", journeys[0].DurationSeconds)
+		}
+	}
+}
+
+func TestCreatePending_AutoConfirm_ShortDuration(t *testing.T) {
+	pool := connectTestDB(t)
+	_, jwtPriv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("generate jwt key: %v", err)
+	}
+	h := NewHandler(pool, jwtPriv)
+	ctx := context.Background()
+
+	userID := createTestUser(t, pool)
+	token, err := auth.CreateSessionJWT(userID, jwtPriv)
+	if err != nil {
+		t.Fatalf("create session jwt: %v", err)
+	}
+
+	// Setup game and hint
+	err = db.UpsertGame(ctx, pool, db.CachedGame{
+		IGDBID: 999222,
+		Name:   "Test Auto Confirm Short Game",
+		Genres: []string{},
+	})
+	if err != nil {
+		t.Fatalf("upsert game: %v", err)
+	}
+	err = db.UpsertGameHint(ctx, pool, userID, "short.exe", 999222)
+	if err != nil {
+		t.Fatalf("upsert hint: %v", err)
+	}
+
+	payload := map[string]string{
+		"exe_name":     "short.exe",
+		"window_title": "My Short Game",
+		"started_at":   "2026-06-23T12:00:00Z",
+		"ended_at":     "2026-06-23T12:00:30Z", // 30 seconds duration
+	}
+	bodyBytes, _ := json.Marshal(payload)
+
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/agent/pending-journeys", strings.NewReader(string(bodyBytes)))
+	r.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	h.createPending(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	// Verify no pending journeys exist
+	pending, err := db.ListPendingJourneys(ctx, pool, userID)
+	if err != nil {
+		t.Fatalf("list pending journeys: %v", err)
+	}
+	if len(pending) != 0 {
+		t.Errorf("got %d pending journeys, want 0", len(pending))
+	}
+
+	// Verify NO confirmed journey exists
+	journeys, err := db.ListJourneysByUser(ctx, pool, userID, 10, "")
+	if err != nil {
+		t.Fatalf("list journeys: %v", err)
+	}
+	if len(journeys) != 0 {
+		t.Errorf("got %d journeys, want 0", len(journeys))
+	}
+}

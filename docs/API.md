@@ -1245,21 +1245,3 @@ Called by the agent when a game is detected.
 ```json
 { "id": "01920f3a-..." }
 ```
-
-### End a pending journey
-
-```
-POST /api/v1/agent/pending-journeys/{id}/end
-```
-
-Called by the agent when the game process closes.
-
-**Body**
-
-```json
-{ "ended_at": "2026-05-23T16:14:00Z" }
-```
-
-`ended_at` defaults to the current time if omitted.
-
-**Response** — `204 No Content`
