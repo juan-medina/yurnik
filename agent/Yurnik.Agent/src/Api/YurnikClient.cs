@@ -12,8 +12,11 @@ namespace Yurnik.Agent.Api;
 enum ApiResult { Ok, Unauthorized, TransientFailure, RateLimited }
 
 record CreatePendingResult(ApiResult Status, string? JourneyId);
-record MeResult(ApiResult Status, string? Handle, string? Name);
+record NotificationPreferences(bool Updates, bool Echoes);
+record MeResult(ApiResult Status, string? Handle, string? Name, NotificationPreferences? NotificationPreferences = null);
 record ExclusionsResult(ApiResult Status, List<string>? ExeNames);
+record Echo(string Id, string Type, int ActorCount, string? SubjectTitle, bool Read);
+record EchoesResult(ApiResult Status, List<Echo>? Echoes);
 
 /// <summary>
 /// Returned by HeartbeatAsync. Status distinguishes a rejected token (Unauthorized)
@@ -116,7 +119,14 @@ sealed class YurnikClient(string baseUrl) : IYurnikClient
             var doc = JsonDocument.Parse(json);
             var handle = doc.RootElement.GetProperty("handle").GetString();
             var name = doc.RootElement.GetProperty("name").GetString();
-            return new MeResult(ApiResult.Ok, handle, name);
+            NotificationPreferences? prefs = null;
+            if (doc.RootElement.TryGetProperty("notification_preferences", out var p) && p.ValueKind == JsonValueKind.Object)
+            {
+                var updates = p.TryGetProperty("updates", out var u) && u.GetBoolean();
+                var echoes = p.TryGetProperty("echoes", out var e) && e.GetBoolean();
+                prefs = new NotificationPreferences(updates, echoes);
+            }
+            return new MeResult(ApiResult.Ok, handle, name, prefs);
         }
         catch (Exception ex)
         {
@@ -158,6 +168,43 @@ sealed class YurnikClient(string baseUrl) : IYurnikClient
         {
             Log.Error("GetExclusions failed", ex);
             return new ExclusionsResult(ApiResult.TransientFailure, null);
+        }
+    }
+
+    public async Task<EchoesResult> GetEchoesAsync()
+    {
+        try
+        {
+            var resp = await _http.GetAsync("api/echoes");
+
+            if (resp.StatusCode == HttpStatusCode.Unauthorized)
+                return new EchoesResult(ApiResult.Unauthorized, null);
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                Log.Warn($"GetEchoes: unexpected status {resp.StatusCode}");
+                return new EchoesResult(ApiResult.TransientFailure, null);
+            }
+
+            var json = await resp.Content.ReadAsStringAsync();
+            var doc = JsonDocument.Parse(json);
+            var echoes = new List<Echo>();
+            foreach (var e in doc.RootElement.EnumerateArray())
+            {
+                echoes.Add(new Echo(
+                    Id: e.GetProperty("id").GetString()!,
+                    Type: e.GetProperty("type").GetString()!,
+                    ActorCount: e.GetProperty("actor_count").GetInt32(),
+                    SubjectTitle: e.TryGetProperty("subject_title", out var st) && st.ValueKind == JsonValueKind.String ? st.GetString() : null,
+                    Read: e.GetProperty("read").GetBoolean()
+                ));
+            }
+            return new EchoesResult(ApiResult.Ok, echoes);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("GetEchoes failed", ex);
+            return new EchoesResult(ApiResult.TransientFailure, null);
         }
     }
 

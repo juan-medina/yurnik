@@ -14,6 +14,12 @@ export type Player = {
   following?: number;
   isFollowing?: boolean;
   isAdmin?: boolean;
+  notificationPreferences?: NotificationPreferences;
+};
+
+export type NotificationPreferences = {
+  updates: boolean;
+  echoes: boolean;
 };
 
 export type RecentGame = {

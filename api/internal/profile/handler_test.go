@@ -26,6 +26,21 @@ func TestPatchMe_unauthenticated(t *testing.T) {
 	}
 }
 
+func TestPutPreferences_unauthenticated(t *testing.T) {
+	h := &Handler{}
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	r := httptest.NewRequest(http.MethodPut, "/api/me/preferences", strings.NewReader(`{"updates":false,"echoes":true}`))
+	r.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, r)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusUnauthorized)
+	}
+}
+
 func TestDeleteMe_unauthenticated(t *testing.T) {
 	h := &Handler{}
 	mux := http.NewServeMux()

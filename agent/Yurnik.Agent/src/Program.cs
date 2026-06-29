@@ -8,6 +8,7 @@ using Yurnik.Agent.Auth;
 using Yurnik.Agent.Queue;
 using Yurnik.Agent.Detection;
 using Yurnik.Agent.Api;
+using Yurnik.Agent.Notifications;
 
 namespace Yurnik.Agent;
 
@@ -68,8 +69,9 @@ static class Program
         var queueProcessor = new QueueProcessor(eventQueue, agentClient, authManager);
         var processWatcher = new ProcessWatcher(sessionStore, eventQueue, exclusionStore, detectableGames, config.MinSessionDuration);
         var updater = new Updater();
+        var echoMonitor = new EchoMonitor(agentClient);
 
-        using var trayApp = new TrayApp(config.WebBaseUrl, authManager, agentClient, processWatcher, sessionMonitor, queueProcessor, updater, detectableGames);
+        using var trayApp = new TrayApp(config.WebBaseUrl, authManager, agentClient, processWatcher, sessionMonitor, queueProcessor, updater, detectableGames, echoMonitor);
         trayApp.Run();
 
         Log.Info("Yurnik agent stopped");

@@ -331,8 +331,10 @@
   "settings_language_en": "English",
   "settings_language_es": "Español",
   "settings_notifications": "Notifications",
-  "settings_desktop_notifications": "Desktop notifications",
-  "settings_desktop_notifications_desc": "Get notified when someone comments on your journeys or follows you.",
+  "settings_updates_notifications": "App Updates",
+  "settings_updates_notifications_desc": "Get notified when a new version of the Agent is available to install.",
+  "settings_echoes_notifications": "Activity Echoes",
+  "settings_echoes_notifications_desc": "Get notified when someone follows you or comments on your journeys.",
   "settings_desktop_notifications_denied": "Notifications are blocked in your browser settings.",
 
   "settings_danger_zone": "Danger zone",
@@ -402,6 +404,11 @@
 
   "whats_new_title": "What's New",
   "whats_new_entries": [
+    {
+      "date": "2026-06-29",
+      "title": "Native desktop notifications",
+      "body": "The desktop agent now uses rich native Windows notifications to let you know about app updates, new followers, and comments on your journeys. You can manage your notification preferences directly from your account settings."
+    },
     {
       "date": "2026-06-27",
       "title": "Journeys confirm automatically",

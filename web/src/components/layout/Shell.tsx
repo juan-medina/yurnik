@@ -6,8 +6,6 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { getCurrentPlayer, AccountSuspendedError } from "@/services/auth";
 import { withContactLink } from "@/components/layout/LegalLayout";
-import { useEchoes } from "@/hooks/useEchoes";
-import { useEchoNotifications } from "@/hooks/useEchoNotifications";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
@@ -16,15 +14,13 @@ import Footer from "./Footer";
 export default function Shell() {
   const { t } = useTranslation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { data: player, error } = useQuery({
+  const { error } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: getCurrentPlayer,
     retry: false,
     refetchInterval: (query) => (query.state.data ? 6 * 60 * 60 * 1000 : false),
     refetchIntervalInBackground: false,
   });
-  const { data: echoes = [] } = useEchoes(!!player);
-  useEchoNotifications(echoes);
 
   if (error instanceof AccountSuspendedError) {
     return (

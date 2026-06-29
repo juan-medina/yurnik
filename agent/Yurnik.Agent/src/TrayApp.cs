@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 using Velopack;
+using Microsoft.Toolkit.Uwp.Notifications;
 using Yurnik.Agent.Api;
 using Yurnik.Agent.Auth;
 using Yurnik.Agent.Detection;
 using Yurnik.Agent.Infrastructure;
 using Yurnik.Agent.Queue;
+using Yurnik.Agent.Notifications;
 
 namespace Yurnik.Agent;
 
@@ -23,6 +25,7 @@ sealed class TrayApp : IDisposable
     readonly QueueProcessor _processor;
     readonly Updater _updater;
     readonly DetectableGamesCache _detectableGames;
+    readonly EchoMonitor _echoMonitor;
     readonly string _webBaseUrl;
     readonly NotifyIcon _tray;
     readonly Icon _normalIcon;
@@ -34,7 +37,7 @@ sealed class TrayApp : IDisposable
     ToolStripMenuItem? _signInItem;
     ToolStripMenuItem? _signOutItem;
 
-    public TrayApp(string webBaseUrl, AuthManager auth, IYurnikClient client, ProcessWatcher watcher, SessionMonitor sessionMonitor, QueueProcessor processor, Updater updater, DetectableGamesCache detectableGames)
+    public TrayApp(string webBaseUrl, AuthManager auth, IYurnikClient client, ProcessWatcher watcher, SessionMonitor sessionMonitor, QueueProcessor processor, Updater updater, DetectableGamesCache detectableGames, EchoMonitor echoMonitor)
     {
         _webBaseUrl = webBaseUrl;
         _auth = auth;
@@ -44,6 +47,7 @@ sealed class TrayApp : IDisposable
         _processor = processor;
         _updater = updater;
         _detectableGames = detectableGames;
+        _echoMonitor = echoMonitor;
 
         var iconStream = typeof(TrayApp).Assembly.GetManifestResourceStream("Yurnik.Agent.Resources.tray.ico");
         _normalIcon = iconStream is not null ? new Icon(iconStream) : SystemIcons.Application;
@@ -60,6 +64,32 @@ sealed class TrayApp : IDisposable
 
         _context = new ApplicationContext();
         _auth.AuthStateChanged += OnAuthStateChanged;
+        ToastNotificationManagerCompat.OnActivated += OnToastActivated;
+    }
+
+    void OnToastActivated(ToastNotificationActivatedEventArgsCompat e)
+    {
+        if (e.Argument == "update")
+        {
+            if (_pendingUpdate is not null)
+            {
+                var update = _pendingUpdate;
+                Task.Run(async () =>
+                {
+                    try { await _updater.DownloadAndRestartAsync(update); }
+                    catch (Exception ex) { Log.Error("Update failed", ex); }
+                });
+            }
+        }
+        else if (e.Argument == "signIn")
+        {
+            _auth.StartLoginFlow();
+        }
+        else if (e.Argument == "echoes")
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+                $"{_webBaseUrl}/echoes") { UseShellExecute = true });
+        }
     }
 
     public void Run()
@@ -120,7 +150,13 @@ sealed class TrayApp : IDisposable
     void ShowSignInRequired()
     {
         _tray.Icon = SystemIcons.Warning;
-        UpdateTray(Strings.TraySignInRequired, Strings.BalloonSignIn);
+        UpdateTray(Strings.TraySignInRequired, null);
+        
+        new ToastContentBuilder()
+            .AddArgument("signIn")
+            .AddText("Yurnik")
+            .AddText(Strings.BalloonSignIn)
+            .Show();
     }
 
     void OnBalloonClicked(object? sender, EventArgs e)
@@ -174,7 +210,22 @@ sealed class TrayApp : IDisposable
 
         _pendingUpdate = update;
         _tray.Icon = SystemIcons.Information;
-        UpdateTray(Strings.TrayUpdateAvailable, Strings.BalloonUpdateAvailable(update.TargetFullRelease.Version.ToString()));
+        UpdateTray(Strings.TrayUpdateAvailable, null);
+
+        var me = _authenticated ? await _client.GetMeAsync() : null;
+        if (me is null || (me.NotificationPreferences?.Updates ?? true))
+        {
+            new ToastContentBuilder()
+                .AddArgument("update")
+                .AddText("Yurnik Update Available")
+                .AddText(Strings.BalloonUpdateAvailable(update.TargetFullRelease.Version.ToString()))
+                .AddButton(new ToastButton()
+                    .SetContent("Install & Restart")
+                    .AddArgument("update")
+                    .SetBackgroundActivation())
+                .AddButton(new ToastButtonDismiss("Dismiss"))
+                .Show();
+        }
     }
 
     void StartWorkers()
@@ -182,11 +233,13 @@ sealed class TrayApp : IDisposable
         _sessionMonitor.Start();
         _processor.Start();
         _watcher.Start();
+        _echoMonitor.Start();
         Log.Info("Workers started");
     }
 
     void StopWorkers()
     {
+        _echoMonitor.Stop();
         _watcher.Stop();
         _sessionMonitor.Stop();
         _processor.Stop();
@@ -274,6 +327,8 @@ sealed class TrayApp : IDisposable
 
     public void Dispose()
     {
+        ToastNotificationManagerCompat.OnActivated -= OnToastActivated;
+        ToastNotificationManagerCompat.Uninstall();
         _auth.AuthStateChanged -= OnAuthStateChanged;
         _tray.Dispose();
         _auth.Dispose();
@@ -281,5 +336,6 @@ sealed class TrayApp : IDisposable
         _sessionMonitor.Dispose();
         _processor.Dispose();
         _detectableGames.Dispose();
+        _echoMonitor.Dispose();
     }
 }

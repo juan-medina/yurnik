@@ -31,6 +31,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/me", h.getMe)
 	mux.HandleFunc("GET /api/me/profile", h.getMeProfile)
 	mux.HandleFunc("PATCH /api/me", h.patchMe)
+	mux.HandleFunc("PUT /api/me/preferences", h.putPreferences)
 	mux.HandleFunc("DELETE /api/me", h.deleteMe)
 	mux.HandleFunc("POST /api/me/avatar", h.uploadAvatar)
 	mux.HandleFunc("DELETE /api/me/avatar", h.deleteAvatar)
@@ -85,9 +86,10 @@ type meResponse struct {
 	AvatarURL       *string `json:"avatar_url"`
 	Bio             *string `json:"bio"`
 	Color           string  `json:"color"`
-	HasCustomAvatar bool    `json:"has_custom_avatar"`
-	HasCustomName   bool    `json:"has_custom_name"`
-	IsAdmin         bool    `json:"is_admin"`
+	HasCustomAvatar         bool                       `json:"has_custom_avatar"`
+	HasCustomName           bool                       `json:"has_custom_name"`
+	IsAdmin                 bool                       `json:"is_admin"`
+	NotificationPreferences db.NotificationPreferences `json:"notification_preferences"`
 }
 
 func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
@@ -116,9 +118,10 @@ func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
 		AvatarURL:       user.AvatarURL,
 		Bio:             user.Bio,
 		Color:           user.Color,
-		HasCustomAvatar: user.HasCustomAvatar,
-		HasCustomName:   user.HasCustomName,
-		IsAdmin:         user.IsAdmin,
+		HasCustomAvatar:         user.HasCustomAvatar,
+		HasCustomName:           user.HasCustomName,
+		IsAdmin:                 user.IsAdmin,
+		NotificationPreferences: user.NotificationPreferences,
 	})
 }
 
@@ -734,6 +737,28 @@ func (h *Handler) patchMe(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "update failed", http.StatusInternalServerError)
 			return
 		}
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) putPreferences(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.authenticate(w, r)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var body db.NotificationPreferences
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	if err := db.UpdateNotificationPreferences(r.Context(), h.pool, userID, body); err != nil {
+		log.Printf("profile/me: update preferences %s: %v", userID, err)
+		http.Error(w, "update failed", http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)

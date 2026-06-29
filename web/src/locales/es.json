@@ -324,13 +324,13 @@
   "settings_remove_hint_label": "Eliminar la pista de {{exe}}",
   "settings_language": "Idioma",
   "settings_language_auto": "Automático (detectado)",
-  "settings_language_en": "English",
+  "settings_language_en": "Inglés",
   "settings_language_es": "Español",
   "settings_notifications": "Notificaciones",
-  "settings_desktop_notifications": "Notificaciones de escritorio",
-  "settings_desktop_notifications_desc": "Recibe un aviso cuando alguien comente en tus travesías o te siga.",
-  "settings_desktop_notifications_denied": "Las notificaciones están bloqueadas en la configuración del navegador.",
-
+  "settings_updates_notifications": "Actualizaciones de la App",
+  "settings_updates_notifications_desc": "Recibe una notificación cuando haya una nueva versión del Agent disponible.",
+  "settings_echoes_notifications": "Actividad (Ecos)",
+  "settings_echoes_notifications_desc": "Recibe notificaciones cuando alguien te siga o comente en tus viajes.",
   "settings_danger_zone": "Zona de peligro",
   "settings_delete_account": "Eliminar cuenta",
   "settings_delete_account_desc": "Elimina permanentemente tu cuenta y todos tus datos: travesías, comentarios, seguidores y tu lista de horizonte. Esta acción no se puede deshacer.",
@@ -398,6 +398,11 @@
 
   "whats_new_title": "Novedades",
   "whats_new_entries": [
+    {
+      "date": "2026-06-29",
+      "title": "Notificaciones nativas de escritorio",
+      "body": "El agente de escritorio ahora usa notificaciones nativas de Windows para avisarte de actualizaciones de la aplicación, nuevos seguidores y comentarios en tus viajes. Puedes gestionar tus preferencias de notificación directamente desde los ajustes de tu cuenta."
+    },
     {
       "date": "2026-06-25",
       "title": "Mira cuándo se lanzan los juegos",

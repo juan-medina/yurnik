@@ -28,6 +28,13 @@ type User struct {
 	HasCustomName   bool
 	IsAdmin         bool
 	SuspendedAt     *time.Time
+	NotificationPreferences NotificationPreferences
+}
+
+// NotificationPreferences holds the user's notification settings.
+type NotificationPreferences struct {
+	Updates bool `json:"updates"`
+	Echoes  bool `json:"echoes"`
 }
 
 // SuspendedUser holds the fields needed to display a suspended user in the admin UI.
@@ -153,9 +160,9 @@ func GetUser(ctx context.Context, pool *pgxpool.Pool, id string) (User, error) {
 	var u User
 	err := pool.QueryRow(ctx, `
 		SELECT id, provider, handle, COALESCE(display_name, name), COALESCE(custom_avatar_url, avatar_url), bio, color,
-		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL, is_admin, suspended_at
+		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL, is_admin, suspended_at, notification_preferences
 		FROM users WHERE id = $1
-	`, id).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName, &u.IsAdmin, &u.SuspendedAt)
+	`, id).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName, &u.IsAdmin, &u.SuspendedAt, &u.NotificationPreferences)
 	if err == pgx.ErrNoRows {
 		return User{}, fmt.Errorf("user not found: %s", id)
 	}
@@ -168,9 +175,9 @@ func GetUserByHandle(ctx context.Context, pool *pgxpool.Pool, handle string) (Us
 	var u User
 	err := pool.QueryRow(ctx, `
 		SELECT id, provider, handle, COALESCE(display_name, name), COALESCE(custom_avatar_url, avatar_url), bio, color,
-		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL, is_admin, suspended_at
+		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL, is_admin, suspended_at, notification_preferences
 		FROM users WHERE lower(handle) = lower($1)
-	`, handle).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName, &u.IsAdmin, &u.SuspendedAt)
+	`, handle).Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName, &u.IsAdmin, &u.SuspendedAt, &u.NotificationPreferences)
 	if err == pgx.ErrNoRows {
 		return User{}, fmt.Errorf("user not found: %s", handle)
 	}
@@ -187,7 +194,7 @@ func SearchUsersByHandlePrefix(ctx context.Context, pool *pgxpool.Pool, prefix s
 	}
 	rows, err := pool.Query(ctx, `
 		SELECT id, provider, handle, COALESCE(display_name, name), COALESCE(custom_avatar_url, avatar_url), bio, color,
-		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL, is_admin, suspended_at
+		       custom_avatar_url IS NOT NULL, display_name IS NOT NULL, is_admin, suspended_at, notification_preferences
 		FROM users
 		WHERE handle ILIKE $1 || '%' AND suspended_at IS NULL
 		ORDER BY length(handle), handle
@@ -201,7 +208,7 @@ func SearchUsersByHandlePrefix(ctx context.Context, pool *pgxpool.Pool, prefix s
 	var users []User
 	for rows.Next() {
 		var u User
-		if err := rows.Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName, &u.IsAdmin, &u.SuspendedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName, &u.IsAdmin, &u.SuspendedAt, &u.NotificationPreferences); err != nil {
 			return nil, fmt.Errorf("scan searched user: %w", err)
 		}
 		users = append(users, u)
@@ -340,6 +347,14 @@ func UpdateBio(ctx context.Context, pool *pgxpool.Pool, id, bio string) error {
 	return err
 }
 
+// UpdateNotificationPreferences sets the notification preferences for the given user ID.
+func UpdateNotificationPreferences(ctx context.Context, pool *pgxpool.Pool, id string, prefs NotificationPreferences) error {
+	_, err := pool.Exec(ctx, `
+		UPDATE users SET notification_preferences = $1, updated_at = now() WHERE id = $2
+	`, prefs, id)
+	return err
+}
+
 // UpdateDisplayName sets the custom display name for the given user ID.
 // Pass an empty string to clear it and fall back to the Discord name.
 func UpdateDisplayName(ctx context.Context, pool *pgxpool.Pool, id, displayName string) error {
@@ -403,7 +418,7 @@ func GetFollowers(ctx context.Context, pool *pgxpool.Pool, userID string, limit 
 	var err error
 	if n, id, cerr := splitFollowCursor(cursor); cerr == nil {
 		rows, err = pool.Query(ctx, `
-			SELECT u.id, u.provider, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.bio, u.color, false, false
+			SELECT u.id, u.provider, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.bio, u.color, false, false, u.notification_preferences
 			FROM users u
 			JOIN follows f ON f.follower_id = u.id
 			WHERE f.followee_id = $1
@@ -413,7 +428,7 @@ func GetFollowers(ctx context.Context, pool *pgxpool.Pool, userID string, limit 
 		`, userID, n, id, limit)
 	} else {
 		rows, err = pool.Query(ctx, `
-			SELECT u.id, u.provider, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.bio, u.color, false, false
+			SELECT u.id, u.provider, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.bio, u.color, false, false, u.notification_preferences
 			FROM users u
 			JOIN follows f ON f.follower_id = u.id
 			WHERE f.followee_id = $1
@@ -435,7 +450,7 @@ func GetFollowing(ctx context.Context, pool *pgxpool.Pool, userID string, limit 
 	var err error
 	if n, id, cerr := splitFollowCursor(cursor); cerr == nil {
 		rows, err = pool.Query(ctx, `
-			SELECT u.id, u.provider, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.bio, u.color, false, false
+			SELECT u.id, u.provider, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.bio, u.color, false, false, u.notification_preferences
 			FROM users u
 			JOIN follows f ON f.followee_id = u.id
 			WHERE f.follower_id = $1
@@ -445,7 +460,7 @@ func GetFollowing(ctx context.Context, pool *pgxpool.Pool, userID string, limit 
 		`, userID, n, id, limit)
 	} else {
 		rows, err = pool.Query(ctx, `
-			SELECT u.id, u.provider, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.bio, u.color, false, false
+			SELECT u.id, u.provider, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.bio, u.color, false, false, u.notification_preferences
 			FROM users u
 			JOIN follows f ON f.followee_id = u.id
 			WHERE f.follower_id = $1
@@ -504,7 +519,7 @@ func scanUsers(rows pgx.Rows) ([]User, error) {
 	var users []User
 	for rows.Next() {
 		var u User
-		if err := rows.Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName); err != nil {
+		if err := rows.Scan(&u.ID, &u.Provider, &u.Handle, &u.Name, &u.AvatarURL, &u.Bio, &u.Color, &u.HasCustomAvatar, &u.HasCustomName, &u.NotificationPreferences); err != nil {
 			return nil, fmt.Errorf("scan user: %w", err)
 		}
 		users = append(users, u)

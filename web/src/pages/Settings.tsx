@@ -6,11 +6,10 @@ import AvatarEditor from "@/components/AvatarEditor";
 import { useNavigate, Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { getCurrentPlayer, signIn, signOut, deleteAccount } from "@/services/auth";
+import { getCurrentPlayer, signIn, signOut, deleteAccount, updateNotificationPreferences } from "@/services/auth";
 import { getExclusions, removeExclusion, getGameHints, removeGameHint, updateGameHint } from "@/services/settings";
 import { searchGames } from "@/services/games";
 import { useLocale, SUPPORTED_LOCALES } from "@/hooks/useLocale";
-import { useDesktopNotifications } from "@/hooks/useDesktopNotifications";
 
 const LOCALE_LABEL_KEYS: Record<string, string> = {
   en: "settings_language_en",
@@ -20,7 +19,6 @@ const LOCALE_LABEL_KEYS: Record<string, string> = {
 export default function Settings() {
   const { t } = useTranslation();
   const { locale, setLocale } = useLocale();
-  const { enabled: desktopNotifEnabled, setEnabled: setDesktopNotifEnabled, supported: desktopNotifSupported, denied: desktopNotifDenied } = useDesktopNotifications();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -79,6 +77,13 @@ export default function Settings() {
 
   const deleteAccountMutation = useMutation({
     mutationFn: deleteAccount,
+  });
+
+  const updatePrefsMutation = useMutation({
+    mutationFn: updateNotificationPreferences,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+    },
   });
 
   if (playerLoading) return null;
@@ -196,41 +201,69 @@ export default function Settings() {
       </section>
 
       {/* Notifications */}
-      {desktopNotifSupported && (
-        <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {t("settings_notifications")}
-          </h2>
+      <section>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {t("settings_notifications")}
+        </h2>
+        <div className="space-y-3">
           <div className="rounded-lg border border-border bg-card p-5">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-medium">{t("settings_desktop_notifications")}</p>
+                <p className="font-medium">{t("settings_updates_notifications")}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {desktopNotifDenied
-                    ? t("settings_desktop_notifications_denied")
-                    : t("settings_desktop_notifications_desc")}
+                  {t("settings_updates_notifications_desc")}
                 </p>
               </div>
               <button
                 role="switch"
-                aria-checked={desktopNotifEnabled}
-                aria-label={t("settings_desktop_notifications")}
-                disabled={desktopNotifDenied}
-                onClick={() => setDesktopNotifEnabled(!desktopNotifEnabled)}
-                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                  desktopNotifEnabled ? "bg-primary" : "bg-muted"
+                aria-checked={player?.notificationPreferences?.updates ?? true}
+                aria-label={t("settings_updates_notifications")}
+                onClick={() => updatePrefsMutation.mutate({ 
+                  updates: !(player?.notificationPreferences?.updates ?? true), 
+                  echoes: player?.notificationPreferences?.echoes ?? true 
+                })}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                  (player?.notificationPreferences?.updates ?? true) ? "bg-primary" : "bg-muted"
                 }`}
               >
                 <span
                   className={`absolute top-0.5 h-5 w-5 rounded-full bg-background transition-transform ${
-                    desktopNotifEnabled ? "translate-x-5" : "translate-x-0.5"
+                    (player?.notificationPreferences?.updates ?? true) ? "translate-x-5" : "translate-x-0.5"
                   }`}
                 />
               </button>
             </div>
           </div>
-        </section>
-      )}
+          <div className="rounded-lg border border-border bg-card p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-medium">{t("settings_echoes_notifications")}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t("settings_echoes_notifications_desc")}
+                </p>
+              </div>
+              <button
+                role="switch"
+                aria-checked={player?.notificationPreferences?.echoes ?? true}
+                aria-label={t("settings_echoes_notifications")}
+                onClick={() => updatePrefsMutation.mutate({ 
+                  updates: player?.notificationPreferences?.updates ?? true, 
+                  echoes: !(player?.notificationPreferences?.echoes ?? true) 
+                })}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                  (player?.notificationPreferences?.echoes ?? true) ? "bg-primary" : "bg-muted"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-background transition-transform ${
+                    (player?.notificationPreferences?.echoes ?? true) ? "translate-x-5" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Windows Agent */}
       <section>

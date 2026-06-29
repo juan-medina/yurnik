@@ -28,6 +28,7 @@ export async function getCurrentPlayer(): Promise<Player> {
     hasCustomName: data.has_custom_name === true,
     bio: data.bio ?? undefined,
     isAdmin: data.is_admin === true,
+    notificationPreferences: data.notification_preferences,
   };
 }
 
@@ -43,6 +44,16 @@ export async function updateProfile(patch: { bio?: string; displayName?: string 
     body: JSON.stringify(body),
   });
   if (!resp.ok) throw new Error(`update profile: ${resp.status}`);
+}
+
+export async function updateNotificationPreferences(prefs: { updates: boolean; echoes: boolean }): Promise<void> {
+  const resp = await apiFetch(`${API_BASE}/api/me/preferences`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(prefs),
+  });
+  if (!resp.ok) throw new Error(`update preferences: ${resp.status}`);
 }
 
 // Navigates the browser to the API's auth/init endpoint. The server generates
