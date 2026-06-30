@@ -33,20 +33,6 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/echoes/read", h.markRead)
 }
 
-func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
-	cookie, err := r.Cookie("yurnik_session")
-	if err != nil {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
-		return "", false
-	}
-	userID, err := auth.ParseAndRenewSession(w, cookie.Value, h.jwtPriv)
-	if err != nil {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
-		return "", false
-	}
-	return userID, true
-}
-
 type actorResp struct {
 	ID        string  `json:"id"`
 	Handle    string  `json:"handle"`
@@ -68,7 +54,7 @@ type echoResp struct {
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -132,7 +118,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) markRead(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}

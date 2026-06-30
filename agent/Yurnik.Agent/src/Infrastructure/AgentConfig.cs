@@ -31,6 +31,9 @@ sealed class AgentConfig
     // session itself lasts 7 days, so a multi-day interval leaves ample margin.
     public TimeSpan AuthRefreshInterval { get; init; } = TimeSpan.FromDays(3);
 
+    // How often the agent checks for new notifications (echoes).
+    public TimeSpan EchoRefreshInterval { get; init; } = TimeSpan.FromHours(1);
+
     public static AgentConfig Load()
     {
         var dir = AppContext.BaseDirectory;
@@ -44,6 +47,8 @@ sealed class AgentConfig
             Language   = dev?.Language   ?? base_?.Language,
             AuthRefreshInterval = TimeSpan.FromSeconds(
                 dev?.AuthRefreshIntervalSeconds ?? base_?.AuthRefreshIntervalSeconds ?? (3 * 24 * 60 * 60)),
+            EchoRefreshInterval = TimeSpan.FromSeconds(
+                dev?.EchoRefreshIntervalSeconds ?? base_?.EchoRefreshIntervalSeconds ?? 3600),
             MinSessionDuration = TimeSpan.FromSeconds(
                 dev?.MinSessionDurationSeconds ?? base_?.MinSessionDurationSeconds ?? 300),
         };
@@ -62,6 +67,7 @@ sealed class AgentConfig
         string? WebBaseUrl,
         string? Language,
         int? AuthRefreshIntervalSeconds,
+        int? EchoRefreshIntervalSeconds,
         int? MinSessionDurationSeconds);
 
     static string DefaultDbPath()

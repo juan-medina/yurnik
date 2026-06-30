@@ -216,7 +216,7 @@ func (h *Handler) players(w http.ResponseWriter, r *http.Request) {
 	}
 
 	followingIDs := map[string]bool{}
-	if callerID, ok := h.tryAuthenticate(w, r); ok {
+	if callerID, ok := auth.TryAuthenticate(w, r, h.jwtPriv, h.pool); ok {
 		followingIDs, _ = db.GetFollowingIDs(r.Context(), h.pool, callerID)
 	}
 
@@ -289,7 +289,7 @@ func (h *Handler) listComments(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) postComment(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -383,7 +383,7 @@ func (h *Handler) postComment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) deleteComment(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -396,31 +396,6 @@ func (h *Handler) deleteComment(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
-	cookie, err := r.Cookie("yurnik_session")
-	if err != nil {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
-		return "", false
-	}
-	userID, err := auth.ParseAndRenewSession(w, cookie.Value, h.jwtPriv)
-	if err != nil {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
-		return "", false
-	}
-	return userID, true
-}
-
-func (h *Handler) tryAuthenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
-	cookie, err := r.Cookie("yurnik_session")
-	if err != nil {
-		return "", false
-	}
-	userID, err := auth.ParseAndRenewSession(w, cookie.Value, h.jwtPriv)
-	if err != nil {
-		return "", false
-	}
-	return userID, true
-}
 
 // pendingResponse is the JSON shape for a pending journey.
 type pendingResponse struct {
@@ -453,7 +428,7 @@ type journeyResponse struct {
 }
 
 func (h *Handler) listPending(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -491,7 +466,7 @@ func (h *Handler) listPending(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) pendingCount(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -508,7 +483,7 @@ func (h *Handler) pendingCount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -591,7 +566,7 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) discard(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -605,7 +580,7 @@ func (h *Handler) discard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) exclude(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -637,7 +612,7 @@ func (h *Handler) exclude(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -712,7 +687,7 @@ func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -769,7 +744,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -783,7 +758,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) listMine(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}

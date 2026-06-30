@@ -38,20 +38,6 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /api/me/horizon/order", h.reorder)
 }
 
-func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
-	cookie, err := r.Cookie("yurnik_session")
-	if err != nil {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
-		return "", false
-	}
-	userID, err := auth.ParseAndRenewSession(w, cookie.Value, h.jwtPriv)
-	if err != nil {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
-		return "", false
-	}
-	return userID, true
-}
-
 type entryResp struct {
 	IGDBID      int      `json:"igdb_id"`
 	Name        string   `json:"name"`
@@ -107,7 +93,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -143,7 +129,7 @@ func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) remove(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -164,7 +150,7 @@ func (h *Handler) remove(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) reorder(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}

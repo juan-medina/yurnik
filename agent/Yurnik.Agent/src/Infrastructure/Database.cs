@@ -68,11 +68,16 @@ sealed class Database
             CREATE TABLE IF NOT EXISTS exclusions (
                 exe_name TEXT PRIMARY KEY
             );
+
+            CREATE TABLE IF NOT EXISTS notified_echoes (
+                echo_id     TEXT    PRIMARY KEY,
+                notified_at INTEGER NOT NULL
+            );
             """;
         schemaCmd.ExecuteNonQuery();
 
         using var pragmaCmd = conn.CreateCommand();
-        pragmaCmd.CommandText = "PRAGMA user_version = 3;";
+        pragmaCmd.CommandText = "PRAGMA user_version = 4;";
         pragmaCmd.ExecuteNonQuery();
 
         Log.Info("Database migrations complete");
@@ -84,6 +89,8 @@ sealed class Database
         cmd.CommandText = """
             DROP TABLE IF EXISTS sessions;
             DROP TABLE IF EXISTS queue;
+            DROP TABLE IF EXISTS exclusions;
+            DROP TABLE IF EXISTS notified_echoes;
             DROP TABLE IF EXISTS schema_version;
             """;
         cmd.ExecuteNonQuery();

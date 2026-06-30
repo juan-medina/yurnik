@@ -34,13 +34,16 @@ record HeartbeatResult(ApiResult Status, string? NewToken = null)
 /// Returns result types — never throws for expected failures.
 /// Caller is responsible for backoff; this class does not retry.
 /// </summary>
-sealed class YurnikClient(string baseUrl) : IYurnikClient
+sealed class YurnikClient : IYurnikClient
 {
-    readonly HttpClient _http = new()
+    readonly HttpClient _http;
+
+    public YurnikClient(string baseUrl, HttpMessageHandler? handler = null)
     {
-        BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/"),
-        DefaultRequestHeaders = { { "User-Agent", $"YurnikAgent/{AgentVersion()}" } },
-    };
+        _http = handler != null ? new HttpClient(handler) : new HttpClient();
+        _http.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd($"YurnikAgent/{AgentVersion()}");
+    }
 
     static string AgentVersion()
     {
@@ -74,7 +77,10 @@ sealed class YurnikClient(string baseUrl) : IYurnikClient
             var resp = await _http.PostAsync("api/v1/agent/heartbeat", null);
 
             if (resp.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                Log.Info("Heartbeat unauthorized, token expired or revoked");
                 return new HeartbeatResult(ApiResult.Unauthorized);
+            }
 
             if (resp.StatusCode == HttpStatusCode.TooManyRequests)
             {
@@ -107,7 +113,10 @@ sealed class YurnikClient(string baseUrl) : IYurnikClient
             var resp = await _http.GetAsync("api/me");
 
             if (resp.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                Log.Warn("GetMe unauthorized");
                 return new MeResult(ApiResult.Unauthorized, null, null);
+            }
 
             if (!resp.IsSuccessStatusCode)
             {
@@ -146,7 +155,10 @@ sealed class YurnikClient(string baseUrl) : IYurnikClient
             var resp = await _http.GetAsync("api/v1/agent/exclusions");
 
             if (resp.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                Log.Warn("GetExclusions unauthorized");
                 return new ExclusionsResult(ApiResult.Unauthorized, null);
+            }
 
             if (!resp.IsSuccessStatusCode)
             {
@@ -178,7 +190,10 @@ sealed class YurnikClient(string baseUrl) : IYurnikClient
             var resp = await _http.GetAsync("api/echoes");
 
             if (resp.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                Log.Warn("GetEchoes unauthorized");
                 return new EchoesResult(ApiResult.Unauthorized, null);
+            }
 
             if (!resp.IsSuccessStatusCode)
             {
@@ -189,10 +204,10 @@ sealed class YurnikClient(string baseUrl) : IYurnikClient
             var json = await resp.Content.ReadAsStringAsync();
             var doc = JsonDocument.Parse(json);
             var echoes = new List<Echo>();
-            foreach (var e in doc.RootElement.EnumerateArray())
+            foreach (var e in doc.RootElement.GetProperty("echoes").EnumerateArray())
             {
                 echoes.Add(new Echo(
-                    Id: e.GetProperty("id").GetString()!,
+                    Id: e.GetProperty("id").GetInt64().ToString(),
                     Type: e.GetProperty("type").GetString()!,
                     ActorCount: e.GetProperty("actor_count").GetInt32(),
                     SubjectTitle: e.TryGetProperty("subject_title", out var st) && st.ValueKind == JsonValueKind.String ? st.GetString() : null,
@@ -230,7 +245,10 @@ sealed class YurnikClient(string baseUrl) : IYurnikClient
                 new StringContent(body, Encoding.UTF8, "application/json"));
 
             if (resp.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                Log.Warn("CreatePendingJourney unauthorized");
                 return new CreatePendingResult(ApiResult.Unauthorized, null);
+            }
 
             if (resp.StatusCode == HttpStatusCode.TooManyRequests)
             {

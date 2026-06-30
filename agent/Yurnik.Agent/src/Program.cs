@@ -69,7 +69,8 @@ static class Program
         var queueProcessor = new QueueProcessor(eventQueue, agentClient, authManager);
         var processWatcher = new ProcessWatcher(sessionStore, eventQueue, exclusionStore, detectableGames, config.MinSessionDuration);
         var updater = new Updater();
-        var echoMonitor = new EchoMonitor(agentClient);
+        var echoStore = new EchoStore(db);
+        var echoMonitor = new EchoMonitor(agentClient, config, echoStore);
 
         using var trayApp = new TrayApp(config.WebBaseUrl, authManager, agentClient, processWatcher, sessionMonitor, queueProcessor, updater, detectableGames, echoMonitor);
         trayApp.Run();

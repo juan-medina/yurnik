@@ -65,7 +65,7 @@ func (h *Handler) token(w http.ResponseWriter, r *http.Request) {
 // heartbeat validates the agent's Bearer token. Returns 204 when valid, or
 // 200 {"token":"<new>"} when the token is valid but older than 24 hours.
 func (h *Handler) heartbeat(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticateBearer(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -86,7 +86,7 @@ func (h *Handler) heartbeat(w http.ResponseWriter, r *http.Request) {
 // listExclusions returns the authenticated user's exe exclusion list, so the
 // agent can cache it locally and avoid round-tripping for known non-games.
 func (h *Handler) listExclusions(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticateBearer(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -109,7 +109,7 @@ func (h *Handler) listExclusions(w http.ResponseWriter, r *http.Request) {
 
 // createPending creates a new pending journey for the authenticated agent.
 func (h *Handler) createPending(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticateBearer(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -197,28 +197,4 @@ func (h *Handler) createPending(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{"id": id})
-}
-
-// authenticateBearer parses Authorization: Bearer <token> and returns the user ID.
-// A token can be cryptographically valid yet refer to a deleted account
-// (account deletion does not revoke outstanding JWTs), so the user must still
-// exist in the database.
-func (h *Handler) authenticateBearer(w http.ResponseWriter, r *http.Request) (string, bool) {
-	hdr := r.Header.Get("Authorization")
-	token, ok := strings.CutPrefix(hdr, "Bearer ")
-	if !ok || token == "" {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
-		return "", false
-	}
-	pub := h.jwtPriv.Public().(ed25519.PublicKey)
-	userID, err := auth.ParseSessionJWT(token, pub)
-	if err != nil {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
-		return "", false
-	}
-	if _, err := db.GetUser(r.Context(), h.pool, userID); err != nil {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
-		return "", false
-	}
-	return userID, true
 }

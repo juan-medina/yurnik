@@ -1,1 +1,1 @@
-The agent now uses rich native Windows notifications to let you know about app updates, new followers, and comments on your journeys. You can manage your notification preferences directly from your account settings.
+Fix a bug on desktop notifications

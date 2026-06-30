@@ -10,21 +10,19 @@ namespace Yurnik.Agent.Notifications;
 sealed class EchoMonitor : IDisposable
 {
     readonly IYurnikClient _client;
+    readonly EchoStore _store;
     readonly System.Timers.Timer _timer;
-    readonly HashSet<string> _seenEchoes = new();
-    bool _firstRun = true;
 
-    public EchoMonitor(IYurnikClient client)
+    public EchoMonitor(IYurnikClient client, AgentConfig config, EchoStore store)
     {
         _client = client;
-        _timer = new System.Timers.Timer(TimeSpan.FromHours(1).TotalMilliseconds);
+        _store = store;
+        _timer = new System.Timers.Timer(config.EchoRefreshInterval.TotalMilliseconds);
         _timer.Elapsed += async (_, _) => await CheckForEchoesAsync();
     }
 
     public void Start()
     {
-        _firstRun = true;
-        _seenEchoes.Clear();
         _timer.Start();
         // Fire once immediately
         Task.Run(CheckForEchoesAsync);
@@ -39,30 +37,39 @@ sealed class EchoMonitor : IDisposable
     {
         try
         {
+            Log.Info("Checking for echoes");
             var me = await _client.GetMeAsync();
-            if (me.Status != ApiResult.Ok) return;
-
-            // Check if user disabled echo notifications
-            if (me.NotificationPreferences is not null && !me.NotificationPreferences.Echoes)
-                return;
-
-            var res = await _client.GetEchoesAsync();
-            if (res.Status != ApiResult.Ok || res.Echoes is null) return;
-
-            var unreadEchoes = res.Echoes.Where(e => !e.Read).ToList();
-
-            if (_firstRun)
+            if (me.Status != ApiResult.Ok)
             {
-                // Just populate seen echoes on first run so we don't alert for old ones
-                foreach (var e in unreadEchoes) _seenEchoes.Add(e.Id);
-                _firstRun = false;
+                Log.Debug($"CheckForEchoesAsync: GetMeAsync failed with status {me.Status}");
                 return;
             }
 
-            var newEchoes = unreadEchoes.Where(e => !_seenEchoes.Contains(e.Id)).ToList();
-            if (newEchoes.Count == 0) return;
+            // Check if user disabled echo notifications
+            if (me.NotificationPreferences is not null && !me.NotificationPreferences.Echoes)
+            {
+                Log.Debug("CheckForEchoesAsync: User has disabled echo notifications in preferences");
+                return;
+            }
 
-            foreach (var e in newEchoes) _seenEchoes.Add(e.Id);
+            var res = await _client.GetEchoesAsync();
+            if (res.Status != ApiResult.Ok || res.Echoes is null)
+            {
+                Log.Debug($"CheckForEchoesAsync: GetEchoesAsync failed with status {res.Status} or null");
+                return;
+            }
+
+            var unreadEchoes = res.Echoes.Where(e => !e.Read).ToList();
+            Log.Debug($"CheckForEchoesAsync: API returned {unreadEchoes.Count} unread echoes");
+
+            var newEchoes = unreadEchoes.Where(e => !_store.IsNotified(e.Id)).ToList();
+            if (newEchoes.Count == 0)
+            {
+                Log.Debug("CheckForEchoesAsync: All unread echoes have already been notified. Nothing new to show.");
+                return;
+            }
+
+            Log.Info($"Found {newEchoes.Count} new echoes to notify");
 
             // Grouping or showing generic notification? The user said:
             // "if in that hour you get 4 comments in a journey is 1 notifaction that say 4 people comment in your journey"
@@ -113,6 +120,8 @@ sealed class EchoMonitor : IDisposable
                     .AddText(title)
                     .AddText(text)
                     .Show();
+                    
+                _store.MarkNotified(echo.Id);
             }
         }
         catch (Exception ex)

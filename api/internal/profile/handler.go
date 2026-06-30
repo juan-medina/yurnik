@@ -58,26 +58,6 @@ func (h *Handler) resolvePlayer(w http.ResponseWriter, r *http.Request) (db.User
 	return user, true
 }
 
-func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (string, bool) {
-	if cookie, err := r.Cookie("yurnik_session"); err == nil {
-		userID, err := auth.ParseAndRenewSession(w, cookie.Value, h.jwtPriv)
-		if err != nil {
-			return "", false
-		}
-		return userID, true
-	}
-
-	token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if !ok || token == "" {
-		return "", false
-	}
-	pub := h.jwtPriv.Public().(ed25519.PublicKey)
-	userID, err := auth.ParseSessionJWT(token, pub)
-	if err != nil {
-		return "", false
-	}
-	return userID, true
-}
 
 type meResponse struct {
 	ID              string  `json:"id"`
@@ -93,7 +73,7 @@ type meResponse struct {
 }
 
 func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -133,7 +113,7 @@ const maxSearchResults = 8
 // Requires auth so it can't be used as an unauthenticated user enumeration
 // endpoint; an empty or missing q returns no results.
 func (h *Handler) searchPlayers(w http.ResponseWriter, r *http.Request) {
-	if _, ok := h.authenticate(w, r); !ok {
+	if _, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool); !ok {
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
@@ -163,7 +143,7 @@ func (h *Handler) getPlayer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	isFollowing := false
-	if callerID, ok := h.authenticate(w, r); ok {
+	if callerID, ok := auth.TryAuthenticate(w, r, h.jwtPriv, h.pool); ok {
 		isFollowing, _ = db.IsFollowing(r.Context(), h.pool, callerID, id)
 	}
 
@@ -196,7 +176,7 @@ func (h *Handler) getPlayer(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) followPlayer(w http.ResponseWriter, r *http.Request) {
-	callerID, ok := h.authenticate(w, r)
+	callerID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -228,7 +208,7 @@ func (h *Handler) followPlayer(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) unfollowPlayer(w http.ResponseWriter, r *http.Request) {
-	callerID, ok := h.authenticate(w, r)
+	callerID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -452,7 +432,7 @@ func mergeFeedItems(
 }
 
 func (h *Handler) getFeed(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		return
 	}
@@ -658,7 +638,7 @@ func buildProfileSummaryResponse(user db.User, followers, following int, isFollo
 }
 
 func (h *Handler) getMeProfile(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -677,7 +657,7 @@ func (h *Handler) getPlayerProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	isFollowing := false
-	if callerID, ok := h.authenticate(w, r); ok {
+	if callerID, ok := auth.TryAuthenticate(w, r, h.jwtPriv, h.pool); ok {
 		isFollowing, _ = db.IsFollowing(r.Context(), h.pool, callerID, user.ID)
 	}
 	h.writeProfileSummary(w, r, user, isFollowing)
@@ -704,7 +684,7 @@ func (h *Handler) writeProfileSummary(w http.ResponseWriter, r *http.Request, us
 }
 
 func (h *Handler) patchMe(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -743,7 +723,7 @@ func (h *Handler) patchMe(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) putPreferences(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -768,7 +748,7 @@ func (h *Handler) putPreferences(w http.ResponseWriter, r *http.Request) {
 // removed via ON DELETE CASCADE on the users row. The session cookie is
 // cleared so the now-stale JWT is dropped by the browser.
 func (h *Handler) deleteMe(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -791,7 +771,7 @@ func (h *Handler) deleteMe(w http.ResponseWriter, r *http.Request) {
 
 // deleteAvatar clears the custom avatar, reverting to the Discord avatar.
 func (h *Handler) deleteAvatar(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -819,7 +799,7 @@ func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, ok := h.authenticate(w, r)
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
