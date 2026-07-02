@@ -1,2 +1,8 @@
 /*
   Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.igdb.com https://cdn.discordapp.com https://assets.yurnik.social; connect-src 'self' https://api.yurnik.social; font-src 'self'; frame-ancestors 'none'
+
+/index.html
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
