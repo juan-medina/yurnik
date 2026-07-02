@@ -32,9 +32,16 @@ function GlobalErrorBoundary() {
   const error = useRouteError();
   
   if (error instanceof Error && error.message.includes("dynamically imported module")) {
-    window.location.reload();
-    return null;
+    const hasReloaded = sessionStorage.getItem("chunk_reload");
+    if (!hasReloaded) {
+      sessionStorage.setItem("chunk_reload", "true");
+      window.location.reload();
+      return null;
+    }
   }
+
+  // Clear the flag if we get here so it can try again later if needed
+  sessionStorage.removeItem("chunk_reload");
 
   return (
     <div className="flex h-screen flex-col items-center justify-center gap-4 text-center">
@@ -44,7 +51,10 @@ function GlobalErrorBoundary() {
         <p className="mt-1 text-sm text-muted-foreground">An unexpected error occurred while loading this page.</p>
       </div>
       <button
-        onClick={() => window.location.reload()}
+        onClick={() => {
+          sessionStorage.removeItem("chunk_reload");
+          window.location.reload();
+        }}
         className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
       >
         Reload page
