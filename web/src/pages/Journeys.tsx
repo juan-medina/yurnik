@@ -57,6 +57,10 @@ function AddJourneyForm({ onAdd, onCancel }: { onAdd: () => void; onCancel: () =
     mutationFn: addJourney,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journeys", "user"] });
+      queryClient.invalidateQueries({ queryKey: ["feed"] });
+      queryClient.invalidateQueries({ queryKey: ["activity", "player"] });
+      queryClient.invalidateQueries({ queryKey: ["player-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["game"] });
       onAdd();
     },
     onError: (err) => {
@@ -141,6 +145,10 @@ function PendingCard({ journey }: { journey: PendingJourney }) {
       queryClient.invalidateQueries({ queryKey: ["pending-journeys"] });
       queryClient.invalidateQueries({ queryKey: ["pending-journeys-count"] });
       queryClient.invalidateQueries({ queryKey: ["journeys", "user"] });
+      queryClient.invalidateQueries({ queryKey: ["feed"] });
+      queryClient.invalidateQueries({ queryKey: ["activity", "player"] });
+      queryClient.invalidateQueries({ queryKey: ["player-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["game"] });
     },
     onError: (err) => {
       if (err instanceof RateLimitedError) {

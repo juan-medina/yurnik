@@ -26,12 +26,17 @@ import { renderCommentText } from "@/lib/mentions";
 
 function JourneyPlayerRow({ entry, currentPlayerId }: { entry: JourneyPlayer; currentPlayerId?: string }) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const isMe = entry.player.id === currentPlayerId;
   const [following, setFollowing] = useState(entry.isFollowing);
   const [showSignIn, setShowSignIn] = useState(false);
   const followMutation = useMutation({
     mutationFn: (follow: boolean) => follow ? followPlayer(entry.player.handle) : unfollowPlayer(entry.player.handle),
-    onSuccess: (_data, follow) => setFollowing(follow),
+    onSuccess: (_data, follow) => {
+      setFollowing(follow);
+      queryClient.invalidateQueries({ queryKey: ["player-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["follow-list"] });
+    },
   });
 
   return (
@@ -248,7 +253,11 @@ export default function JourneyDetail() {
 
   const followOwnerMutation = useMutation({
     mutationFn: (follow: boolean) => follow ? followPlayer(journey!.player.handle) : unfollowPlayer(journey!.player.handle),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["following", journey?.player.id] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["following", journey?.player.id] });
+      queryClient.invalidateQueries({ queryKey: ["player-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["follow-list"] });
+    },
   });
 
   const commentCooldown = useCooldown();
@@ -265,7 +274,14 @@ export default function JourneyDetail() {
 
   const deleteJourneyMutation = useMutation({
     mutationFn: () => deleteJourney(id!),
-    onSuccess: () => navigate("/journeys"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["journeys", "user"] });
+      queryClient.invalidateQueries({ queryKey: ["feed"] });
+      queryClient.invalidateQueries({ queryKey: ["activity", "player"] });
+      queryClient.invalidateQueries({ queryKey: ["player-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["game"] });
+      navigate("/journeys");
+    },
   });
 
   const updateCooldown = useCooldown();
@@ -273,6 +289,10 @@ export default function JourneyDetail() {
     mutationFn: (input: Parameters<typeof updateJourney>[1]) => updateJourney(id!, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journey", id] });
+      queryClient.invalidateQueries({ queryKey: ["journeys", "user"] });
+      queryClient.invalidateQueries({ queryKey: ["feed"] });
+      queryClient.invalidateQueries({ queryKey: ["activity", "player"] });
+      queryClient.invalidateQueries({ queryKey: ["game"] });
       setIsEditing(false);
     },
     onError: (err) => {

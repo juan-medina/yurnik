@@ -320,6 +320,7 @@ export default function Admin() {
     mutationFn: suspendUser,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["admin", "suspended"] });
+      void queryClient.invalidateQueries({ queryKey: ["player-profile"] });
       void navigate("/admin", { replace: true });
     },
   });
@@ -327,6 +328,7 @@ export default function Admin() {
   const resetMutation = useMutation({
     mutationFn: resetProfile,
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["player-profile"] });
       void navigate("/admin", { replace: true });
     },
   });
@@ -334,6 +336,7 @@ export default function Admin() {
   const deleteJourneyLogMutation = useMutation({
     mutationFn: adminDeleteJourneyLog,
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["journey", confirmDeleteJourneyLogId] });
       void navigate("/admin", { replace: true });
     },
   });
@@ -349,6 +352,9 @@ export default function Admin() {
   const deleteCommentMutation = useMutation({
     mutationFn: adminDeleteComment,
     onSuccess: () => {
+      if (fromJourneyId) {
+        void queryClient.invalidateQueries({ queryKey: ["journey", fromJourneyId, "comments"] });
+      }
       void navigate(fromJourneyId ? `/journey/${fromJourneyId}` : "/admin", { replace: true });
     },
   });

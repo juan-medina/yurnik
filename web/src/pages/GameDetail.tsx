@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { ChevronLeft, Check, UserPlus, ExternalLink, Monitor, Gamepad2, Smartphone, Telescope } from "lucide-react";
 import { siPlaystation, siSteam, siAndroid, siApple, siLinux } from "simple-icons";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { getGameDetail, getGameJourneys } from "@/services/games";
 import { followPlayer, unfollowPlayer } from "@/services/players";
@@ -202,12 +202,18 @@ function JourneyPlayerRow({ entry }: { entry: JourneyPlayer }) {
 
 function AddToHorizonButton({ game }: { game: GameDetailModel }) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [inHorizon, setInHorizon] = useState(game.inHorizon);
   const [showSignIn, setShowSignIn] = useState(false);
   const { data: currentPlayer } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer, retry: false });
   const addMutation = useMutation({
     mutationFn: () => addToHorizon(parseInt(game.id, 10)),
-    onSuccess: () => setInHorizon(true),
+    onSuccess: () => {
+      setInHorizon(true);
+      queryClient.invalidateQueries({ queryKey: ["horizon"] });
+      queryClient.invalidateQueries({ queryKey: ["player-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["game", game.id] });
+    },
   });
 
   if (inHorizon) {
