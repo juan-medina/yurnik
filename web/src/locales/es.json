@@ -360,7 +360,7 @@
   "legal_agree_prefix": "Al continuar, aceptas nuestros",
   "legal_and": "y nuestra",
   "legal_last_updated": "Última actualización: {{date}}",
-  "legal_updated_date": "junio de 2026",
+  "legal_updated_date": "julio de 2026",
 
   "terms_title": "Términos de servicio",
   "terms_intro_title": "Acuerdo",
@@ -398,6 +398,16 @@
 
   "whats_new_title": "Novedades",
   "whats_new_entries": [
+    {
+      "date": "2026-07-02",
+      "title": "Actualizaciones de la aplicación más fluidas",
+      "body": "Hemos mejorado nuestra infraestructura de entrega para garantizar que cada vez que lanzamos una nueva versión de Yurnik, tu navegador la cargue perfectamente sin los errores temporales que a veces ocurrían."
+    },
+    {
+      "date": "2026-07-02",
+      "title": "Actualizaciones instantáneas en toda la web",
+      "body": "Hemos corregido varios problemas donde los datos podían quedar desactualizados tras realizar cambios. Ahora, cuando actualizas un viaje o confirmas una sesión, la página refleja tus cambios al instante."
+    },
     {
       "date": "2026-06-29",
       "title": "Notificaciones nativas de escritorio",

@@ -366,7 +366,7 @@
   "legal_agree_prefix": "By continuing, you agree to our",
   "legal_and": "and",
   "legal_last_updated": "Last updated: {{date}}",
-  "legal_updated_date": "June 2026",
+  "legal_updated_date": "July 2026",
 
   "terms_title": "Terms of Service",
   "terms_intro_title": "Agreement",
@@ -404,6 +404,16 @@
 
   "whats_new_title": "What's New",
   "whats_new_entries": [
+    {
+      "date": "2026-07-02",
+      "title": "Smoother application updates",
+      "body": "We've upgraded our delivery infrastructure to ensure that whenever we release a new version of Yurnik, your browser seamlessly picks it up without the temporary loading errors that used to occasionally happen."
+    },
+    {
+      "date": "2026-07-02",
+      "title": "Instant updates across the site",
+      "body": "We fixed several issues where data could become stale after making changes. Now, when you update a journey or confirm a session, the page reflects your changes instantly."
+    },
     {
       "date": "2026-06-29",
       "title": "Native desktop notifications",
