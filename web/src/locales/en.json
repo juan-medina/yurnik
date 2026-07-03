@@ -310,6 +310,7 @@
   "settings_cancel": "Cancel",
   "settings_windows_agent": "Windows Agent",
   "settings_agent_desc": "Automatically record your game journeys in the background.",
+  "settings_agent_sync_desc": "Agent settings sync every hour or on computer restart. You can also sync manually via the Yurnik tray icon.",
   "settings_download": "Download",
   "settings_excluded_exes": "Excluded executables",
   "settings_excluded_desc": "These executables will never trigger a journey.",
@@ -317,6 +318,12 @@
   "settings_remove_exe": "Remove {{exe}}?",
   "settings_remove": "Remove",
   "settings_remove_label": "Remove {{exe}}",
+  "settings_included_exes": "Included executables",
+  "settings_included_desc": "These executables will always be treated as games, bypassing any automatic filtering.",
+  "settings_no_inclusions": "No inclusions yet.",
+  "settings_add_inclusion_placeholder": "e.g. awesomegame.exe",
+  "settings_add_inclusion": "Add",
+  "settings_add_inclusion_empty": "Executable name cannot be empty.",
   "settings_game_hints": "Auto-confirm games",
   "settings_hints_desc": "Games the agent has learned to recognize. Remove a game to stop auto-confirming and let the agent detect it manually next time.",
   "settings_no_hints": "No games will auto-confirm yet.",
@@ -404,6 +411,11 @@
 
   "whats_new_title": "What's New",
   "whats_new_entries": [
+    {
+      "date": "2026-07-03",
+      "title": "Custom Game Inclusions & Settings Sync",
+      "body": "The desktop agent now supports adding custom executable files to ensure they are always tracked as game journeys. Your inclusions and exclusions are synchronized automatically every hour, and you can manually trigger a sync straight from the newly organized tray menu."
+    },
     {
       "date": "2026-07-02",
       "title": "Smoother application updates",

@@ -374,3 +374,47 @@ func TestCreatePending_AutoConfirm_ShortDuration(t *testing.T) {
 		t.Errorf("got %d journeys, want 0", len(journeys))
 	}
 }
+
+func TestListInclusions_scopedPerUser(t *testing.T) {
+	pool := connectTestDB(t)
+	_, jwtPriv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("generate jwt key: %v", err)
+	}
+	h := NewHandler(pool, jwtPriv)
+	ctx := context.Background()
+
+	userA := createTestUser(t, pool)
+	userB := createTestUser(t, pool)
+
+	if err := db.InsertInclusion(ctx, pool, userA, "awesomegame.exe"); err != nil {
+		t.Fatalf("insert inclusion for userA: %v", err)
+	}
+	if err := db.InsertInclusion(ctx, pool, userB, "othergame.exe"); err != nil {
+		t.Fatalf("insert inclusion for userB: %v", err)
+	}
+
+	tokenA, err := auth.CreateSessionJWT(userA, jwtPriv)
+	if err != nil {
+		t.Fatalf("create session jwt: %v", err)
+	}
+
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/agent/inclusions", nil)
+	r.Header.Set("Authorization", "Bearer "+tokenA)
+	w := httptest.NewRecorder()
+	h.listInclusions(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	var body struct {
+		Inclusions []string `json:"inclusions"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(body.Inclusions) != 1 || body.Inclusions[0] != "awesomegame.exe" {
+		t.Errorf("inclusions = %v, want [awesomegame.exe]", body.Inclusions)
+	}
+}

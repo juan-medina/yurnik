@@ -33,6 +33,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/agent/token", h.token)
 	mux.HandleFunc("POST /api/v1/agent/heartbeat", h.heartbeat)
 	mux.HandleFunc("GET /api/v1/agent/exclusions", h.listExclusions)
+	mux.HandleFunc("GET /api/v1/agent/inclusions", h.listInclusions)
 	mux.HandleFunc("POST /api/v1/agent/pending-journeys", h.createPending)
 }
 
@@ -105,6 +106,30 @@ func (h *Handler) listExclusions(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"exclusions": exeNames})
+}
+
+// listInclusions returns the authenticated user's exe inclusion list, so the
+// agent can cache it locally and skip heuristic checks for known games.
+func (h *Handler) listInclusions(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
+	if !ok {
+		return
+	}
+
+	incs, err := db.ListInclusions(r.Context(), h.pool, userID)
+	if err != nil {
+		log.Printf("agent/listInclusions: %v", err)
+		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	exeNames := make([]string, len(incs))
+	for i, e := range incs {
+		exeNames[i] = e.ExeName
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"inclusions": exeNames})
 }
 
 // createPending creates a new pending journey for the authenticated agent.

@@ -36,6 +36,7 @@ sealed class TrayApp : IDisposable
 
     ToolStripMenuItem? _signInItem;
     ToolStripMenuItem? _signOutItem;
+    ToolStripMenuItem? _syncSettingsItem;
 
     public TrayApp(string webBaseUrl, AuthManager auth, IYurnikClient client, ProcessWatcher watcher, SessionMonitor sessionMonitor, QueueProcessor processor, Updater updater, DetectableGamesCache detectableGames, EchoMonitor echoMonitor)
     {
@@ -64,7 +65,13 @@ sealed class TrayApp : IDisposable
 
         _context = new ApplicationContext();
         _auth.AuthStateChanged += OnAuthStateChanged;
+        _auth.SettingsSynced += OnSettingsSynced;
         ToastNotificationManagerCompat.OnActivated += OnToastActivated;
+    }
+
+    void OnSettingsSynced()
+    {
+        _watcher.ClearCaches();
     }
 
     void OnToastActivated(ToastNotificationActivatedEventArgsCompat e)
@@ -142,9 +149,10 @@ sealed class TrayApp : IDisposable
 
     void UpdateAuthMenuItems()
     {
-        if (_signInItem is null || _signOutItem is null) return;
+        if (_signInItem is null || _signOutItem is null || _syncSettingsItem is null) return;
         _signInItem.Visible = !_authenticated;
         _signOutItem.Visible = _authenticated;
+        _syncSettingsItem.Visible = _authenticated;
     }
 
     void ShowSignInRequired()
@@ -275,23 +283,22 @@ sealed class TrayApp : IDisposable
             });
         });
 
+        _syncSettingsItem = new ToolStripMenuItem(Strings.MenuSyncSettings, null, async (_, _) =>
+        {
+            if (_authenticated)
+            {
+                await _auth.SyncSettingsAsync();
+            }
+        });
+        _syncSettingsItem.Visible = _authenticated;
+        menu.Items.Add(_syncSettingsItem);
+
         menu.Items.Add(new ToolStripSeparator());
 
-        _signInItem = new ToolStripMenuItem(Strings.MenuSignIn, null, (_, _) =>
+        menu.Items.Add(Strings.MenuCheckUpdates, null, async (_, _) =>
         {
-            _auth.StartLoginFlow();
+            await CheckForUpdatesAsync();
         });
-        _signInItem.Visible = !_authenticated;
-        menu.Items.Add(_signInItem);
-
-        _signOutItem = new ToolStripMenuItem(Strings.MenuSignOut, null, (_, _) =>
-        {
-            _auth.OnUnauthorized();
-        });
-        _signOutItem.Visible = _authenticated;
-        menu.Items.Add(_signOutItem);
-
-        menu.Items.Add(new ToolStripSeparator());
 
         menu.Items.Add(Strings.MenuAbout, null, async (_, _) =>
         {
@@ -307,10 +314,19 @@ sealed class TrayApp : IDisposable
 
         menu.Items.Add(new ToolStripSeparator());
 
-        menu.Items.Add(Strings.MenuCheckUpdates, null, async (_, _) =>
+        _signInItem = new ToolStripMenuItem(Strings.MenuSignIn, null, (_, _) =>
         {
-            await CheckForUpdatesAsync();
+            _auth.StartLoginFlow();
         });
+        _signInItem.Visible = !_authenticated;
+        menu.Items.Add(_signInItem);
+
+        _signOutItem = new ToolStripMenuItem(Strings.MenuSignOut, null, (_, _) =>
+        {
+            _auth.OnUnauthorized();
+        });
+        _signOutItem.Visible = _authenticated;
+        menu.Items.Add(_signOutItem);
 
         menu.Items.Add(new ToolStripSeparator());
 
@@ -330,6 +346,7 @@ sealed class TrayApp : IDisposable
         ToastNotificationManagerCompat.OnActivated -= OnToastActivated;
         ToastNotificationManagerCompat.Uninstall();
         _auth.AuthStateChanged -= OnAuthStateChanged;
+        _auth.SettingsSynced -= OnSettingsSynced;
         _tray.Dispose();
         _auth.Dispose();
         _watcher.Dispose();

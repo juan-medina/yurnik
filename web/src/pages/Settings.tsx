@@ -7,7 +7,7 @@ import { useNavigate, Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { getCurrentPlayer, signIn, signOut, deleteAccount, updateNotificationPreferences } from "@/services/auth";
-import { getExclusions, removeExclusion, getGameHints, removeGameHint, updateGameHint } from "@/services/settings";
+import { getExclusions, removeExclusion, getGameHints, removeGameHint, updateGameHint, getInclusions, addInclusion, removeInclusion } from "@/services/settings";
 import { searchGames } from "@/services/games";
 import { useLocale, SUPPORTED_LOCALES } from "@/hooks/useLocale";
 
@@ -29,6 +29,7 @@ export default function Settings() {
   });
   const { data: exclusions = [] } = useQuery({ queryKey: ["settings", "exclusions"], queryFn: getExclusions });
   const { data: hints = [] } = useQuery({ queryKey: ["settings", "hints"], queryFn: getGameHints });
+  const { data: inclusions = [] } = useQuery({ queryKey: ["settings", "inclusions"], queryFn: getInclusions });
 
   const [confirmingExe, setConfirmingExe] = useState<string | null>(null);
   const [confirmingHintExe, setConfirmingHintExe] = useState<string | null>(null);
@@ -37,6 +38,8 @@ export default function Settings() {
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteHandleInput, setDeleteHandleInput] = useState("");
+  const [addInclusionInput, setAddInclusionInput] = useState("");
+  const [confirmingInclusionExe, setConfirmingInclusionExe] = useState<string | null>(null);
 
   const { data: editGameResults = [] } = useQuery({
     queryKey: ["games", "search", editQuery],
@@ -49,6 +52,22 @@ export default function Settings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings", "exclusions"] });
       setConfirmingExe(null);
+    },
+  });
+
+  const addInclusionMutation = useMutation({
+    mutationFn: addInclusion,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings", "inclusions"] });
+      setAddInclusionInput("");
+    },
+  });
+
+  const removeInclusionMutation = useMutation({
+    mutationFn: removeInclusion,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings", "inclusions"] });
+      setConfirmingInclusionExe(null);
     },
   });
 
@@ -277,9 +296,14 @@ export default function Settings() {
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <MonitorDown size={18} className="shrink-0 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  {t("settings_agent_desc")}
-                </p>
+                <div className="flex flex-col">
+                  <p className="text-sm text-muted-foreground">
+                    {t("settings_agent_desc")}
+                  </p>
+                  <p className="text-xs text-muted-foreground opacity-80 mt-1">
+                    {t("settings_agent_sync_desc")}
+                  </p>
+                </div>
               </div>
               <a
                 href="https://github.com/juan-medina/yurnik/releases/latest"
@@ -454,6 +478,86 @@ export default function Settings() {
                       <button
                         onClick={() => setConfirmingExe(exc.exeName)}
                         aria-label={t("settings_remove_label", { exe: exc.exeName })}
+                        className="rounded-md px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      >
+                        {t("settings_remove")}
+                      </button>
+                    </li>
+                  ),
+                )}
+              </ul>
+            )}
+          </div>
+
+          {/* Inclusions */}
+          <div className="rounded-lg border border-border bg-card p-5">
+            <h3 className="font-semibold">{t("settings_included_exes")}</h3>
+            <p className="mb-4 mt-1 text-sm text-muted-foreground">
+              {t("settings_included_desc")}
+            </p>
+            
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (addInclusionInput.trim()) {
+                  addInclusionMutation.mutate(addInclusionInput.trim());
+                }
+              }}
+              className="mb-4 flex gap-2"
+            >
+              <input
+                type="text"
+                value={addInclusionInput}
+                onChange={(e) => setAddInclusionInput(e.target.value)}
+                placeholder={t("settings_add_inclusion_placeholder")}
+                className="flex-1 rounded-md border border-border bg-background px-3 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <button
+                type="submit"
+                disabled={!addInclusionInput.trim() || addInclusionMutation.isPending}
+                className="shrink-0 rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {t("settings_add_inclusion")}
+              </button>
+            </form>
+
+            {inclusions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("settings_no_inclusions")}</p>
+            ) : (
+              <ul className="space-y-2">
+                {inclusions.map((inc) =>
+                  confirmingInclusionExe === inc.exeName ? (
+                    <li
+                      key={inc.exeName}
+                      className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2"
+                    >
+                      <span className="text-sm text-muted-foreground">
+                        {t("settings_remove_exe", { exe: inc.exeName })}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setConfirmingInclusionExe(null)}
+                          className="rounded-md px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                        >
+                          {t("settings_cancel")}
+                        </button>
+                        <button
+                          onClick={() => removeInclusionMutation.mutate(inc.exeName)}
+                          className="rounded-md bg-destructive px-3 py-1 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
+                        >
+                          {t("settings_remove")}
+                        </button>
+                      </div>
+                    </li>
+                  ) : (
+                    <li
+                      key={inc.exeName}
+                      className="flex items-center justify-between rounded-md border border-border px-3 py-2"
+                    >
+                      <span className="font-mono text-sm">{inc.exeName}</span>
+                      <button
+                        onClick={() => setConfirmingInclusionExe(inc.exeName)}
+                        aria-label={t("settings_remove_label", { exe: inc.exeName })}
                         className="rounded-md px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                       >
                         {t("settings_remove")}

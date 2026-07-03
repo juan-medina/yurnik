@@ -34,6 +34,7 @@ sealed class AuthManager : IAuthState, IDisposable
     readonly CredentialStore _store;
     readonly IYurnikClient _client;
     readonly ExclusionStore _exclusions;
+    readonly InclusionStore _inclusions;
 
     // yurnik:// callbacks arrive as a second process instance passing args.
     // We listen on a named pipe so the second instance can hand off the URL.
@@ -46,12 +47,13 @@ sealed class AuthManager : IAuthState, IDisposable
 
     public event Action<bool>? AuthStateChanged;
 
-    public AuthManager(AgentConfig config, CredentialStore store, IYurnikClient client, ExclusionStore exclusions)
+    public AuthManager(AgentConfig config, CredentialStore store, IYurnikClient client, ExclusionStore exclusions, InclusionStore inclusions)
     {
         _config = config;
         _store = store;
         _client = client;
         _exclusions = exclusions;
+        _inclusions = inclusions;
         _listener = new UrlSchemeListener(OnYurnikUrl);
     }
 
@@ -88,7 +90,7 @@ sealed class AuthManager : IAuthState, IDisposable
 
         Log.Info("Token validated — authenticated");
         SetAuthenticated(true);
-        await SyncExclusionsAsync();
+        await SyncSettingsAsync();
         return true;
     }
 
@@ -100,7 +102,7 @@ sealed class AuthManager : IAuthState, IDisposable
     {
         _refreshTask = RefreshLoopAsync(_cts.Token);
         Log.Info("Session refresh loop started");
-        Log.Debug($"Session refresh interval: {_config.AuthRefreshInterval}");
+        Log.Debug($"Session refresh interval: {_config.SyncInterval}");
     }
 
     /// <summary>
@@ -143,7 +145,7 @@ sealed class AuthManager : IAuthState, IDisposable
     /// </summary>
     async Task RefreshLoopAsync(CancellationToken ct)
     {
-        var delay = _config.AuthRefreshInterval;
+        var delay = _config.SyncInterval;
         var failures = 0;
 
         while (!ct.IsCancellationRequested)
@@ -154,7 +156,7 @@ sealed class AuthManager : IAuthState, IDisposable
             if (!IsAuthenticated)
             {
                 Log.Debug("Session refresh: not authenticated, skipping check");
-                delay = _config.AuthRefreshInterval;
+                delay = _config.SyncInterval;
                 continue;
             }
 
@@ -173,9 +175,9 @@ sealed class AuthManager : IAuthState, IDisposable
                     {
                         Log.Debug("Session refresh: token still valid, no renewal needed");
                     }
-                    await SyncExclusionsAsync();
+                    await SyncSettingsAsync();
                     failures = 0;
-                    delay = _config.AuthRefreshInterval;
+                    delay = _config.SyncInterval;
                     break;
 
                 case ApiResult.Unauthorized:
@@ -183,7 +185,7 @@ sealed class AuthManager : IAuthState, IDisposable
                     _store.DeleteToken();
                     _client.ClearToken();
                     failures = 0;
-                    delay = _config.AuthRefreshInterval;
+                    delay = _config.SyncInterval;
                     SetAuthenticated(false);
                     break;
 
@@ -216,7 +218,7 @@ sealed class AuthManager : IAuthState, IDisposable
         _store.SaveToken(token);
         _client.SetToken(token);
         SetAuthenticated(true);
-        _ = SyncExclusionsAsync();
+        _ = SyncSettingsAsync();
     }
 
     void SetAuthenticated(bool value)
@@ -226,20 +228,43 @@ sealed class AuthManager : IAuthState, IDisposable
     }
 
     /// <summary>
-    /// Refreshes the local exclusion cache from the API. Best-effort — a
+    /// Refreshes the local settings cache from the API. Best-effort — a
     /// failure here just means the cache stays stale until the next sync
     /// (login or heartbeat), not a fatal error for the agent.
     /// </summary>
-    async Task SyncExclusionsAsync()
+    public event Action? SettingsSynced;
+
+    public async Task SyncSettingsAsync()
     {
-        var result = await _client.GetExclusionsAsync();
-        if (result.Status != ApiResult.Ok || result.ExeNames is null)
+        bool changed = false;
+
+        var excResult = await _client.GetExclusionsAsync();
+        if (excResult.Status == ApiResult.Ok && excResult.ExeNames is not null)
         {
-            Log.Warn($"Exclusion sync skipped: {result.Status}");
-            return;
+            _exclusions.ReplaceAll(excResult.ExeNames);
+            Log.Info($"Exclusion list synced: {excResult.ExeNames.Count} entries");
+            changed = true;
+        }
+        else
+        {
+            Log.Warn($"Exclusion sync skipped: {excResult.Status}");
         }
 
-        _exclusions.ReplaceAll(result.ExeNames);
-        Log.Info($"Exclusion list synced: {result.ExeNames.Count} entries");
+        var incResult = await _client.GetInclusionsAsync();
+        if (incResult.Status == ApiResult.Ok && incResult.ExeNames is not null)
+        {
+            _inclusions.ReplaceAll(incResult.ExeNames);
+            Log.Info($"Inclusion list synced: {incResult.ExeNames.Count} entries");
+            changed = true;
+        }
+        else
+        {
+            Log.Warn($"Inclusion sync skipped: {incResult.Status}");
+        }
+
+        if (changed)
+        {
+            SettingsSynced?.Invoke();
+        }
     }
 }

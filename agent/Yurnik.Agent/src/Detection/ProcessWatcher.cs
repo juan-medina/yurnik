@@ -28,6 +28,7 @@ sealed class ProcessWatcher(
     SessionStore sessions,
     EventQueue queue,
     ExclusionStore exclusions,
+    InclusionStore inclusions,
     DetectableGamesCache detectableGames,
     TimeSpan? minSessionDuration = null) : IDisposable
 {
@@ -60,10 +61,24 @@ sealed class ProcessWatcher(
         Log.Info("ProcessWatcher stopped");
     }
 
+    volatile bool _shouldClearCaches;
+
+    public void ClearCaches()
+    {
+        _shouldClearCaches = true;
+    }
+
     async Task PollLoopAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
         {
+            if (_shouldClearCaches)
+            {
+                _shouldClearCaches = false;
+                _ignored.Clear();
+                _pathCache.Clear();
+                Log.Debug("ProcessWatcher caches cleared due to settings sync");
+            }
             Poll();
             await Task.Delay(PollInterval, ct).ConfigureAwait(false);
         }
@@ -89,7 +104,8 @@ sealed class ProcessWatcher(
                     continue;
                 }
 
-                var isKnownGame = detectableGames.IsKnownGame(exeName)
+                var isKnownGame = inclusions.Contains(exeName)
+                    || detectableGames.IsKnownGame(exeName)
                     || (exePath is not null && KnownGamePaths.IsKnownGamePath(exePath));
 
                 // Level 2 Cache & PE Scan fallback

@@ -69,6 +69,10 @@ sealed class Database
                 exe_name TEXT PRIMARY KEY
             );
 
+            CREATE TABLE IF NOT EXISTS inclusions (
+                exe_name TEXT PRIMARY KEY
+            );
+
             CREATE TABLE IF NOT EXISTS notified_echoes (
                 echo_id     TEXT    PRIMARY KEY,
                 notified_at INTEGER NOT NULL
@@ -90,6 +94,7 @@ sealed class Database
             DROP TABLE IF EXISTS sessions;
             DROP TABLE IF EXISTS queue;
             DROP TABLE IF EXISTS exclusions;
+            DROP TABLE IF EXISTS inclusions;
             DROP TABLE IF EXISTS notified_echoes;
             DROP TABLE IF EXISTS schema_version;
             """;

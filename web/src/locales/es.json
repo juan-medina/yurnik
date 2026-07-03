@@ -306,6 +306,7 @@
   "settings_cancel": "Cancelar",
   "settings_windows_agent": "Agente de Windows",
   "settings_agent_desc": "Registra automáticamente tus partidas de juego en segundo plano.",
+  "settings_agent_sync_desc": "La configuración del agente se sincroniza cada hora o al reiniciar el equipo. También puedes sincronizar manualmente desde el icono de la bandeja de Yurnik.",
   "settings_download": "Descargar",
   "settings_excluded_exes": "Ejecutables excluidos",
   "settings_excluded_desc": "Estos ejecutables nunca activarán una partida.",
@@ -398,6 +399,11 @@
 
   "whats_new_title": "Novedades",
   "whats_new_entries": [
+    {
+      "date": "2026-07-03",
+      "title": "Inclusión de juegos personalizados y sincronización de configuración",
+      "body": "El agente de escritorio ahora permite añadir archivos ejecutables personalizados para asegurar que siempre se registren como partidas de juego. Tus inclusiones y exclusiones se sincronizan automáticamente cada hora, y puedes sincronizar manualmente desde el menú de la bandeja, que acaba de ser reorganizado."
+    },
     {
       "date": "2026-07-02",
       "title": "Actualizaciones de la aplicación más fluidas",

@@ -53,6 +53,7 @@ static class Program
         db.Migrate();
 
         var exclusionStore = new ExclusionStore(db);
+        var inclusionStore = new InclusionStore(db);
         var detectableGamesPath = Path.Combine(
             Path.GetDirectoryName(config.DbPath)!, "detectable_games.json");
         var detectableGames = new DetectableGamesCache(detectableGamesPath);
@@ -60,14 +61,14 @@ static class Program
 
         var credentialStore = new CredentialStore();
         var agentClient = new YurnikClient(config.ApiBaseUrl);
-        var authManager = new AuthManager(config, credentialStore, agentClient, exclusionStore);
+        var authManager = new AuthManager(config, credentialStore, agentClient, exclusionStore, inclusionStore);
         authManager.Start();
 
         var sessionStore = new SessionStore(db);
         var eventQueue = new EventQueue(db);
         var sessionMonitor = new SessionMonitor(sessionStore, eventQueue, config.MinSessionDuration);
         var queueProcessor = new QueueProcessor(eventQueue, agentClient, authManager);
-        var processWatcher = new ProcessWatcher(sessionStore, eventQueue, exclusionStore, detectableGames, config.MinSessionDuration);
+        var processWatcher = new ProcessWatcher(sessionStore, eventQueue, exclusionStore, inclusionStore, detectableGames, config.MinSessionDuration);
         var updater = new Updater();
         var echoStore = new EchoStore(db);
         var echoMonitor = new EchoMonitor(agentClient, config, echoStore);

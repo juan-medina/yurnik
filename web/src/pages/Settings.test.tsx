@@ -7,13 +7,17 @@ import { vi } from "vitest";
 import { GAME_LIBRARY } from "@/test/fixtures";
 import { renderWithProviders } from "@/test/utils";
 import Settings from "./Settings";
-import type { Exclusion, GameHint } from "@/models/settings";
+import type { Exclusion, GameHint, Inclusion } from "@/models/settings";
 import { updateGameHint } from "@/services/settings";
 
 const TEST_EXCLUSIONS: Exclusion[] = [
   { exeName: "cyberpunk2077.exe" },
   { exeName: "svb.exe" },
   { exeName: "launcher.exe" },
+];
+
+const TEST_INCLUSIONS: Inclusion[] = [
+  { exeName: "mygame.exe" },
 ];
 
 const TEST_HINTS: GameHint[] = [
@@ -24,6 +28,7 @@ const TEST_HINTS: GameHint[] = [
 
 const mockState = vi.hoisted(() => ({
   exclusions: [] as Exclusion[],
+  inclusions: [] as Inclusion[],
   hints: [] as GameHint[],
 }));
 
@@ -32,6 +37,13 @@ vi.mock("@/services/settings", () => ({
   addExclusion: vi.fn(async () => undefined),
   removeExclusion: vi.fn(async (exeName: string) => {
     mockState.exclusions = mockState.exclusions.filter((e) => e.exeName !== exeName);
+  }),
+  getInclusions: vi.fn(() => Promise.resolve([...mockState.inclusions])),
+  addInclusion: vi.fn(async (exeName: string) => {
+    mockState.inclusions.push({ exeName });
+  }),
+  removeInclusion: vi.fn(async (exeName: string) => {
+    mockState.inclusions = mockState.inclusions.filter((e) => e.exeName !== exeName);
   }),
   getGameHints: vi.fn(() => Promise.resolve([...mockState.hints])),
   addGameHint: vi.fn(async () => undefined),
@@ -51,6 +63,7 @@ function renderSettings() {
 
 beforeEach(() => {
   mockState.exclusions = [...TEST_EXCLUSIONS];
+  mockState.inclusions = [...TEST_INCLUSIONS];
   mockState.hints = [...TEST_HINTS];
   vi.mocked(updateGameHint).mockImplementation(async () => undefined);
 });
@@ -126,6 +139,66 @@ describe("Settings — exclusions", () => {
       await user.click(screen.getByRole("button", { name: "Remove" }));
     }
     expect(await screen.findByText("No exclusions yet.")).toBeInTheDocument();
+  });
+});
+
+describe("Settings — inclusions", () => {
+  it("clicking Remove on an inclusion shows inline confirmation", async () => {
+    const user = userEvent.setup();
+    renderSettings();
+    await user.click(
+      await screen.findByRole("button", { name: `Remove ${TEST_INCLUSIONS[0].exeName}` }),
+    );
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
+  });
+
+  it("canceling inclusion removal restores the row", async () => {
+    const user = userEvent.setup();
+    renderSettings();
+    await user.click(
+      await screen.findByRole("button", { name: `Remove ${TEST_INCLUSIONS[0].exeName}` }),
+    );
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(
+      screen.getByRole("button", { name: `Remove ${TEST_INCLUSIONS[0].exeName}` }),
+    ).toBeInTheDocument();
+  });
+
+  it("confirming removal removes the inclusion from the list", async () => {
+    const user = userEvent.setup();
+    renderSettings();
+    await user.click(
+      await screen.findByRole("button", { name: `Remove ${TEST_INCLUSIONS[0].exeName}` }),
+    );
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await waitFor(() =>
+      expect(screen.queryByText(TEST_INCLUSIONS[0].exeName)).not.toBeInTheDocument(),
+    );
+  });
+
+  it("removing all inclusions shows empty state", async () => {
+    const user = userEvent.setup();
+    renderSettings();
+    await screen.findByRole("button", { name: `Remove ${TEST_INCLUSIONS[0].exeName}` });
+    for (const inc of TEST_INCLUSIONS) {
+      await user.click(screen.getByRole("button", { name: `Remove ${inc.exeName}` }));
+      await user.click(screen.getByRole("button", { name: "Remove" }));
+    }
+    expect(await screen.findByText("No inclusions yet.")).toBeInTheDocument();
+  });
+
+  it("adds an inclusion and clears input", async () => {
+    const user = userEvent.setup();
+    renderSettings();
+    await screen.findByRole("button", { name: `Remove ${TEST_INCLUSIONS[0].exeName}` });
+
+    const input = screen.getByPlaceholderText("e.g. awesomegame.exe");
+    await user.type(input, "newgame.exe");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    expect(await screen.findByText("newgame.exe")).toBeInTheDocument();
+    expect(input).toHaveValue("");
   });
 });
 

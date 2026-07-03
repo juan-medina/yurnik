@@ -15,6 +15,7 @@ record CreatePendingResult(ApiResult Status, string? JourneyId);
 record NotificationPreferences(bool Updates, bool Echoes);
 record MeResult(ApiResult Status, string? Handle, string? Name, NotificationPreferences? NotificationPreferences = null);
 record ExclusionsResult(ApiResult Status, List<string>? ExeNames);
+record InclusionsResult(ApiResult Status, List<string>? ExeNames);
 record Echo(string Id, string Type, int ActorCount, string? SubjectTitle, bool Read);
 record EchoesResult(ApiResult Status, List<Echo>? Echoes);
 
@@ -180,6 +181,41 @@ sealed class YurnikClient : IYurnikClient
         {
             Log.Error("GetExclusions failed", ex);
             return new ExclusionsResult(ApiResult.TransientFailure, null);
+        }
+    }
+
+    public async Task<InclusionsResult> GetInclusionsAsync()
+    {
+        try
+        {
+            var resp = await _http.GetAsync("api/v1/agent/inclusions");
+
+            if (resp.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                Log.Warn("GetInclusions unauthorized");
+                return new InclusionsResult(ApiResult.Unauthorized, null);
+            }
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                Log.Warn($"GetInclusions: unexpected status {resp.StatusCode}");
+                return new InclusionsResult(ApiResult.TransientFailure, null);
+            }
+
+            var json = await resp.Content.ReadAsStringAsync();
+            var doc = JsonDocument.Parse(json);
+            var exeNames = doc.RootElement.GetProperty("inclusions")
+                .EnumerateArray()
+                .Select(e => e.GetString())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => s!)
+                .ToList();
+            return new InclusionsResult(ApiResult.Ok, exeNames);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("GetInclusions failed", ex);
+            return new InclusionsResult(ApiResult.TransientFailure, null);
         }
     }
 

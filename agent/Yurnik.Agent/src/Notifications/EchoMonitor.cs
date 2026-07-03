@@ -17,7 +17,7 @@ sealed class EchoMonitor : IDisposable
     {
         _client = client;
         _store = store;
-        _timer = new System.Timers.Timer(config.EchoRefreshInterval.TotalMilliseconds);
+        _timer = new System.Timers.Timer(config.SyncInterval.TotalMilliseconds);
         _timer.Elapsed += async (_, _) => await CheckForEchoesAsync();
     }
 

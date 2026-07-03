@@ -90,5 +90,7 @@
   <data name="AboutNotSignedIn" xml:space="preserve">
     <value>Sin sesión iniciada</value>
   </data>
-
+  <data name="MenuSyncSettings" xml:space="preserve">
+    <value>Sincronizar configuración</value>
+  </data>
 </root>

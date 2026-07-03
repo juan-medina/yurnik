@@ -23,6 +23,7 @@ static class Strings
     public static string MenuSignOut        => Get(nameof(MenuSignOut));
     public static string MenuAbout          => Get(nameof(MenuAbout));
     public static string MenuCheckUpdates   => Get(nameof(MenuCheckUpdates));
+    public static string MenuSyncSettings   => Get(nameof(MenuSyncSettings));
     public static string MenuExit           => Get(nameof(MenuExit));
     public static string AboutTitle         => Get(nameof(AboutTitle));
     public static string AboutTagline       => Get(nameof(AboutTagline));

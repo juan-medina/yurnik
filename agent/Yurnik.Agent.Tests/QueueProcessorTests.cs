@@ -28,6 +28,7 @@ class FakeYurnikClient : IYurnikClient
     public Task<MeResult> GetMeAsync() => Task.FromResult(new MeResult(ApiResult.Ok, null, null));
     public Task<EchoesResult> GetEchoesAsync() => Task.FromResult(new EchoesResult(ApiResult.Ok, new List<Echo>()));
     public Task<ExclusionsResult> GetExclusionsAsync() => Task.FromResult(new ExclusionsResult(ApiResult.Ok, []));
+    public Task<InclusionsResult> GetInclusionsAsync() => Task.FromResult(new InclusionsResult(ApiResult.Ok, []));
 
     public Task<CreatePendingResult> CreatePendingJourneyAsync(
         string exeName, string windowTitle, DateTimeOffset startedAt, DateTimeOffset endedAt)

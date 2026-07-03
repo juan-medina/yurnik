@@ -11,6 +11,7 @@ interface IYurnikClient
     Task<MeResult> GetMeAsync();
     Task<EchoesResult> GetEchoesAsync();
     Task<ExclusionsResult> GetExclusionsAsync();
+    Task<InclusionsResult> GetInclusionsAsync();
     Task<CreatePendingResult> CreatePendingJourneyAsync(
         string exeName, string windowTitle, DateTimeOffset startedAt, DateTimeOffset endedAt);
 }

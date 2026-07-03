@@ -5,6 +5,10 @@ export type Exclusion = {
   exeName: string;
 };
 
+export type Inclusion = {
+  exeName: string;
+};
+
 export type GameHint = {
   exeName: string;
   game: string;
