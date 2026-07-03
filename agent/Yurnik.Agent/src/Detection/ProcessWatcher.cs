@@ -37,6 +37,11 @@ sealed class ProcessWatcher(
     // In-memory dedup set — avoids redundant DB writes within one agent run.
     // SessionStore uses INSERT OR IGNORE, so this is an optimisation only.
     readonly HashSet<int> _seen = [];
+    readonly HashSet<int> _ignored = [];
+    
+    // Level 2 Cache: Path -> (LastWriteTime, IsGame)
+    // Avoids re-parsing the PE file for non-game apps that restart.
+    readonly Dictionary<string, (DateTime LastWriteTime, bool IsGame)> _pathCache = [];
 
     readonly CancellationTokenSource _cts = new();
     Task? _pollTask;
@@ -67,26 +72,67 @@ sealed class ProcessWatcher(
     void Poll()
     {
         var currentPids = new HashSet<int>();
+        var allPids = new HashSet<int>();
 
         foreach (var process in Process.GetProcesses())
         {
             try
             {
+                allPids.Add(process.Id);
                 var exePath = ProcessPath.TryGetExecutablePath(process.Id);
                 var exeName = exePath is not null ? Path.GetFileName(exePath) : process.ProcessName + ".exe";
 
-                if (exclusions.Contains(exeName)) continue;
+                if (exclusions.Contains(exeName))
+                {
+                    if (_ignored.Add(process.Id))
+                        Log.Debug($"Discarding {exeName} (pid {process.Id}): on exclusion list");
+                    continue;
+                }
 
                 var isKnownGame = detectableGames.IsKnownGame(exeName)
                     || (exePath is not null && KnownGamePaths.IsKnownGamePath(exePath));
-                if (!isKnownGame) continue;
+
+                // Level 2 Cache & PE Scan fallback
+                if (!isKnownGame && exePath is not null)
+                {
+                    try
+                    {
+                        var fileInfo = new FileInfo(exePath);
+                        if (fileInfo.Exists)
+                        {
+                            var lastWrite = fileInfo.LastWriteTimeUtc;
+                            if (!_pathCache.TryGetValue(exePath, out var cached) || cached.LastWriteTime != lastWrite)
+                            {
+                                bool hasGameImports = PeScanner.IsGameExecutable(exePath);
+                                _pathCache[exePath] = (lastWrite, hasGameImports);
+                            }
+                            isKnownGame = _pathCache[exePath].IsGame;
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore file access errors on FileInfo
+                    }
+                }
+
+                if (!isKnownGame)
+                {
+                    if (_ignored.Add(process.Id))
+                        Log.Debug($"Discarding {exeName} (pid {process.Id}): not a known game (PE scan failed)");
+                    continue;
+                }
 
                 currentPids.Add(process.Id);
 
                 if (_seen.Contains(process.Id)) continue;
 
                 var windowTitle = process.MainWindowTitle;
-                if (string.IsNullOrWhiteSpace(windowTitle)) continue;
+                if (string.IsNullOrWhiteSpace(windowTitle))
+                {
+                    if (_ignored.Add(process.Id))
+                        Log.Debug($"Discarding {exeName} (pid {process.Id}): no window title");
+                    continue;
+                }
 
                 sessions.Insert(process.Id, exeName, windowTitle);
                 _seen.Add(process.Id);
@@ -124,7 +170,15 @@ sealed class ProcessWatcher(
         }
 
         _seen.IntersectWith(currentPids);
+        _ignored.IntersectWith(allPids);
+        
+        // Prevent path cache from growing infinitely if the user runs the agent for months
+        if (_pathCache.Count > 1000)
+        {
+            _pathCache.Clear();
+        }
     }
+
 
     public void Dispose() => Stop();
 }
