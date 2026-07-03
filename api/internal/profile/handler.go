@@ -75,7 +75,6 @@ type meResponse struct {
 func (h *Handler) getMe(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -114,7 +113,6 @@ const maxSearchResults = 8
 // endpoint; an empty or missing q returns no results.
 func (h *Handler) searchPlayers(w http.ResponseWriter, r *http.Request) {
 	if _, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool); !ok {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
 
@@ -178,7 +176,6 @@ func (h *Handler) getPlayer(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) followPlayer(w http.ResponseWriter, r *http.Request) {
 	callerID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 	target, ok := h.resolvePlayer(w, r)
@@ -210,7 +207,6 @@ func (h *Handler) followPlayer(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) unfollowPlayer(w http.ResponseWriter, r *http.Request) {
 	callerID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 	target, ok := h.resolvePlayer(w, r)
@@ -640,7 +636,6 @@ func buildProfileSummaryResponse(user db.User, followers, following int, isFollo
 func (h *Handler) getMeProfile(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 	user, err := db.GetUser(r.Context(), h.pool, userID)
@@ -686,7 +681,6 @@ func (h *Handler) writeProfileSummary(w http.ResponseWriter, r *http.Request, us
 func (h *Handler) patchMe(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -725,7 +719,6 @@ func (h *Handler) patchMe(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) putPreferences(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -750,7 +743,6 @@ func (h *Handler) putPreferences(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) deleteMe(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -773,7 +765,6 @@ func (h *Handler) deleteMe(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) deleteAvatar(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if err := db.UpdateAvatar(r.Context(), h.pool, userID, ""); err != nil {
@@ -801,7 +792,6 @@ func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) {
 
 	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
