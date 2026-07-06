@@ -1,1 +1,1 @@
-- Remove background processes from game detection
+- Fix background processes detection

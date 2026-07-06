@@ -96,6 +96,9 @@ sealed class ProcessWatcher(
             try
             {
                 allPids.Add(process.Id);
+                
+                if (process.SessionId == 0) continue;
+
                 var exePath = ProcessPath.TryGetExecutablePath(process.Id);
                 var exeName = exePath is not null ? Path.GetFileName(exePath) : process.ProcessName + ".exe";
 
@@ -143,7 +146,11 @@ sealed class ProcessWatcher(
                     continue;
                 }
 
-                if (process.MainWindowHandle == IntPtr.Zero)
+                var windowTitle = process.MainWindowTitle;
+
+                // We require both a window handle AND a non-empty window title.
+                // If it lacks either, it goes into the grace period.
+                if (process.MainWindowHandle == IntPtr.Zero || string.IsNullOrWhiteSpace(windowTitle))
                 {
                     if (!_pendingWindows.TryGetValue(process.Id, out var firstSeen))
                     {
@@ -154,33 +161,33 @@ sealed class ProcessWatcher(
                     if (DateTimeOffset.UtcNow - firstSeen > TimeSpan.FromSeconds(60))
                     {
                         _pendingWindows.Remove(process.Id);
-                        if (_ignored.Add(process.Id))
-                            Log.Debug($"Discarding {exeName} (pid {process.Id}): no window spawned after grace period");
+                        
+                        // If the user explicitly included this executable, we accept it even if it has no window title,
+                        // falling back to the executable name. Otherwise, we discard it.
+                        if (inclusions.Contains(exeName))
+                        {
+                            windowTitle = Path.GetFileNameWithoutExtension(exeName);
+                        }
+                        else
+                        {
+                            if (_ignored.Add(process.Id))
+                                Log.Debug($"Discarding {exeName} (pid {process.Id}): no window title spawned after grace period");
+                            continue;
+                        }
+                    }
+                    else
+                    {
                         continue;
                     }
-
-                    continue;
                 }
-
-                _pendingWindows.Remove(process.Id);
+                else
+                {
+                    _pendingWindows.Remove(process.Id);
+                }
 
                 currentPids.Add(process.Id);
 
                 if (_seen.Contains(process.Id)) continue;
-
-                var rawWindowTitle = process.MainWindowTitle;
-                var windowTitle = discordName;
-                if (string.IsNullOrWhiteSpace(windowTitle))
-                    windowTitle = rawWindowTitle;
-                if (string.IsNullOrWhiteSpace(windowTitle))
-                    windowTitle = Path.GetFileNameWithoutExtension(exeName);
-
-                if (string.IsNullOrWhiteSpace(windowTitle))
-                {
-                    if (_ignored.Add(process.Id))
-                        Log.Debug($"Discarding {exeName} (pid {process.Id}): no window title");
-                    continue;
-                }
 
                 sessions.Insert(process.Id, exeName, windowTitle);
                 _seen.Add(process.Id);
