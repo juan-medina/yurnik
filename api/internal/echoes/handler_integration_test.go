@@ -13,7 +13,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/juan-medina/yurnik/internal/auth"
 	"github.com/juan-medina/yurnik/internal/db"
@@ -42,7 +41,7 @@ func TestHandlerListEchoesWithHorizonRelease(t *testing.T) {
 		t.Fatalf("insert user: %v", err)
 	}
 
-	_, err = pool.Exec(ctx, "INSERT INTO igdb_games (igdb_id, name, slug, cover_url, genres) VALUES (999993, 'Test Game 3', 'test-game-3', '', '{}')")
+	_, err = pool.Exec(ctx, "INSERT INTO igdb_games (igdb_id, name, cover_url, genres) VALUES (999993, 'Test Game 3', '', '{}')")
 	if err != nil {
 		t.Fatalf("insert game: %v", err)
 	}
@@ -59,19 +58,17 @@ func TestHandlerListEchoesWithHorizonRelease(t *testing.T) {
 	}
 
 	// Make request
-	pub, priv, err := ed25519.GenerateKey(nil)
+	_, priv, err := ed25519.GenerateKey(nil)
 	if err != nil {
 		t.Fatalf("generate key: %v", err)
 	}
 	h := NewHandler(pool, priv)
 
-	token, _ := auth.CreateToken(priv, userID, time.Hour)
+	token, _ := auth.CreateSessionJWT(userID, priv)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/echoes", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
-
-	auth.SetJWTPublicKey(pub)
 
 	h.list(w, req)
 

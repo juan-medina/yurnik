@@ -208,7 +208,7 @@ jobs:
         run: make build-web
 
   deploy-api:
-    needs: [build-api, build-web, test-and-build-agent]
+    needs: [build-api, build-web, test-and-build-agent, build-maintenance]
     runs-on: ubuntu-latest
     steps:
       - name: Set up SSH
@@ -222,7 +222,7 @@ jobs:
         run: ssh -i ~/.ssh/deploy root@${{ vars.YURNI_SERVER_IP }} 'cd /opt/yurnik && git pull && make deploy-api'
 
   deploy-maintenance:
-    needs: [build-maintenance]
+    needs: [build-api, build-web, test-and-build-agent, build-maintenance]
     runs-on: ubuntu-latest
     steps:
       - name: Set up SSH
