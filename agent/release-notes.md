@@ -1,1 +1,1 @@
-- Added desktop notifications when a game in your Horizon is releasing soon
+- Remove background processes from game detection

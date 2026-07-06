@@ -39,6 +39,7 @@ sealed class ProcessWatcher(
     // SessionStore uses INSERT OR IGNORE, so this is an optimisation only.
     readonly HashSet<int> _seen = [];
     readonly HashSet<int> _ignored = [];
+    readonly Dictionary<int, DateTimeOffset> _pendingWindows = [];
     
     // Level 2 Cache: Path -> (LastWriteTime, IsGame)
     // Avoids re-parsing the PE file for non-game apps that restart.
@@ -76,6 +77,7 @@ sealed class ProcessWatcher(
             {
                 _shouldClearCaches = false;
                 _ignored.Clear();
+                _pendingWindows.Clear();
                 _pathCache.Clear();
                 Log.Debug("ProcessWatcher caches cleared due to settings sync");
             }
@@ -141,6 +143,27 @@ sealed class ProcessWatcher(
                     continue;
                 }
 
+                if (process.MainWindowHandle == IntPtr.Zero)
+                {
+                    if (!_pendingWindows.TryGetValue(process.Id, out var firstSeen))
+                    {
+                        _pendingWindows[process.Id] = DateTimeOffset.UtcNow;
+                        continue;
+                    }
+
+                    if (DateTimeOffset.UtcNow - firstSeen > TimeSpan.FromSeconds(60))
+                    {
+                        _pendingWindows.Remove(process.Id);
+                        if (_ignored.Add(process.Id))
+                            Log.Debug($"Discarding {exeName} (pid {process.Id}): no window spawned after grace period");
+                        continue;
+                    }
+
+                    continue;
+                }
+
+                _pendingWindows.Remove(process.Id);
+
                 currentPids.Add(process.Id);
 
                 if (_seen.Contains(process.Id)) continue;
@@ -196,6 +219,11 @@ sealed class ProcessWatcher(
 
         _seen.IntersectWith(currentPids);
         _ignored.IntersectWith(allPids);
+        
+        foreach (var p in _pendingWindows.Keys.Except(allPids).ToList())
+        {
+            _pendingWindows.Remove(p);
+        }
         
         // Prevent path cache from growing infinitely if the user runs the agent for months
         if (_pathCache.Count > 1000)
