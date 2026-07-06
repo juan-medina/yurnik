@@ -30,7 +30,7 @@ sealed class DetectableGamesCache : IDisposable
     readonly HttpClient _http = new();
     readonly CancellationTokenSource _cts = new();
 
-    HashSet<string> _exeNames = [];
+    Dictionary<string, string> _exeNames = [];
     Task? _refreshTask;
 
     public DetectableGamesCache(string cachePath)
@@ -39,7 +39,8 @@ sealed class DetectableGamesCache : IDisposable
         LoadFromDisk();
     }
 
-    public bool IsKnownGame(string exeName) => _exeNames.Contains(exeName.ToLowerInvariant());
+    public bool TryGetGameName(string exeName, out string? gameName) => 
+        _exeNames.TryGetValue(exeName.ToLowerInvariant(), out gameName);
 
     public void Start()
     {
@@ -119,13 +120,18 @@ sealed class DetectableGamesCache : IDisposable
         }
     }
 
-    internal static HashSet<string> ParseExeNames(string json)
+    internal static Dictionary<string, string> ParseExeNames(string json)
     {
-        var names = new HashSet<string>();
+        var names = new Dictionary<string, string>();
         using var doc = JsonDocument.Parse(json);
         foreach (var app in doc.RootElement.EnumerateArray())
         {
             if (!app.TryGetProperty("executables", out var executables)) continue;
+            
+            app.TryGetProperty("name", out var gameNameProp);
+            var gameName = gameNameProp.ValueKind == JsonValueKind.String ? gameNameProp.GetString() : null;
+            if (string.IsNullOrWhiteSpace(gameName)) continue;
+
             foreach (var exe in executables.EnumerateArray())
             {
                 if (!exe.TryGetProperty("name", out var nameProp)) continue;
@@ -134,7 +140,7 @@ sealed class DetectableGamesCache : IDisposable
 
                 var exeName = path.Replace('/', '\\').Split('\\')[^1];
                 if (!string.IsNullOrWhiteSpace(exeName))
-                    names.Add(exeName.ToLowerInvariant());
+                    names[exeName.ToLowerInvariant()] = gameName;
             }
         }
         return names;

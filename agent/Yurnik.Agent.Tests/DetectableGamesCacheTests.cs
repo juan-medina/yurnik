@@ -9,7 +9,7 @@ namespace Yurnik.Agent.Tests;
 public class DetectableGamesCacheTests
 {
     [Fact]
-    public void ParseExeNames_ExtractsLowercasedBasenames()
+    public void ParseExeNames_ExtractsLowercasedBasenamesAndGameNames()
     {
         const string json = """
             [
@@ -20,8 +20,11 @@ public class DetectableGamesCacheTests
 
         var names = DetectableGamesCache.ParseExeNames(json);
 
-        Assert.Contains("starfield.exe", names);
-        Assert.Contains("cs2.exe", names);
+        Assert.Contains("starfield.exe", (System.Collections.Generic.IDictionary<string, string>)names);
+        Assert.Equal("Starfield", names["starfield.exe"]);
+
+        Assert.Contains("cs2.exe", (System.Collections.Generic.IDictionary<string, string>)names);
+        Assert.Equal("Counter-Strike 2", names["cs2.exe"]);
     }
 
     [Fact]

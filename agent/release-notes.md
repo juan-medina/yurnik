@@ -1,5 +1,1 @@
-- Add support for custom executable inclusions, allowing you to force-detect specific games
-- Sync settings (inclusions and exclusions) automatically with the Yurnik cloud every hour
-- Add a manual "Sync settings" button directly to the system tray menu
-- Improve system tray menu layout for easier navigation
-- Fix a caching issue where newly added inclusions wouldn't trigger detection if previously ignored
+- Improve game title detection

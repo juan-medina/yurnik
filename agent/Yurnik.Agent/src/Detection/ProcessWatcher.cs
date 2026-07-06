@@ -104,9 +104,12 @@ sealed class ProcessWatcher(
                     continue;
                 }
 
-                var isKnownGame = inclusions.Contains(exeName)
-                    || detectableGames.IsKnownGame(exeName)
-                    || (exePath is not null && KnownGamePaths.IsKnownGamePath(exePath));
+                bool isKnownGame = inclusions.Contains(exeName);
+                bool inDiscord = detectableGames.TryGetGameName(exeName, out string? discordName);
+
+                if (inDiscord) isKnownGame = true;
+                if (!isKnownGame && exePath is not null && KnownGamePaths.IsKnownGamePath(exePath))
+                    isKnownGame = true;
 
                 // Level 2 Cache & PE Scan fallback
                 if (!isKnownGame && exePath is not null)
@@ -142,7 +145,13 @@ sealed class ProcessWatcher(
 
                 if (_seen.Contains(process.Id)) continue;
 
-                var windowTitle = process.MainWindowTitle;
+                var rawWindowTitle = process.MainWindowTitle;
+                var windowTitle = discordName;
+                if (string.IsNullOrWhiteSpace(windowTitle))
+                    windowTitle = rawWindowTitle;
+                if (string.IsNullOrWhiteSpace(windowTitle))
+                    windowTitle = Path.GetFileNameWithoutExtension(exeName);
+
                 if (string.IsNullOrWhiteSpace(windowTitle))
                 {
                     if (_ignored.Add(process.Id))
