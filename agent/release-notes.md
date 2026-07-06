@@ -1,1 +1,1 @@
-- Improve game title detection
+- Added desktop notifications when a game in your Horizon is releasing soon

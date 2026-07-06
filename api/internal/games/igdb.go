@@ -342,3 +342,62 @@ func (c *Client) Search(ctx context.Context, query string, offset int) ([]Game, 
 
 	return games, nil
 }
+
+// GetBatchReleaseDates fetches just the release dates for a batch of IGDB game IDs.
+// It returns a map of IGDB ID to release date (which may be nil if TBD).
+func (c *Client) GetBatchReleaseDates(ctx context.Context, igdbIDs []int) (map[int]*time.Time, error) {
+	if len(igdbIDs) == 0 {
+		return nil, nil
+	}
+	if err := c.limiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("igdb rate limit: %w", err)
+	}
+
+	tok, err := c.getToken(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var idStrings []string
+	for _, id := range igdbIDs {
+		idStrings = append(idStrings, fmt.Sprintf("%d", id))
+	}
+	joinedIDs := strings.Join(idStrings, ",")
+
+	body := fmt.Sprintf(`fields first_release_date; where id = (%s); limit 500;`, joinedIDs)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.igdb.com/v4/games", strings.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("build igdb batch request: %w", err)
+	}
+	req.Header.Set("Client-ID", c.clientID)
+	req.Header.Set("Authorization", "Bearer "+tok)
+	req.Header.Set("Content-Type", "text/plain")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("igdb batch details: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("igdb batch details %d: %s", resp.StatusCode, b)
+	}
+
+	var raw []igdbGame
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return nil, fmt.Errorf("decode igdb batch details: %w", err)
+	}
+
+	dates := make(map[int]*time.Time, len(raw))
+	for _, g := range raw {
+		if g.FirstReleaseDate != nil {
+			t := time.Unix(*g.FirstReleaseDate, 0).UTC()
+			dates[g.ID] = &t
+		} else {
+			dates[g.ID] = nil
+		}
+	}
+
+	return dates, nil
+}

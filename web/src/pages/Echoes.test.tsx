@@ -85,6 +85,13 @@ describe("Echoes", () => {
     expect(links[0]).toHaveAttribute("href", `/player/${firstFollower.actors[0].handle}`);
   });
 
+  it("horizon_release echo links to the game detail page", async () => {
+    renderEchoes();
+    const release = MOCK_ECHOES.find((e) => e.type === "horizon_release")!;
+    const links = await screen.findAllByRole("link", { name: /Elden Ring: Shadow of the Erdtree is releasing soon!/ });
+    expect(links[0]).toHaveAttribute("href", `/game/${release.subjectIgdbId}`);
+  });
+
   it("shows a Load more button when the API returns a next_cursor", async () => {
     vi.mocked(echoesService.getEchoes).mockResolvedValue({
       echoes: [...MOCK_ECHOES],

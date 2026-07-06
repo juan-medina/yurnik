@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { AtSign, MessageSquare, UserPlus } from "lucide-react";
+import { AtSign, MessageSquare, UserPlus, CalendarDays } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
@@ -27,7 +27,9 @@ function ActorAvatars({ actors }: { actors: Player[] }) {
 
 function EchoIcon({ type }: { type: Echo["type"] }) {
   const icon =
-    type === "new_mention" ? (
+    type === "horizon_release" ? (
+      <CalendarDays size={13} />
+    ) : type === "new_mention" ? (
       <AtSign size={13} />
     ) : type === "new_comment" || type === "new_comment_reply" ? (
       <MessageSquare size={13} />
@@ -54,16 +56,19 @@ function EchoRow({ echo }: { echo: Echo }) {
   const { t } = useTranslation();
   const [showActors, setShowActors] = useState(false);
 
+  const isReleaseEcho = echo.type === "horizon_release";
   const isCommentEcho = echo.type === "new_comment" || echo.type === "new_comment_reply";
   const isMentionEcho = echo.type === "new_mention";
   const linksToJourney = isCommentEcho || isMentionEcho;
   const isFollowerBatch = echo.type === "new_follower" && echo.actorCount > 1;
   const journeyDeleted = linksToJourney && echo.subjectId === null;
-  const to = linksToJourney
+  const to = isReleaseEcho
+    ? `/game/${echo.subjectIgdbId}`
+    : linksToJourney
     ? `/journey/${echo.subjectId}`
     : `/player/${echo.actors[0]?.handle}`;
 
-  const actorLabel = formatActors(echo.actors, echo.actorCount, t);
+  const actorLabel = isReleaseEcho ? "" : formatActors(echo.actors, echo.actorCount, t);
 
   const rowClass = `flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-accent/5 ${
     !echo.read ? "border-l-2 border-primary bg-primary/5" : "border-l-2 border-transparent"
@@ -72,10 +77,17 @@ function EchoRow({ echo }: { echo: Echo }) {
   const body = (
     <>
       <EchoIcon type={echo.type} />
-      <ActorAvatars actors={echo.actors} />
+      {!isReleaseEcho && <ActorAvatars actors={echo.actors} />}
       <div className="min-w-0 flex-1">
         <p className="text-sm">
-          <span className="font-semibold">{actorLabel}</span>
+          {isReleaseEcho ? (
+            <>
+              <span className="font-semibold">{echo.subjectTitle}</span>{" "}
+              {t("echoes_releasing_soon")}
+            </>
+          ) : (
+            <span className="font-semibold">{actorLabel} </span>
+          )}
           {isMentionEcho ? (
             <>
               {t("echoes_mentioned")}
@@ -98,9 +110,9 @@ function EchoRow({ echo }: { echo: Echo }) {
                 </span>
               )}
             </>
-          ) : (
+          ) : !isReleaseEcho ? (
             <>{t("echoes_followed")}</>
-          )}
+          ) : null}
         </p>
       </div>
       <span className="shrink-0 text-xs text-muted-foreground">

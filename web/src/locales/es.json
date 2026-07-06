@@ -195,8 +195,9 @@
   "echoes_commented_suffix": "",
   "echoes_replied": " también ha comentado en ",
   "echoes_replied_suffix": "",
-  "echoes_mentioned": " te ha mencionado en un comentario en ",
+  "echoes_mentioned": " te mencionó en un comentario en ",
   "echoes_mentioned_suffix": "",
+  "echoes_releasing_soon": " ¡se lanzará pronto!",
   "echoes_followed": " ha empezado a seguirte",
   "echoes_removed": "eliminada",
   "echoes_empty_all": "Aún no hay ecos.",
@@ -330,8 +331,8 @@
   "settings_notifications": "Notificaciones",
   "settings_updates_notifications": "Actualizaciones de la App",
   "settings_updates_notifications_desc": "Recibe una notificación cuando haya una nueva versión del Agent disponible.",
-  "settings_echoes_notifications": "Actividad (Ecos)",
-  "settings_echoes_notifications_desc": "Recibe notificaciones cuando alguien te siga o comente en tus viajes.",
+  "settings_echoes_notifications": "Ecos",
+  "settings_echoes_notifications_desc": "Recibe notificaciones de escritorio para tus ecos.",
   "settings_danger_zone": "Zona de peligro",
   "settings_delete_account": "Eliminar cuenta",
   "settings_delete_account_desc": "Elimina permanentemente tu cuenta y todos tus datos: travesías, comentarios, seguidores y tu lista de horizonte. Esta acción no se puede deshacer.",
@@ -399,6 +400,11 @@
 
   "whats_new_title": "Novedades",
   "whats_new_entries": [
+    {
+      "date": "2026-07-06",
+      "title": "Entérate cuando tus juegos estén por salir",
+      "body": "Ahora recibirás una notificación de escritorio y una actualización en tu feed de actividad cuando un juego de tu lista Horizonte vaya a lanzarse pronto."
+    },
     {
       "date": "2026-07-03",
       "title": "Inclusión de juegos personalizados y sincronización de configuración",

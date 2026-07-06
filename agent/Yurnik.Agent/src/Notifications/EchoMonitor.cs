@@ -109,6 +109,11 @@ sealed class EchoMonitor : IDisposable
                         ? $"{echo.ActorCount} people mentioned you in \"{echo.SubjectTitle}\""
                         : $"Someone mentioned you in \"{echo.SubjectTitle}\"";
                 }
+                else if (echo.Type == "horizon_release")
+                {
+                    title = "Releasing soon";
+                    text = $"\"{echo.SubjectTitle}\" is releasing soon!";
+                }
                 else
                 {
                     title = "New activity";

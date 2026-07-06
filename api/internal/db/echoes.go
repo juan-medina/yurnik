@@ -46,15 +46,16 @@ type EchoActor struct {
 
 // EchoRow is a batched notification row with its actors resolved.
 type EchoRow struct {
-	ID           int64
-	Type         string
-	SubjectID    *string
-	SubjectTitle *string
-	Unread       bool
-	ActorCount   int
-	Actors       []EchoActor
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID            int64
+	Type          string
+	SubjectID     *string
+	SubjectIgdbID *int
+	SubjectTitle  *string
+	Unread        bool
+	ActorCount    int
+	Actors        []EchoActor
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // JourneyMeta holds the owner and game name for a journey — used when creating comment echoes.
@@ -184,6 +185,7 @@ func ListEchoes(ctx context.Context, pool *pgxpool.Pool, userID string, limit in
 			e.id,
 			e.type,
 			e.subject_id,
+			e.subject_igdb_id,
 			e.subject_title,
 			e.seen_at IS NULL AS unread,
 			e.created_at,
@@ -237,7 +239,7 @@ func ListEchoes(ctx context.Context, pool *pgxpool.Pool, userID string, limit in
 		var e EchoRow
 		var actorsJSON []byte
 		if err := rows.Scan(
-			&e.ID, &e.Type, &e.SubjectID, &e.SubjectTitle,
+			&e.ID, &e.Type, &e.SubjectID, &e.SubjectIgdbID, &e.SubjectTitle,
 			&e.Unread, &e.CreatedAt, &e.UpdatedAt,
 			&e.ActorCount, &actorsJSON,
 		); err != nil {

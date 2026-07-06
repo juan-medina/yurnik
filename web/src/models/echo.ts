@@ -3,7 +3,7 @@
 
 import type { Player } from "./player";
 
-export type EchoType = "new_comment" | "new_comment_reply" | "new_follower" | "new_mention";
+export type EchoType = "new_comment" | "new_comment_reply" | "new_follower" | "new_mention" | "horizon_release";
 
 export type Echo = {
   id: string;
@@ -11,6 +11,7 @@ export type Echo = {
   actors: Player[];
   actorCount: number;
   subjectId: string | null;
+  subjectIgdbId: number | null;
   subjectTitle: string | null;
   read: boolean;
   createdAt: Date;

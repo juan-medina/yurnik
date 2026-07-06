@@ -19,6 +19,7 @@ type RawEcho = {
   actors: RawActor[];
   actor_count: number;
   subject_id: string | null;
+  subject_igdb_id: number | null;
   subject_title: string | null;
   read: boolean;
   created_at: string;
@@ -43,6 +44,7 @@ export async function getEchoes(cursor?: string): Promise<{ echoes: Echo[]; next
         actors: (r.actors ?? []).map(rawToPlayer),
         actorCount: r.actor_count,
         subjectId: r.subject_id ?? null,
+        subjectIgdbId: r.subject_igdb_id ?? null,
         subjectTitle: r.subject_title ?? null,
         read: r.read,
         createdAt: new Date(r.created_at),

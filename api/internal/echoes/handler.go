@@ -42,15 +42,16 @@ type actorResp struct {
 }
 
 type echoResp struct {
-	ID           int64       `json:"id"`
-	Type         string      `json:"type"`
-	Actors       []actorResp `json:"actors"`
-	ActorCount   int         `json:"actor_count"`
-	SubjectID    *string     `json:"subject_id"`
-	SubjectTitle *string     `json:"subject_title"`
-	Read         bool        `json:"read"`
-	CreatedAt    string      `json:"created_at"`
-	UpdatedAt    string      `json:"updated_at"`
+	ID            int64       `json:"id"`
+	Type          string      `json:"type"`
+	Actors        []actorResp `json:"actors"`
+	ActorCount    int         `json:"actor_count"`
+	SubjectID     *string     `json:"subject_id"`
+	SubjectIgdbID *int        `json:"subject_igdb_id"`
+	SubjectTitle  *string     `json:"subject_title"`
+	Read          bool        `json:"read"`
+	CreatedAt     string      `json:"created_at"`
+	UpdatedAt     string      `json:"updated_at"`
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
@@ -90,15 +91,16 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 		er := echoResp{
-			ID:           e.ID,
-			Type:         e.Type,
-			Actors:       actors,
-			ActorCount:   e.ActorCount,
-			SubjectID:    e.SubjectID,
-			SubjectTitle: e.SubjectTitle,
-			Read:         !e.Unread,
-			CreatedAt:    e.CreatedAt.UTC().Format(time.RFC3339),
-			UpdatedAt:    e.UpdatedAt.UTC().Format(time.RFC3339),
+			ID:            e.ID,
+			Type:          e.Type,
+			Actors:        actors,
+			ActorCount:    e.ActorCount,
+			SubjectID:     e.SubjectID,
+			SubjectIgdbID: e.SubjectIgdbID,
+			SubjectTitle:  e.SubjectTitle,
+			Read:          !e.Unread,
+			CreatedAt:     e.CreatedAt.UTC().Format(time.RFC3339),
+			UpdatedAt:     e.UpdatedAt.UTC().Format(time.RFC3339),
 		}
 		resp = append(resp, er)
 		if e.Unread {

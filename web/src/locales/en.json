@@ -198,6 +198,7 @@
   "echoes_replied_suffix": "",
   "echoes_mentioned": " mentioned you in a comment on ",
   "echoes_mentioned_suffix": "",
+  "echoes_releasing_soon": " is releasing soon!",
   "echoes_followed": " started following you",
   "echoes_removed": "removed",
   "echoes_empty_all": "No echoes yet.",
@@ -340,8 +341,8 @@
   "settings_notifications": "Notifications",
   "settings_updates_notifications": "App Updates",
   "settings_updates_notifications_desc": "Get notified when a new version of the Agent is available to install.",
-  "settings_echoes_notifications": "Activity Echoes",
-  "settings_echoes_notifications_desc": "Get notified when someone follows you or comments on your journeys.",
+  "settings_echoes_notifications": "Echoes",
+  "settings_echoes_notifications_desc": "Get desktop notifications for your echoes.",
   "settings_desktop_notifications_denied": "Notifications are blocked in your browser settings.",
 
   "settings_danger_zone": "Danger zone",
@@ -411,6 +412,11 @@
 
   "whats_new_title": "What's New",
   "whats_new_entries": [
+    {
+      "date": "2026-07-06",
+      "title": "Get notified when games are releasing soon",
+      "body": "You'll now receive a desktop notification and an activity feed update when a game in your Horizon list is releasing soon."
+    },
     {
       "date": "2026-07-03",
       "title": "Custom Game Inclusions & Settings Sync",
