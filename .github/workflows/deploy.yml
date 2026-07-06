@@ -219,10 +219,10 @@ jobs:
           ssh-keyscan -H ${{ vars.YURNI_SERVER_IP }} >> ~/.ssh/known_hosts
 
       - name: Deploy
-        run: ssh -i ~/.ssh/deploy root@${{ vars.YURNI_SERVER_IP }} 'cd /opt/yurnik && git pull && make deploy-api'
+        run: ssh -i ~/.ssh/deploy root@${{ vars.YURNI_SERVER_IP }} 'cd /opt/yurnik && git fetch && git reset --hard origin/main && make deploy-api'
 
   deploy-maintenance:
-    needs: [build-api, build-web, test-and-build-agent, build-maintenance]
+    needs: [deploy-api, build-maintenance]
     runs-on: ubuntu-latest
     steps:
       - name: Set up SSH
@@ -233,7 +233,7 @@ jobs:
           ssh-keyscan -H ${{ vars.YURNI_SERVER_IP }} >> ~/.ssh/known_hosts
 
       - name: Deploy
-        run: ssh -i ~/.ssh/deploy root@${{ vars.YURNI_SERVER_IP }} 'cd /opt/yurnik && git pull && make deploy-maintenance'
+        run: ssh -i ~/.ssh/deploy root@${{ vars.YURNI_SERVER_IP }} 'cd /opt/yurnik && git fetch && git reset --hard origin/main && make deploy-maintenance'
 
   deploy-web:
     needs: [deploy-api]

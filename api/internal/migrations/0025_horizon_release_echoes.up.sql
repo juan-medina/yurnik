@@ -5,7 +5,7 @@ ALTER TABLE echoes ADD COLUMN subject_igdb_id integer REFERENCES igdb_games(igdb
 ALTER TABLE echoes DROP CONSTRAINT echoes_type_check;
 
 -- 3. Recreate the CHECK constraint to allow the new horizon_release type
-ALTER TABLE echoes ADD CONSTRAINT echoes_type_check CHECK (type IN ('new_comment', 'new_follower', 'new_like', 'horizon_release'));
+ALTER TABLE echoes ADD CONSTRAINT echoes_type_check CHECK (type IN ('new_comment', 'new_follower', 'new_comment_reply', 'new_mention', 'horizon_release'));
 
 -- 4. Add the unique index to prevent duplicate release notifications per game per user
 -- This also perfectly covers the NOT EXISTS subquery check for fast lookups.
