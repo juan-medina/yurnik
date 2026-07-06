@@ -11,6 +11,7 @@
 //
 //	go run ./cmd/migrate up        # apply all pending migrations (default)
 //	go run ./cmd/migrate version   # print the current schema version
+//	go run ./cmd/migrate force 24  # force database to version 24
 package main
 
 import (
@@ -18,6 +19,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -49,8 +51,20 @@ func main() {
 			log.Fatalf("migrate version: %v", err)
 		}
 		fmt.Printf("version=%d dirty=%t\n", version, dirty)
+	case "force":
+		if len(os.Args) < 3 {
+			log.Fatalf("migrate force: missing version argument")
+		}
+		v, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			log.Fatalf("migrate force: invalid version %q", os.Args[2])
+		}
+		if err := m.Force(v); err != nil {
+			log.Fatalf("migrate force: %v", err)
+		}
+		fmt.Printf("migrate: forced version to %d\n", v)
 	default:
-		log.Fatalf("migrate: unknown command %q (want \"up\" or \"version\")", cmd)
+		log.Fatalf("migrate: unknown command %q (want \"up\", \"version\", or \"force\")", cmd)
 	}
 }
 

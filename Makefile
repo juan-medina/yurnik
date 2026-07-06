@@ -1,4 +1,4 @@
-.PHONY: run-api run-maintenance run-agent run-web test test-api test-maintenance test-agent test-web test-integration test-integration-api test-integration-maintenance build build-api build-maintenance build-web build-agent deploy-api deploy-maintenance deploy-web release-agent gen-keys export-user lint setup db-init db-migrate db-start db-stop
+.PHONY: run-api run-maintenance run-agent run-web test test-api test-maintenance test-agent test-web test-integration test-integration-api test-integration-maintenance build build-api build-maintenance build-web build-agent deploy-api deploy-maintenance deploy-web release-agent gen-keys export-user lint setup db-init db-migrate db-force db-start db-stop
 
 ifeq ($(OS),Windows_NT)
 PLATFORM := windows
@@ -119,6 +119,13 @@ ifeq ($(PLATFORM),windows)
 	powershell -ExecutionPolicy Bypass -File scripts/db-migrate.ps1
 else
 	bash scripts/db-migrate.sh
+endif
+
+db-force:
+ifeq ($(PLATFORM),windows)
+	powershell -ExecutionPolicy Bypass -File scripts/db-force.ps1 $(VERSION)
+else
+	bash scripts/db-force.sh $(VERSION)
 endif
 
 db-start:
