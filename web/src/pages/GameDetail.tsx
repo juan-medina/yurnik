@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { ChevronLeft, Check, UserPlus, ExternalLink, Monitor, Gamepad2, Smartphone, Telescope } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, UserPlus, ExternalLink, Monitor, Gamepad2, Smartphone, Telescope } from "lucide-react";
 import { siPlaystation, siSteam, siAndroid, siApple, siLinux } from "simple-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -320,13 +320,49 @@ export default function GameDetail() {
   const { igdbId } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  
+  // Drag to scroll state
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragScrollLeft, setDragScrollLeft] = useState(0);
+  const [dragged, setDragged] = useState(false);
+
+  const scrollCarousel = (direction: 'left' | 'right') => {
+    if (carouselRef.current) {
+      const scrollAmount = direction === 'left' ? -300 : 300;
+      carouselRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!carouselRef.current) return;
+    setIsDragging(true);
+    setDragged(false);
+    setDragStartX(e.pageX - carouselRef.current.offsetLeft);
+    setDragScrollLeft(carouselRef.current.scrollLeft);
+  };
+
+  const handleMouseLeave = () => setIsDragging(false);
+  const handleMouseUp = () => setIsDragging(false);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !carouselRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - carouselRef.current.offsetLeft;
+    const walk = (x - dragStartX) * 2;
+    if (Math.abs(walk) > 5) setDragged(true);
+    carouselRef.current.scrollLeft = dragScrollLeft - walk;
+  };
 
   const { data: game, isPending, isFetched } = useQuery({
     queryKey: ["game", igdbId],
     queryFn: () => getGameDetail(igdbId!),
     enabled: !!igdbId,
   });
+
+
 
   usePageTitle(game?.name);
 
@@ -451,21 +487,60 @@ export default function GameDetail() {
 
             {/* Screenshots */}
             {game.screenshots.length > 0 && (
-              <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-                {game.screenshots.slice(0, 3).map((url, i) => (
+              <div className="relative mt-4 group">
+                {game.screenshots.length > 3 && (
                   <button
-                    key={i}
-                    onClick={() => setLightboxUrl(url)}
-                    aria-label={`View screenshot ${i + 1}`}
-                    className="shrink-0 overflow-hidden rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); scrollCarousel('left'); }}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 hidden h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:flex group-hover:opacity-100 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-primary"
+                    aria-label="Scroll left"
                   >
-                    <img
-                      src={url}
-                      alt={`${game.name} screenshot ${i + 1}`}
-                      className="h-28 w-auto object-cover transition-opacity hover:opacity-80"
-                    />
+                    <ChevronLeft size={20} />
                   </button>
-                ))}
+                )}
+
+                <div 
+                  ref={carouselRef}
+                  onMouseDown={handleMouseDown}
+                  onMouseLeave={handleMouseLeave}
+                  onMouseUp={handleMouseUp}
+                  onMouseMove={handleMouseMove}
+                  className={`flex gap-2 overflow-x-auto pb-1 scrollbar-hide select-none ${isDragging ? 'cursor-grabbing snap-none' : 'cursor-grab snap-x snap-mandatory'}`}
+                >
+                  {game.screenshots.map((url, i) => (
+                    <button
+                      key={i}
+                      onClick={(e) => {
+                        if (dragged) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          return;
+                        }
+                        setLightboxIndex(i);
+                      }}
+                      aria-label={`View screenshot ${i + 1}`}
+                      className="shrink-0 overflow-hidden rounded-md focus:outline-none focus:ring-2 focus:ring-primary snap-start"
+                    >
+                      <img
+                        src={url}
+                        alt={`${game.name} screenshot ${i + 1}`}
+                        draggable={false}
+                        className="h-28 w-auto object-cover transition-opacity hover:opacity-80"
+                      />
+                    </button>
+                  ))}
+                </div>
+
+                {game.screenshots.length > 3 && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); scrollCarousel('right'); }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 hidden h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:flex group-hover:opacity-100 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-primary"
+                    aria-label="Scroll right"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                )}
               </div>
             )}
 
@@ -576,19 +651,45 @@ export default function GameDetail() {
       <div className="h-8" />
 
       {/* Lightbox */}
-      {lightboxUrl && (
+      {lightboxIndex !== null && game && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-          onClick={() => setLightboxUrl(null)}
+          onClick={() => setLightboxIndex(null)}
           role="dialog"
           aria-label="Screenshot preview"
         >
+          {game.screenshots.length > 1 && (
+            <button
+              className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/75 focus:outline-none focus:ring-2 focus:ring-primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((prev) => prev === null ? null : (prev === 0 ? game.screenshots.length - 1 : prev - 1));
+              }}
+              aria-label="Previous screenshot"
+            >
+              <ChevronLeft size={32} />
+            </button>
+          )}
+
           <img
-            src={lightboxUrl}
+            src={game.screenshots[lightboxIndex]}
             alt="Screenshot"
             className="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
+
+          {game.screenshots.length > 1 && (
+            <button
+              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/75 focus:outline-none focus:ring-2 focus:ring-primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((prev) => prev === null ? null : (prev === game.screenshots.length - 1 ? 0 : prev + 1));
+              }}
+              aria-label="Next screenshot"
+            >
+              <ChevronRight size={32} />
+            </button>
+          )}
         </div>
       )}
     </div>
