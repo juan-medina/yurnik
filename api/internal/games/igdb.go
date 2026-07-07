@@ -109,7 +109,7 @@ type GameDetails struct {
 	Platforms        []string
 	Developer        *string
 	Publisher        *string
-	TrailerID        *string
+	Videos           []string
 	StoreLinks       map[string]string // key: "steam"|"epic"|"playstation"|"xbox"|"gog", value: URL
 	AggregatedRating *float64          // external critics, 0–100
 	Rating           *float64          // IGDB community, 0–100
@@ -203,8 +203,8 @@ func (c *Client) GetDetails(ctx context.Context, igdbID int) (GameDetails, error
 			d.Publisher = &name
 		}
 	}
-	if len(g.Videos) > 0 {
-		d.TrailerID = &g.Videos[0].VideoID
+	for _, v := range g.Videos {
+		d.Videos = append(d.Videos, v.VideoID)
 	}
 	d.AggregatedRating = g.AggregatedRating
 	d.Rating = g.Rating

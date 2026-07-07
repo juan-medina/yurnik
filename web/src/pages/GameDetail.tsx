@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { ChevronLeft, ChevronRight, Check, UserPlus, ExternalLink, Monitor, Gamepad2, Smartphone, Telescope, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, UserPlus, ExternalLink, Monitor, Gamepad2, Smartphone, Telescope, X, Play } from "lucide-react";
 import { siPlaystation, siSteam, siAndroid, siApple, siLinux } from "simple-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -321,6 +321,7 @@ export default function GameDetail() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [mediaFilter, setMediaFilter] = useState<'all' | 'video' | 'image'>('all');
   const carouselRef = useRef<HTMLDivElement>(null);
   
   // Drag to scroll state
@@ -362,7 +363,22 @@ export default function GameDetail() {
     enabled: !!igdbId,
   });
 
+  const media = useMemo(() => {
+    if (!game) return [];
+    const items: { type: 'video' | 'image', url: string, id?: string }[] = [];
+    if (game.videos) {
+      game.videos.forEach(videoId => {
+        items.push({ type: 'video', url: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`, id: videoId });
+      });
+    }
+    game.screenshots.forEach(url => items.push({ type: 'image', url }));
+    return items;
+  }, [game]);
 
+  const filteredMedia = useMemo(() => {
+    if (mediaFilter === 'all') return media;
+    return media.filter(m => m.type === mediaFilter);
+  }, [media, mediaFilter]);
 
   usePageTitle(game?.name);
 
@@ -485,29 +501,48 @@ export default function GameDetail() {
               <p className="mt-4 text-sm leading-relaxed text-foreground/80">{game.summary}</p>
             )}
 
-            {/* Screenshots */}
-            {game.screenshots.length > 0 && (
-              <div className="relative mt-4 group">
-                {game.screenshots.length > 3 && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.preventDefault(); scrollCarousel('left'); }}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 hidden h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:flex group-hover:opacity-100 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-primary"
-                    aria-label="Scroll left"
-                  >
-                    <ChevronLeft size={20} />
-                  </button>
+            {/* Media Carousel */}
+            {media.length > 0 && (
+              <div className="mt-4">
+                {media.some(m => m.type === 'video') && media.some(m => m.type === 'image') && (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {(['all', 'video', 'image'] as const).map(filterType => (
+                      <button
+                        key={filterType}
+                        type="button"
+                        onClick={() => setMediaFilter(filterType)}
+                        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                          mediaFilter === filterType
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground'
+                        }`}
+                      >
+                        {filterType === 'all' ? 'All Media' : filterType === 'video' ? 'Videos' : 'Images'}
+                      </button>
+                    ))}
+                  </div>
                 )}
+                <div className="relative group">
+                  {filteredMedia.length > 3 && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); scrollCarousel('left'); }}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 z-10 hidden h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:flex group-hover:opacity-100 hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-primary"
+                      aria-label="Scroll left"
+                    >
+                      <ChevronLeft size={20} />
+                    </button>
+                  )}
 
-                <div 
-                  ref={carouselRef}
-                  onMouseDown={handleMouseDown}
-                  onMouseLeave={handleMouseLeave}
-                  onMouseUp={handleMouseUp}
-                  onMouseMove={handleMouseMove}
-                  className={`flex gap-2 overflow-x-auto pb-1 scrollbar-hide select-none ${isDragging ? 'cursor-grabbing snap-none' : 'cursor-grab snap-x snap-mandatory'}`}
-                >
-                  {game.screenshots.map((url, i) => (
+                  <div 
+                    ref={carouselRef}
+                    onMouseDown={handleMouseDown}
+                    onMouseLeave={handleMouseLeave}
+                    onMouseUp={handleMouseUp}
+                    onMouseMove={handleMouseMove}
+                    className={`flex gap-2 overflow-x-auto pb-1 scrollbar-hide select-none ${isDragging ? 'cursor-grabbing snap-none' : 'cursor-grab snap-x snap-mandatory'}`}
+                  >
+                    {filteredMedia.map((item, i) => (
                     <button
                       key={i}
                       onClick={(e) => {
@@ -518,20 +553,27 @@ export default function GameDetail() {
                         }
                         setLightboxIndex(i);
                       }}
-                      aria-label={`View screenshot ${i + 1}`}
-                      className="shrink-0 overflow-hidden rounded-md focus:outline-none focus:ring-2 focus:ring-primary snap-start"
+                      aria-label={item.type === 'video' ? `Play video` : `View media ${i + 1}`}
+                      className="shrink-0 overflow-hidden rounded-md focus:outline-none focus:ring-2 focus:ring-primary snap-start relative h-28 w-auto"
                     >
                       <img
-                        src={url}
-                        alt={`${game.name} screenshot ${i + 1}`}
+                        src={item.url}
+                        alt={`${game.name} media ${i + 1}`}
                         draggable={false}
-                        className="h-28 w-auto object-cover transition-opacity hover:opacity-80"
+                        className="h-full w-auto object-cover transition-opacity hover:opacity-80"
                       />
+                      {item.type === 'video' && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="rounded-full bg-black/60 p-2 text-white shadow-lg">
+                            <Play size={24} fill="currentColor" className="ml-1" />
+                          </div>
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
 
-                {game.screenshots.length > 3 && (
+                {filteredMedia.length > 3 && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); scrollCarousel('right'); }}
@@ -542,22 +584,12 @@ export default function GameDetail() {
                   </button>
                 )}
               </div>
+            </div>
             )}
 
             {/* Links */}
             <div className="mt-4 flex flex-wrap gap-2">
               <AddToHorizonButton game={game} />
-              {game.trailerId && (
-                <a
-                  href={`https://www.youtube.com/watch?v=${game.trailerId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent"
-                >
-                  Watch trailer
-                  <ExternalLink size={11} />
-                </a>
-              )}
               {STORE_LABELS.filter(({ key }) => game.storeLinks[key]).map(({ key, label, color, bg, icon }) => (
                 <a
                   key={key}
@@ -665,34 +697,44 @@ export default function GameDetail() {
           >
             <X size={24} />
           </button>
-          {game.screenshots.length > 1 && (
+          {filteredMedia.length > 1 && (
             <button
               className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/75 focus:outline-none focus:ring-2 focus:ring-primary"
               onClick={(e) => {
                 e.stopPropagation();
-                setLightboxIndex((prev) => prev === null ? null : (prev === 0 ? game.screenshots.length - 1 : prev - 1));
+                setLightboxIndex((prev) => prev === null ? null : (prev === 0 ? filteredMedia.length - 1 : prev - 1));
               }}
-              aria-label="Previous screenshot"
+              aria-label="Previous media"
             >
               <ChevronLeft size={32} />
             </button>
           )}
 
-          <img
-            src={game.screenshots[lightboxIndex]}
-            alt="Screenshot"
-            className="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
+          {filteredMedia[lightboxIndex].type === 'video' ? (
+            <iframe
+              className="w-full max-w-4xl aspect-video rounded-lg shadow-2xl"
+              src={`https://www.youtube.com/embed/${filteredMedia[lightboxIndex].id}?autoplay=1`}
+              allow="autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={filteredMedia[lightboxIndex].url}
+              alt="Screenshot"
+              className="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
 
-          {game.screenshots.length > 1 && (
+          {filteredMedia.length > 1 && (
             <button
               className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/75 focus:outline-none focus:ring-2 focus:ring-primary"
               onClick={(e) => {
                 e.stopPropagation();
-                setLightboxIndex((prev) => prev === null ? null : (prev === game.screenshots.length - 1 ? 0 : prev + 1));
+                setLightboxIndex((prev) => prev === null ? null : (prev === filteredMedia.length - 1 ? 0 : prev + 1));
               }}
-              aria-label="Next screenshot"
+              aria-label="Next media"
             >
               <ChevronRight size={32} />
             </button>

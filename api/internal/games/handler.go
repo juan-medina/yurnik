@@ -85,7 +85,7 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 				Platforms:        fetched.Platforms,
 				Developer:        fetched.Developer,
 				Publisher:        fetched.Publisher,
-				TrailerID:        fetched.TrailerID,
+				Videos:           fetched.Videos,
 				StoreLinks:       fetched.StoreLinks,
 				AggregatedRating: fetched.AggregatedRating,
 				Rating:           fetched.Rating,
@@ -139,7 +139,7 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 		Platforms        []string          `json:"platforms"`
 		Developer        *string           `json:"developer,omitempty"`
 		Publisher        *string           `json:"publisher,omitempty"`
-		TrailerID        *string           `json:"trailer_id,omitempty"`
+		Videos           []string          `json:"videos"`
 		StoreLinks       map[string]string `json:"store_links,omitempty"`
 		AggregatedRating *float64          `json:"aggregated_rating,omitempty"`
 		Rating           *float64          `json:"rating,omitempty"`
@@ -185,7 +185,7 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 		Platforms:        platforms,
 		Developer:        detail.Developer,
 		Publisher:        detail.Publisher,
-		TrailerID:        detail.TrailerID,
+		Videos:           detail.Videos,
 		StoreLinks:       detail.StoreLinks,
 		AggregatedRating: detail.AggregatedRating,
 		Rating:           detail.Rating,

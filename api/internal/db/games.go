@@ -56,7 +56,7 @@ type CachedGameDetail struct {
 	Platforms        []string
 	Developer        *string
 	Publisher        *string
-	TrailerID        *string
+	Videos           []string
 	StoreLinks       map[string]string // key: "steam"|"epic"|"playstation"|"xbox"|"gog"|"nintendo"
 	AggregatedRating *float64          // external critics, 0–100; nil when not available
 	Rating           *float64          // IGDB community, 0–100; nil when not available
@@ -71,13 +71,13 @@ func GetGameDetail(ctx context.Context, pool *pgxpool.Pool, igdbID int) (CachedG
 	var storeLinksJSON []byte
 	var slug *string
 	err := pool.QueryRow(ctx, `
-		SELECT igdb_id, slug, summary, screenshots, platforms, developer, publisher, trailer_id, store_links,
+		SELECT igdb_id, slug, summary, screenshots, platforms, developer, publisher, videos, store_links,
 		       aggregated_rating, rating, cached_at
 		FROM igdb_game_details
 		WHERE igdb_id = $1
 	`, igdbID).Scan(
 		&d.IGDBID, &slug, &d.Summary, &d.Screenshots, &d.Platforms,
-		&d.Developer, &d.Publisher, &d.TrailerID, &storeLinksJSON,
+		&d.Developer, &d.Publisher, &d.Videos, &storeLinksJSON,
 		&d.AggregatedRating, &d.Rating, &d.CachedAt,
 	)
 	if err == pgx.ErrNoRows {
@@ -102,7 +102,7 @@ func UpsertGameDetail(ctx context.Context, pool *pgxpool.Pool, d CachedGameDetai
 		return fmt.Errorf("marshal store_links: %w", err)
 	}
 	_, err = pool.Exec(ctx, `
-		INSERT INTO igdb_game_details (igdb_id, slug, summary, screenshots, platforms, developer, publisher, trailer_id, store_links, aggregated_rating, rating, cached_at)
+		INSERT INTO igdb_game_details (igdb_id, slug, summary, screenshots, platforms, developer, publisher, videos, store_links, aggregated_rating, rating, cached_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())
 		ON CONFLICT (igdb_id) DO UPDATE
 		  SET slug              = EXCLUDED.slug,
@@ -111,12 +111,12 @@ func UpsertGameDetail(ctx context.Context, pool *pgxpool.Pool, d CachedGameDetai
 		      platforms         = EXCLUDED.platforms,
 		      developer         = EXCLUDED.developer,
 		      publisher         = EXCLUDED.publisher,
-		      trailer_id        = EXCLUDED.trailer_id,
+		      videos            = EXCLUDED.videos,
 		      store_links       = EXCLUDED.store_links,
 		      aggregated_rating = EXCLUDED.aggregated_rating,
 		      rating            = EXCLUDED.rating,
 		      cached_at         = now()
-	`, d.IGDBID, d.Slug, d.Summary, d.Screenshots, d.Platforms, d.Developer, d.Publisher, d.TrailerID, storeLinksJSON, d.AggregatedRating, d.Rating)
+	`, d.IGDBID, d.Slug, d.Summary, d.Screenshots, d.Platforms, d.Developer, d.Publisher, d.Videos, storeLinksJSON, d.AggregatedRating, d.Rating)
 	return err
 }
 

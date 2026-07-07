@@ -29,7 +29,7 @@ export async function getGameDetail(igdbId: string): Promise<GameDetail | undefi
     release_date?: string;
     igdb_slug?: string;
     platforms: string[]; developer?: string; publisher?: string; summary?: string;
-    screenshots: string[]; trailer_id?: string; store_links?: Record<string, string>;
+    screenshots: string[]; videos?: string[]; store_links?: Record<string, string>;
     aggregated_rating?: number; rating?: number; in_horizon?: boolean;
   } = await resp.json();
   return {
@@ -45,7 +45,7 @@ export async function getGameDetail(igdbId: string): Promise<GameDetail | undefi
     publisher: g.publisher,
     summary: g.summary,
     screenshots: g.screenshots ?? [],
-    trailerId: g.trailer_id,
+    videos: g.videos ?? [],
     storeLinks: g.store_links ?? {},
     aggregatedRating: g.aggregated_rating,
     rating: g.rating,

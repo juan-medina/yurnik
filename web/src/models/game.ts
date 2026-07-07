@@ -25,7 +25,7 @@ export type GameDetail = {
   publisher?: string;
   summary?: string;
   screenshots: string[];
-  trailerId?: string;
+  videos?: string[];
   storeLinks: Record<string, string>;
   aggregatedRating?: number;
   rating?: number;

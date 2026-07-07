@@ -22,7 +22,7 @@ function gameDetailResponse(withTrailer: boolean, withStoreLinks: boolean, inHor
     publisher: MOCK_GAME_DETAIL.publisher,
     summary: MOCK_GAME_DETAIL.summary,
     screenshots: MOCK_GAME_DETAIL.screenshots,
-    trailer_id: withTrailer ? MOCK_GAME_DETAIL.trailerId : undefined,
+    videos: withTrailer ? MOCK_GAME_DETAIL.videos : [],
     store_links: withStoreLinks ? MOCK_GAME_DETAIL.storeLinks : {},
     in_horizon: inHorizon,
   });
@@ -108,16 +108,17 @@ describe("GameDetail", () => {
     expect(await screen.findByRole("heading", { name: /Elden Ring/ })).toBeInTheDocument();
   });
 
-  it("shows Watch trailer link when trailer_id is present", async () => {
+  it("shows play button overlay on video thumbnail when videos are present", async () => {
     renderGame("1");
-    expect(await screen.findByRole("link", { name: /Watch trailer/i })).toBeInTheDocument();
+    // Wait for the video thumbnail's play button
+    expect(await screen.findByRole("button", { name: /Play video/i })).toBeInTheDocument();
   });
 
-  it("does not show Watch trailer link when trailer_id is absent", async () => {
+  it("does not show video thumbnail when videos are absent", async () => {
     vi.stubGlobal("fetch", makeFetch({ withTrailer: false }));
     renderGame("1");
     await screen.findByRole("heading", { name: /Elden Ring/ });
-    expect(screen.queryByRole("link", { name: /Watch trailer/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Play video/i })).not.toBeInTheDocument();
   });
 
   it("shows store links when store_links are present", async () => {

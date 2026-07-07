@@ -257,7 +257,7 @@ export const MOCK_GAME_DETAIL: GameDetail = {
     "https://images.igdb.com/igdb/image/upload/t_screenshot_big/sc1.jpg",
     "https://images.igdb.com/igdb/image/upload/t_screenshot_big/sc2.jpg",
   ],
-  trailerId: "E3y8jNIHZCA",
+  videos: ["E3y8jNIHZCA"],
   storeLinks: {
     steam: "https://store.steampowered.com/app/1245620",
     epic: "https://store.epicgames.com/p/elden-ring",
