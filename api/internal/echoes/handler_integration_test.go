@@ -52,7 +52,7 @@ func TestHandlerListEchoesWithHorizonRelease(t *testing.T) {
 	})
 
 	// Insert an echo
-	_, err = pool.Exec(ctx, "INSERT INTO echoes (recipient_id, type, subject_igdb_id, updated_at) VALUES ($1, 'horizon_release', 999993, now())", userID)
+	_, err = pool.Exec(ctx, "INSERT INTO echoes (recipient_id, type, subject_igdb_id, updated_at, batch_until) VALUES ($1, 'horizon_release', 999993, now(), now())", userID)
 	if err != nil {
 		t.Fatalf("insert echo: %v", err)
 	}

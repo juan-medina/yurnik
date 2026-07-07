@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { AtSign, MessageSquare, UserPlus, CalendarDays } from "lucide-react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { getEchoes, markAllRead } from "@/services/echoes";
@@ -173,7 +173,14 @@ export default function Echoes() {
     }
   }, [echoesPage]);
 
-  const markReadMutation = useMutation({ mutationFn: markAllRead });
+  const queryClient = useQueryClient();
+  const markReadMutation = useMutation({
+    mutationFn: markAllRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["echoes"] });
+      setAllEchoes((prev) => prev.map((e) => ({ ...e, read: true })));
+    },
+  });
 
   async function loadMore() {
     if (!nextCursor || loadingMore) return;

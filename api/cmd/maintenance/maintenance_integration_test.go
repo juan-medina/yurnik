@@ -77,7 +77,7 @@ func TestMaintenanceEvictsOldData(t *testing.T) {
 	}
 
 	// Insert echoes (one per user to avoid unique constraint)
-	insertEcho := `INSERT INTO echoes (recipient_id, type, updated_at) VALUES ($1, 'new_follower', $2)`
+	insertEcho := `INSERT INTO echoes (recipient_id, type, updated_at, batch_until) VALUES ($1, 'new_follower', $2, $2)`
 	if _, err := pool.Exec(ctx, insertEcho, userID1, echoesOld); err != nil {
 		t.Fatalf("insert old echo: %v", err)
 	}

@@ -285,3 +285,71 @@ func TestCommentConversation_EchoFlow(t *testing.T) {
 		t.Fatalf("step5: owner echoes = %+v, want unchanged single echo %d", ownerEchoes, ownerEchoID)
 	}
 }
+
+func TestEchoBatchWindows(t *testing.T) {
+	pool := connectTestDB(t)
+	ctx := context.Background()
+
+	recipient := createTestUserNamed(t, pool, "-batch-recipient")
+	actor1 := createTestUserNamed(t, pool, "-batch-actor1")
+	actor2 := createTestUserNamed(t, pool, "-batch-actor2")
+
+	insertTestGame(t, pool, 55520, "Batch Game")
+	journey, err := db.InsertJourney(ctx, pool, db.Journey{
+		UserID:          recipient,
+		IGDBID:          55520,
+		StartedAt:       time.Now().Add(-48 * time.Hour),
+		EndedAt:         time.Now().Add(-47 * time.Hour),
+		DurationSeconds: 3600,
+		PlayedAt:        time.Now().Add(-48 * time.Hour),
+	})
+	if err != nil {
+		t.Fatalf("insert journey: %v", err)
+	}
+
+	// 1. Initial comment by actor1
+	if err := db.UpsertCommentEcho(ctx, pool, recipient, actor1, journey, "Batch Game"); err != nil {
+		t.Fatalf("upsert 1: %v", err)
+	}
+
+	// Read the echo to verify it's created and actor count is 1
+	echoes, _ := db.ListEchoes(ctx, pool, recipient, 10, "")
+	if len(echoes) != 1 || echoes[0].ActorCount != 1 {
+		t.Fatalf("expected 1 echo with 1 actor, got: %+v", echoes)
+	}
+	firstEchoID := echoes[0].ID
+
+	// 2. Second comment by actor2 immediately - should batch!
+	if err := db.UpsertCommentEcho(ctx, pool, recipient, actor2, journey, "Batch Game"); err != nil {
+		t.Fatalf("upsert 2: %v", err)
+	}
+
+	echoes, _ = db.ListEchoes(ctx, pool, recipient, 10, "")
+	if len(echoes) != 1 || echoes[0].ID != firstEchoID || echoes[0].ActorCount != 2 {
+		t.Fatalf("expected still 1 echo with 2 actors, got: %+v", echoes)
+	}
+
+	// 3. Manually push batch_until into the past to simulate time passing > 24 hours
+	_, err = pool.Exec(ctx, "UPDATE echoes SET batch_until = now() - interval '1 second' WHERE id = $1", firstEchoID)
+	if err != nil {
+		t.Fatalf("update batch_until: %v", err)
+	}
+
+	// 4. Third comment by actor1 AFTER 24 hours window closed - should create NEW echo
+	if err := db.UpsertCommentEcho(ctx, pool, recipient, actor1, journey, "Batch Game"); err != nil {
+		t.Fatalf("upsert 3: %v", err)
+	}
+
+	echoes, _ = db.ListEchoes(ctx, pool, recipient, 10, "")
+	if len(echoes) != 2 {
+		t.Fatalf("expected 2 distinct echoes after time window expired, got %d", len(echoes))
+	}
+	
+	// The newest echo should be first, with actor count 1 (actor1)
+	if echoes[0].ID == firstEchoID {
+		t.Fatalf("new echo was not created, still updating the old one")
+	}
+	if echoes[0].ActorCount != 1 {
+		t.Fatalf("new echo should have 1 actor, got %d", echoes[0].ActorCount)
+	}
+}

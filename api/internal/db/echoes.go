@@ -88,15 +88,32 @@ func UpsertCommentEcho(ctx context.Context, pool *pgxpool.Pool, recipientID, act
 	}
 	var echoID int64
 	err := pool.QueryRow(ctx, `
-		INSERT INTO echoes (recipient_id, type, subject_id, subject_title, updated_at)
-		VALUES ($1, 'new_comment', $2, $3, now())
-		ON CONFLICT (recipient_id, subject_id) WHERE type = 'new_comment'
-		DO UPDATE SET updated_at = now(), subject_title = EXCLUDED.subject_title, seen_at = NULL
-		RETURNING id
-	`, recipientID, journeyID, subjectTitle).Scan(&echoID)
-	if err != nil {
-		return fmt.Errorf("upsert comment echo: %w", err)
+		SELECT id FROM echoes
+		WHERE recipient_id = $1 AND type = 'new_comment' AND subject_id = $2 AND batch_until > now()
+		ORDER BY id DESC LIMIT 1
+	`, recipientID, journeyID).Scan(&echoID)
+
+	if err == pgx.ErrNoRows {
+		err = pool.QueryRow(ctx, `
+			INSERT INTO echoes (recipient_id, type, subject_id, subject_title, updated_at, batch_until)
+			VALUES ($1, 'new_comment', $2, $3, now(), now() + interval '24 hours')
+			RETURNING id
+		`, recipientID, journeyID, subjectTitle).Scan(&echoID)
+		if err != nil {
+			return fmt.Errorf("upsert comment echo insert: %w", err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("upsert comment echo select: %w", err)
+	} else {
+		_, err = pool.Exec(ctx, `
+			UPDATE echoes SET updated_at = now(), subject_title = $1, seen_at = NULL
+			WHERE id = $2
+		`, subjectTitle, echoID)
+		if err != nil {
+			return fmt.Errorf("upsert comment echo update: %w", err)
+		}
 	}
+
 	_, err = pool.Exec(ctx, `
 		INSERT INTO echo_actors (echo_id, actor_id) VALUES ($1, $2)
 		ON CONFLICT DO NOTHING
@@ -113,15 +130,32 @@ func UpsertCommentReplyEcho(ctx context.Context, pool *pgxpool.Pool, recipientID
 	}
 	var echoID int64
 	err := pool.QueryRow(ctx, `
-		INSERT INTO echoes (recipient_id, type, subject_id, subject_title, updated_at)
-		VALUES ($1, 'new_comment_reply', $2, $3, now())
-		ON CONFLICT (recipient_id, subject_id) WHERE type = 'new_comment_reply'
-		DO UPDATE SET updated_at = now(), subject_title = EXCLUDED.subject_title, seen_at = NULL
-		RETURNING id
-	`, recipientID, journeyID, subjectTitle).Scan(&echoID)
-	if err != nil {
-		return fmt.Errorf("upsert comment reply echo: %w", err)
+		SELECT id FROM echoes
+		WHERE recipient_id = $1 AND type = 'new_comment_reply' AND subject_id = $2 AND batch_until > now()
+		ORDER BY id DESC LIMIT 1
+	`, recipientID, journeyID).Scan(&echoID)
+
+	if err == pgx.ErrNoRows {
+		err = pool.QueryRow(ctx, `
+			INSERT INTO echoes (recipient_id, type, subject_id, subject_title, updated_at, batch_until)
+			VALUES ($1, 'new_comment_reply', $2, $3, now(), now() + interval '24 hours')
+			RETURNING id
+		`, recipientID, journeyID, subjectTitle).Scan(&echoID)
+		if err != nil {
+			return fmt.Errorf("upsert comment reply echo insert: %w", err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("upsert comment reply echo select: %w", err)
+	} else {
+		_, err = pool.Exec(ctx, `
+			UPDATE echoes SET updated_at = now(), subject_title = $1, seen_at = NULL
+			WHERE id = $2
+		`, subjectTitle, echoID)
+		if err != nil {
+			return fmt.Errorf("upsert comment reply echo update: %w", err)
+		}
 	}
+
 	_, err = pool.Exec(ctx, `
 		INSERT INTO echo_actors (echo_id, actor_id) VALUES ($1, $2)
 		ON CONFLICT DO NOTHING
@@ -139,15 +173,32 @@ func UpsertMentionEcho(ctx context.Context, pool *pgxpool.Pool, recipientID, act
 	}
 	var echoID int64
 	err := pool.QueryRow(ctx, `
-		INSERT INTO echoes (recipient_id, type, subject_id, subject_title, updated_at)
-		VALUES ($1, 'new_mention', $2, $3, now())
-		ON CONFLICT (recipient_id, subject_id) WHERE type = 'new_mention'
-		DO UPDATE SET updated_at = now(), subject_title = EXCLUDED.subject_title, seen_at = NULL
-		RETURNING id
-	`, recipientID, journeyID, subjectTitle).Scan(&echoID)
-	if err != nil {
-		return fmt.Errorf("upsert mention echo: %w", err)
+		SELECT id FROM echoes
+		WHERE recipient_id = $1 AND type = 'new_mention' AND subject_id = $2 AND batch_until > now()
+		ORDER BY id DESC LIMIT 1
+	`, recipientID, journeyID).Scan(&echoID)
+
+	if err == pgx.ErrNoRows {
+		err = pool.QueryRow(ctx, `
+			INSERT INTO echoes (recipient_id, type, subject_id, subject_title, updated_at, batch_until)
+			VALUES ($1, 'new_mention', $2, $3, now(), now() + interval '24 hours')
+			RETURNING id
+		`, recipientID, journeyID, subjectTitle).Scan(&echoID)
+		if err != nil {
+			return fmt.Errorf("upsert mention echo insert: %w", err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("upsert mention echo select: %w", err)
+	} else {
+		_, err = pool.Exec(ctx, `
+			UPDATE echoes SET updated_at = now(), subject_title = $1, seen_at = NULL
+			WHERE id = $2
+		`, subjectTitle, echoID)
+		if err != nil {
+			return fmt.Errorf("upsert mention echo update: %w", err)
+		}
 	}
+
 	_, err = pool.Exec(ctx, `
 		INSERT INTO echo_actors (echo_id, actor_id) VALUES ($1, $2)
 		ON CONFLICT DO NOTHING
@@ -160,15 +211,32 @@ func UpsertMentionEcho(ctx context.Context, pool *pgxpool.Pool, recipientID, act
 func UpsertFollowerEcho(ctx context.Context, pool *pgxpool.Pool, recipientID, actorID string) error {
 	var echoID int64
 	err := pool.QueryRow(ctx, `
-		INSERT INTO echoes (recipient_id, type, updated_at)
-		VALUES ($1, 'new_follower', now())
-		ON CONFLICT (recipient_id) WHERE type = 'new_follower'
-		DO UPDATE SET updated_at = now(), seen_at = NULL
-		RETURNING id
+		SELECT id FROM echoes
+		WHERE recipient_id = $1 AND type = 'new_follower' AND batch_until > now()
+		ORDER BY id DESC LIMIT 1
 	`, recipientID).Scan(&echoID)
-	if err != nil {
-		return fmt.Errorf("upsert follower echo: %w", err)
+
+	if err == pgx.ErrNoRows {
+		err = pool.QueryRow(ctx, `
+			INSERT INTO echoes (recipient_id, type, updated_at, batch_until)
+			VALUES ($1, 'new_follower', now(), now() + interval '24 hours')
+			RETURNING id
+		`, recipientID).Scan(&echoID)
+		if err != nil {
+			return fmt.Errorf("upsert follower echo insert: %w", err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("upsert follower echo select: %w", err)
+	} else {
+		_, err = pool.Exec(ctx, `
+			UPDATE echoes SET updated_at = now(), seen_at = NULL
+			WHERE id = $1
+		`, echoID)
+		if err != nil {
+			return fmt.Errorf("upsert follower echo update: %w", err)
+		}
 	}
+
 	_, err = pool.Exec(ctx, `
 		INSERT INTO echo_actors (echo_id, actor_id) VALUES ($1, $2)
 		ON CONFLICT DO NOTHING

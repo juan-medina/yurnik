@@ -111,8 +111,8 @@ func refreshUpcomingReleases(ctx context.Context, pool *pgxpool.Pool, igdbClient
 
 	// Insert new horizon_release echoes
 	res, err := pool.Exec(ctx, `
-		INSERT INTO echoes (recipient_id, type, subject_igdb_id, subject_title)
-		SELECT h.player_id, 'horizon_release', h.igdb_id, g.name
+		INSERT INTO echoes (recipient_id, type, subject_igdb_id, subject_title, batch_until)
+		SELECT h.player_id, 'horizon_release', h.igdb_id, g.name, NOW()
 		FROM horizon_entries h
 		JOIN igdb_games g ON h.igdb_id = g.igdb_id
 		WHERE g.release_date BETWEEN NOW() AND NOW() + INTERVAL '7 days'
