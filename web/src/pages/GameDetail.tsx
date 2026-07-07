@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { ChevronLeft, ChevronRight, Check, UserPlus, ExternalLink, Monitor, Gamepad2, Smartphone, Telescope } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, UserPlus, ExternalLink, Monitor, Gamepad2, Smartphone, Telescope, X } from "lucide-react";
 import { siPlaystation, siSteam, siAndroid, siApple, siLinux } from "simple-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -658,6 +658,13 @@ export default function GameDetail() {
           role="dialog"
           aria-label="Screenshot preview"
         >
+          <button
+            className="absolute right-4 top-4 z-[60] rounded-full bg-black/50 p-2 text-white hover:bg-black/75 focus:outline-none focus:ring-2 focus:ring-primary"
+            onClick={() => setLightboxIndex(null)}
+            aria-label="Close lightbox"
+          >
+            <X size={24} />
+          </button>
           {game.screenshots.length > 1 && (
             <button
               className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white hover:bg-black/75 focus:outline-none focus:ring-2 focus:ring-primary"
