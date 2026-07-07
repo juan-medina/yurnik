@@ -140,16 +140,22 @@ func UpsertPendingJourney(ctx context.Context, pool *pgxpool.Pool, userID, exeNa
 	}
 	defer tx.Rollback(ctx)
 
-	// 1. Exact duplicate — idempotent retry path.
+	// 1. Exact duplicate on started_at — idempotent retry path.
 	var id string
+	var existingEndedAt *time.Time
 	err = tx.QueryRow(ctx, `
-		SELECT id FROM pending_journeys
+		SELECT id, ended_at FROM pending_journeys
 		WHERE user_id = $1 AND exe_name = $2 AND started_at = $3
-		  AND ended_at IS NOT DISTINCT FROM $4
 		LIMIT 1
-	`, userID, exeName, startedAt, endedAt).Scan(&id)
+		FOR UPDATE
+	`, userID, exeName, startedAt).Scan(&id, &existingEndedAt)
 	if err == nil {
-		return id, nil
+		if endedAt != nil && (existingEndedAt == nil || !existingEndedAt.Equal(*endedAt)) {
+			if _, errUpdate := tx.Exec(ctx, `UPDATE pending_journeys SET ended_at = $1, status = 'ended' WHERE id = $2`, endedAt, id); errUpdate != nil {
+				return "", fmt.Errorf("update duplicate pending journey: %w", errUpdate)
+			}
+		}
+		return id, tx.Commit(ctx)
 	}
 	if err != pgx.ErrNoRows {
 		return "", fmt.Errorf("check duplicate pending journey: %w", err)

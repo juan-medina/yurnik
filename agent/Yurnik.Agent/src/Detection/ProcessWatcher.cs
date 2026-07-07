@@ -26,7 +26,6 @@ namespace Yurnik.Agent.Detection;
 /// </summary>
 sealed class ProcessWatcher(
     SessionStore sessions,
-    EventQueue queue,
     ExclusionStore exclusions,
     InclusionStore inclusions,
     DetectableGamesCache detectableGames,
@@ -203,26 +202,7 @@ sealed class ProcessWatcher(
             }
         }
 
-        // Any pid we were tracking that is no longer running has exited — close immediately.
-        foreach (var pid in _seen.Except(currentPids).ToList())
-        {
-            var session = sessions.GetAll().FirstOrDefault(s => s.Pid == pid);
-            if (session is not null)
-            {
-                var endedAt = DateTimeOffset.UtcNow;
-                var duration = endedAt - session.StartedAt;
-                if (duration >= _minSessionDuration)
-                {
-                    Log.Info($"Game ended: {session.ExeName} (pid {pid}) — \"{session.WindowTitle}\"");
-                    queue.Enqueue(session.ExeName, session.WindowTitle, session.StartedAt, endedAt);
-                }
-                else
-                {
-                    Log.Info($"Session discarded: {session.ExeName} ran for only {duration.TotalSeconds:F0}s (below threshold)");
-                }
-                sessions.Delete(pid);
-            }
-        }
+        // Session ending is now purely handled by SessionMonitor.
 
         _seen.IntersectWith(currentPids);
         _ignored.IntersectWith(allPids);

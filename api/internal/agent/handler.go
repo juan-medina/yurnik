@@ -7,11 +7,13 @@ package agent
 import (
 	"crypto/ed25519"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/juan-medina/yurnik/internal/auth"
 	"github.com/juan-medina/yurnik/internal/db"
@@ -212,7 +214,13 @@ func (h *Handler) createPending(w http.ResponseWriter, r *http.Request) {
 				_ = db.DeletePendingJourney(r.Context(), h.pool, id, userID)
 				id = journeyID
 			} else {
-				log.Printf("agent/createPending: auto-confirm failed to insert journey: %v", errInsert)
+				var pgErr *pgconn.PgError
+				if errors.As(errInsert, &pgErr) && pgErr.Code == "23505" {
+					log.Printf("agent/createPending: journey already exists for exact started_at, ignoring duplicate")
+					_ = db.DeletePendingJourney(r.Context(), h.pool, id, userID)
+				} else {
+					log.Printf("agent/createPending: auto-confirm failed to insert journey: %v", errInsert)
+				}
 			}
 		} else {
 			_ = db.DeletePendingJourney(r.Context(), h.pool, id, userID)

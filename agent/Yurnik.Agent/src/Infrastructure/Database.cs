@@ -45,6 +45,13 @@ sealed class Database
             Log.Info($"Schema is version {version} — recreating tables");
             DropAll(conn);
         }
+        else if (version < 5)
+        {
+            Log.Info($"Schema is version {version} — dropping queue table to apply new unique constraint");
+            using var dropQueueCmd = conn.CreateCommand();
+            dropQueueCmd.CommandText = "DROP TABLE IF EXISTS queue;";
+            dropQueueCmd.ExecuteNonQuery();
+        }
 
         using var schemaCmd = conn.CreateCommand();
         schemaCmd.CommandText = """
@@ -62,7 +69,8 @@ sealed class Database
                 window_title TEXT    NOT NULL,
                 started_at   INTEGER NOT NULL,
                 ended_at     INTEGER NOT NULL,
-                attempts     INTEGER NOT NULL DEFAULT 0
+                attempts     INTEGER NOT NULL DEFAULT 0,
+                UNIQUE(exe_name, started_at)
             );
 
             CREATE TABLE IF NOT EXISTS exclusions (
@@ -81,7 +89,7 @@ sealed class Database
         schemaCmd.ExecuteNonQuery();
 
         using var pragmaCmd = conn.CreateCommand();
-        pragmaCmd.CommandText = "PRAGMA user_version = 4;";
+        pragmaCmd.CommandText = "PRAGMA user_version = 5;";
         pragmaCmd.ExecuteNonQuery();
 
         Log.Info("Database migrations complete");

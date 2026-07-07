@@ -9,6 +9,7 @@ using Yurnik.Agent.Queue;
 using Yurnik.Agent.Detection;
 using Yurnik.Agent.Api;
 using Yurnik.Agent.Notifications;
+using System.Threading;
 
 namespace Yurnik.Agent;
 
@@ -17,6 +18,12 @@ static class Program
     [STAThread]
     static void Main()
     {
+        using var mutex = new Mutex(true, "YurnikAgentMutex", out bool createdNew);
+        if (!createdNew)
+        {
+            return;
+        }
+
         // Must run before anything else — handles Velopack install/uninstall hooks.
         VelopackApp.Build()
             .WithBeforeUninstallFastCallback(_ =>
@@ -68,7 +75,7 @@ static class Program
         var eventQueue = new EventQueue(db);
         var sessionMonitor = new SessionMonitor(sessionStore, eventQueue, config.MinSessionDuration);
         var queueProcessor = new QueueProcessor(eventQueue, agentClient, authManager);
-        var processWatcher = new ProcessWatcher(sessionStore, eventQueue, exclusionStore, inclusionStore, detectableGames, config.MinSessionDuration);
+        var processWatcher = new ProcessWatcher(sessionStore, exclusionStore, inclusionStore, detectableGames, config.MinSessionDuration);
         var updater = new Updater();
         var echoStore = new EchoStore(db);
         var echoMonitor = new EchoMonitor(agentClient, config, echoStore);

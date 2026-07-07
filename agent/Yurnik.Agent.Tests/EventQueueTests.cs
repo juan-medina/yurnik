@@ -72,6 +72,19 @@ public class EventQueueTests : IDisposable
         Assert.Equal(1, _queue.Peek()[0].Attempts);
     }
 
+    [Fact]
+    public void Enqueue_DuplicateIgnores()
+    {
+        var start = DateTimeOffset.UtcNow.AddHours(-1);
+        var end = DateTimeOffset.UtcNow;
+
+        _queue.Enqueue("game.exe", "Game", start, end);
+        _queue.Enqueue("game.exe", "Game", start, end); // Duplicate
+
+        var journeys = _queue.Peek();
+        Assert.Single(journeys);
+    }
+
     public void Dispose()
     {
         try { File.Delete(_dbPath); } catch { }

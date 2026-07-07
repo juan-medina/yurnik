@@ -1,1 +1,1 @@
-- Fix background processes detection
+- Fix duplicated game journeys

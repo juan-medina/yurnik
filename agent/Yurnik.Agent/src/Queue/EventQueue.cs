@@ -26,7 +26,7 @@ sealed class EventQueue(Database db)
         using var conn = db.OpenConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO queue (exe_name, window_title, started_at, ended_at)
+            INSERT OR IGNORE INTO queue (exe_name, window_title, started_at, ended_at)
             VALUES ($exe, $title, $start, $end)
             """;
         cmd.Parameters.AddWithValue("$exe", exeName);
