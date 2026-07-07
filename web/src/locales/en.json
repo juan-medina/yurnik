@@ -413,6 +413,11 @@
   "whats_new_title": "What's New",
   "whats_new_entries": [
     {
+      "date": "2026-07-07",
+      "title": "Expanded game screenshots & gallery navigation",
+      "body": "The game detail page now features a scrollable carousel to view all available screenshots for a game. You can easily click and drag to scroll, or use the navigation arrows in both the inline view and the expanded full-screen gallery."
+    },
+    {
       "date": "2026-07-06",
       "title": "Get notified when games are releasing soon",
       "body": "You'll now receive a desktop notification and an activity feed update when a game in your Horizon list is releasing soon."

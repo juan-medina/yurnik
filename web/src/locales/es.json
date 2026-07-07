@@ -401,6 +401,11 @@
   "whats_new_title": "Novedades",
   "whats_new_entries": [
     {
+      "date": "2026-07-07",
+      "title": "Galería de imágenes ampliada y mejor navegación",
+      "body": "La página de detalles del juego ahora cuenta con un carrusel desplazable para ver todas las capturas de pantalla disponibles. Puedes deslizar fácilmente arrastrando con el ratón, o usar las flechas de navegación tanto en la vista integrada como en la galería ampliada."
+    },
+    {
       "date": "2026-07-06",
       "title": "Entérate cuando tus juegos estén por salir",
       "body": "Ahora recibirás una notificación de escritorio y una actualización en tu feed de actividad cuando un juego de tu lista Horizonte vaya a lanzarse pronto."
