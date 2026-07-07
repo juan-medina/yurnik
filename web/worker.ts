@@ -24,6 +24,11 @@ export default {
       return env.ASSETS.fetch(request);
     };
 
+    if (url.pathname === "/sitemap.xml") {
+      const apiUrl = env.VITE_API_URL || "https://api.yurnik.social";
+      return fetch(`${apiUrl}/api/sitemap.xml`, request);
+    }
+
     // 1. Journey Detail (/journey/:id)
     const journeyMatch = url.pathname.match(/^\/journey\/([^/]+)$/);
     if (journeyMatch && isBot) {
@@ -37,8 +42,21 @@ export default {
           const description = journey.log || `A gaming journey of ${journey.game} on Yurnik.`;
           const imageUrl = journey.cover_url || `${url.origin}/logo.png`;
 
+          const jsonLd = {
+            "@context": "https://schema.org",
+            "@type": "GamePlayMode",
+            "name": title,
+            "description": description,
+            "url": url.href,
+            "image": imageUrl
+          };
+          const ldString = `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`;
+
           const assetRes = await getAssetResponse();
           return new HTMLRewriter()
+            .on('head', { element(el: any) { el.append(ldString, { html: true }); } })
+            .on('title', { element(el: any) { el.setInnerContent(title); } })
+            .on('meta[name="description"]', { element(el: any) { el.setAttribute('content', description); } })
             .on('meta[property="og:title"]', { element(el: any) { el.setAttribute('content', title); } })
             .on('meta[name="twitter:title"]', { element(el: any) { el.setAttribute('content', title); } })
             .on('meta[property="og:description"]', { element(el: any) { el.setAttribute('content', description); } })
@@ -65,8 +83,21 @@ export default {
           const description = game.summary || `Browse game activity and players on Yurnik.`;
           const imageUrl = game.cover_url || `${url.origin}/logo.png`;
 
+          const jsonLd = {
+            "@context": "https://schema.org",
+            "@type": "VideoGame",
+            "name": game.name,
+            "description": description,
+            "url": url.href,
+            "image": imageUrl
+          };
+          const ldString = `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`;
+
           const assetRes = await getAssetResponse();
           return new HTMLRewriter()
+            .on('head', { element(el: any) { el.append(ldString, { html: true }); } })
+            .on('title', { element(el: any) { el.setInnerContent(title); } })
+            .on('meta[name="description"]', { element(el: any) { el.setAttribute('content', description); } })
             .on('meta[property="og:title"]', { element(el: any) { el.setAttribute('content', title); } })
             .on('meta[name="twitter:title"]', { element(el: any) { el.setAttribute('content', title); } })
             .on('meta[property="og:description"]', { element(el: any) { el.setAttribute('content', description); } })
@@ -93,8 +124,22 @@ export default {
           const description = player.bio || `Check out ${player.name}'s gaming journeys on Yurnik.`;
           const imageUrl = player.avatar_url || `${url.origin}/logo.png`;
 
+          const jsonLd = {
+            "@context": "https://schema.org",
+            "@type": "Person",
+            "name": player.name,
+            "alternateName": player.handle,
+            "description": description,
+            "url": url.href,
+            "image": imageUrl
+          };
+          const ldString = `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`;
+
           const assetRes = await getAssetResponse();
           return new HTMLRewriter()
+            .on('head', { element(el: any) { el.append(ldString, { html: true }); } })
+            .on('title', { element(el: any) { el.setInnerContent(title); } })
+            .on('meta[name="description"]', { element(el: any) { el.setAttribute('content', description); } })
             .on('meta[property="og:title"]', { element(el: any) { el.setAttribute('content', title); } })
             .on('meta[name="twitter:title"]', { element(el: any) { el.setAttribute('content', title); } })
             .on('meta[property="og:description"]', { element(el: any) { el.setAttribute('content', description); } })

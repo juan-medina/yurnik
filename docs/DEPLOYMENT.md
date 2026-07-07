@@ -19,7 +19,7 @@ Hetzner VPS               Go API binary + Postgres on the same instance
 
 The React SPA is deployed directly from Git. Cloudflare Pages rebuilds and deploys on every push to `main`. Pull requests get preview URLs automatically. Static assets are served from Cloudflare's edge globally at no bandwidth cost.
 
-No server is involved in serving the frontend. The SPA communicates with the API at `api.yurnik.social`.
+While no traditional server is involved in serving the frontend, a Cloudflare Worker intercepts requests at the edge to provide dynamic SEO meta tags for bots. The SPA communicates with the API at `api.yurnik.social`.
 
 ## API and database — Hetzner VPS
 

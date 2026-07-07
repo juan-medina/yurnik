@@ -44,7 +44,7 @@ Clients are optional. The web app is fully functional without any client install
 
 React with TypeScript strict mode. No `any`. Vite is the build tool. pnpm is the package manager. Node 22 is pinned via `.node-version` for fnm.
 
-The frontend is a plain SPA deployed to Cloudflare Pages. Static assets are served from Cloudflare's edge globally, with automatic deploys on every push to `main` and preview URLs per pull request. The Go binary serves only API routes — it has no responsibility for static files.
+The frontend is a SPA deployed to Cloudflare Pages. Static assets are served from Cloudflare's edge globally, with automatic deploys on every push to `main` and preview URLs per pull request. A Cloudflare Worker runs at the edge to intercept requests from bots (for SEO and social sharing), dynamically injecting Open Graph, Twitter, and standard meta tags, as well as JSON-LD structured data. The Go binary serves only API routes and the dynamic `sitemap.xml` proxy endpoint.
 
 ## Database — Postgres
 
