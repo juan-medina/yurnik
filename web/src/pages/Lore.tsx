@@ -5,14 +5,14 @@ import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
-  Globe2,
+  Home,
   Gamepad2,
-  Users,
+  Compass,
   ScrollText,
   Monitor,
   CheckCircle2,
   ArrowDown,
-  Telescope,
+  Library,
 } from "lucide-react";
 
 import { getCurrentPlayer, signIn } from "@/services/auth";
@@ -144,7 +144,7 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <FeatureCard
-              icon={<Globe2 size={18} />}
+              icon={<Home size={18} />}
               title={t("lore_feature_feed_title")}
               body={t("lore_feature_feed_body")}
             />
@@ -154,7 +154,7 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
               body={t("lore_feature_log_body")}
             />
             <FeatureCard
-              icon={<Users size={18} />}
+              icon={<Compass size={18} />}
               title={t("lore_feature_explore_title")}
               body={t("lore_feature_explore_body")}
             />
@@ -164,7 +164,7 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
               body={t("lore_feature_agent_body")}
             />
             <FeatureCard
-              icon={<Telescope size={18} />}
+              icon={<Library size={18} />}
               title={t("lore_feature_backlog_title")}
               body={t("lore_feature_backlog_body")}
             />

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { ChevronLeft, ChevronRight, Check, UserPlus, ExternalLink, Monitor, Gamepad2, Smartphone, Telescope, X, Play } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, UserPlus, ExternalLink, Monitor, Gamepad2, Smartphone, Library, X, Play } from "lucide-react";
 import { siPlaystation, siSteam, siAndroid, siApple, siLinux } from "simple-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -232,7 +232,7 @@ function AddToBacklogButton({ game }: { game: GameDetailModel }) {
         disabled={addMutation.isPending}
         className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-40"
       >
-        <Telescope size={11} />
+        <Library size={11} />
         {t("backlog_add")}
       </button>
       {showSignIn && <SignInPromptModal onClose={() => setShowSignIn(false)} />}

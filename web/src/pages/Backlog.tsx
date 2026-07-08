@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { Telescope, Trash2, GripVertical, Sparkles, Dices, ChevronDown } from "lucide-react";
+import { Library, Trash2, GripVertical, Sparkles, Dices, ChevronDown } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
@@ -355,7 +355,7 @@ export default function Backlog() {
 
       {!currentPlayer ? (
         <div className="flex flex-col items-center gap-4 rounded-lg border border-border bg-card px-4 py-12 text-center">
-          <Telescope size={28} className="text-muted-foreground" />
+          <Library size={28} className="text-muted-foreground" />
           <p className="text-sm text-muted-foreground">{t("signin_prompt_sub")}</p>
           <button
             onClick={() => signIn()}
@@ -450,7 +450,7 @@ export default function Backlog() {
             </>
           ) : (
             <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card px-4 py-12 text-center">
-              <Telescope size={28} className="text-muted-foreground" />
+              <Library size={28} className="text-muted-foreground" />
               <p className="text-sm text-muted-foreground">{t("backlog_empty")}</p>
             </div>
           )}

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { Link } from "react-router";
-import { MessageSquare, Telescope, UserPlus } from "lucide-react";
+import { MessageSquare, Library, UserPlus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { playerHref } from "@/lib/display";
 import PlayerAvatar from "@/components/PlayerAvatar";
@@ -26,7 +26,7 @@ export default function ActivityItem({ activity, viewerId }: ActivityItemProps) 
     playerHref(aboutViewer ? actor : recipient);
   const icon =
     type === "comment" ? <MessageSquare size={13} /> :
-    type === "backlog_add" ? <Telescope size={13} /> :
+    type === "backlog_add" ? <Library size={13} /> :
     <UserPlus size={13} />;
 
   const text =
