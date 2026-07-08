@@ -43,7 +43,7 @@
     <value>Yurnik — iniciando…</value>
   </data>
   <data name="TraySignInRequired" xml:space="preserve">
-    <value>Yurnik — inicia sesión</value>
+    <value>Yurnik — debes iniciar sesión</value>
   </data>
   <data name="TrayReady" xml:space="preserve">
     <value>Yurnik</value>
@@ -52,10 +52,10 @@
     <value>Yurnik — actualización disponible</value>
   </data>
   <data name="BalloonSignIn" xml:space="preserve">
-    <value>Inicia sesión en Yurnik — haz clic para continuar</value>
+    <value>Inicia sesión en Yurnik — haz clic para abrir el navegador</value>
   </data>
   <data name="BalloonUpdateAvailable" xml:space="preserve">
-    <value>Actualización disponible — haz clic para instalar v{0}</value>
+    <value>Actualización disponible — haz clic para instalar la v{0}</value>
   </data>
   <data name="MenuOpen" xml:space="preserve">
     <value>Abrir Yurnik</value>
@@ -79,7 +79,7 @@
     <value>Acerca de Yurnik</value>
   </data>
   <data name="AboutTagline" xml:space="preserve">
-    <value>Tu rastreador de aventuras gaming</value>
+    <value>El registro de tus partidas</value>
   </data>
   <data name="AboutSignedIn" xml:space="preserve">
     <value>Sesión iniciada</value>
@@ -88,9 +88,9 @@
     <value>Sesión iniciada como {0}</value>
   </data>
   <data name="AboutNotSignedIn" xml:space="preserve">
-    <value>Sin sesión iniciada</value>
+    <value>No has iniciado sesión</value>
   </data>
   <data name="MenuSyncSettings" xml:space="preserve">
-    <value>Sincronizar configuración</value>
+    <value>Sincronizar ajustes</value>
   </data>
 </root>

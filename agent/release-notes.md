@@ -1,1 +1,1 @@
-- Update notifications to match the web naming conventions
+- Update localization

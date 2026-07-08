@@ -323,7 +323,7 @@
   "settings_updates_notifications": "App Updates",
   "settings_updates_notifications_desc": "Get notified when a new version of the Agent is available to install.",
   "settings_notifications_notifications": "Notifications",
-  "settings_notifications_notifications_desc": "Get desktop notifications for your notifications.",
+  "settings_notifications_notifications_desc": "Get desktop notifications for activity on your account.",
   "settings_desktop_notifications_denied": "Notifications are blocked in your browser settings.",
   "settings_danger_zone": "Danger zone",
   "settings_delete_account": "Delete account",

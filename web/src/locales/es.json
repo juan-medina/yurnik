@@ -100,7 +100,7 @@
   "about_feature_explore_title": "Explorar",
   "about_feature_explore_body": "Busca partidas recientes por juego. Descubre quién juega a qué y sigue a los jugadores que quieras ver en tu feed.",
   "about_feature_agent_title": "Auto-tracking (PC)",
-  "about_feature_agent_body": "Instala el agente ligero de Windows para detectar cuándo juegas. Confirma un juego una vez y el agente aprenderá a detectarlo y confirmarlo por ti la próxima vez.",
+  "about_feature_agent_body": "Instala la app de Windows para detectar cuándo juegas. Confirma un juego una vez y la app aprenderá a detectarlo y confirmarlo por ti la próxima vez.",
   "about_feature_backlog_title": "Backlog",
   "about_feature_backlog_body": "Mantén una lista pública de los juegos que vas a jugar próximamente. Añádelos desde la página de un juego o desde tu Backlog y comparte lo que se viene.",
   "about_open_title": "Hecho para jugadores, de los jugadores",
@@ -117,16 +117,16 @@
   "about_auth_cta": "Ir al feed",
   "about_footer_signin": "Entrar",
   "home_explore_cta": "Explorar la web",
-  "settings_signin_hint": "Inicia sesión para gestionar tu perfil, preferencias y ajustes del agente.",
+  "settings_signin_hint": "Inicia sesión para gestionar tu perfil, preferencias y ajustes de la app.",
   "profile_anon_title": "Tu perfil",
   "profile_anon_hint": "Una vez inicies sesión, aquí es donde vivirá tu aventura gamer: tu perfil, tus estadísticas, tu historia.",
   "home_learn_more": "Saber más sobre Yurnik",
   "signin_prompt_title": "Inicia sesión para continuar",
   "signin_prompt_sub": "Únete a Yurnik con tu cuenta de Discord para empezar.",
-  "agent_connected": "Agente conectado",
+  "agent_connected": "App conectada",
   "agent_close_tab": "Ya puedes cerrar esta pestaña.",
-  "agent_failed": "No se pudo conectar con el agente. Inténtalo de nuevo.",
-  "agent_connecting": "Conectando agente...",
+  "agent_failed": "No se pudo conectar con la app. Inténtalo de nuevo.",
+  "agent_connecting": "Conectando app...",
   "auth_completing": "Completando inicio de sesión...",
   "not_found_title": "Página no encontrada",
   "not_found_desc": "Esta ruta no existe en Yurnik.",
@@ -165,7 +165,7 @@
   "journeys_exclude_desc": "Se ignorarán las futuras partidas de este ejecutable.",
   "journeys_exclude_btn": "Excluir",
   "journeys_never_detect": "No detectar nunca",
-  "journeys_auto_detect_note": "Una vez confirmado, el agente detectará y confirmará este juego automáticamente la próxima vez.",
+  "journeys_auto_detect_note": "Una vez confirmado, la app detectará y confirmará este juego automáticamente la próxima vez.",
   "explore_title": "Explorar",
   "explore_search_placeholder": "Buscar por juego o género...",
   "explore_all": "Todos",
@@ -290,9 +290,9 @@
   "settings_signout": "Cerrar sesión",
   "settings_signout_confirm": "¿Cerrar sesión?",
   "settings_cancel": "Cancelar",
-  "settings_windows_agent": "Agente de Windows",
+  "settings_windows_agent": "App de Windows",
   "settings_agent_desc": "Registra automáticamente tus partidas en segundo plano.",
-  "settings_agent_sync_desc": "Los ajustes del agente se sincronizan cada hora o al reiniciar el ordenador. También puedes forzar la sincronización desde el icono de Yurnik en la barra de tareas.",
+  "settings_agent_sync_desc": "Los ajustes de la app se sincronizan cada hora o al reiniciar el ordenador. También puedes forzar la sincronización desde el icono de Yurnik en la barra de tareas.",
   "settings_download": "Descargar",
   "settings_excluded_exes": "Ejecutables ignorados",
   "settings_excluded_desc": "Estos ejecutables nunca se detectarán como partidas.",
@@ -307,7 +307,7 @@
   "settings_add_inclusion": "Añadir",
   "settings_add_inclusion_empty": "El nombre del ejecutable no puede estar vacío.",
   "settings_game_hints": "Autoconfirmar juegos",
-  "settings_hints_desc": "Juegos que el agente ha aprendido a reconocer. Quita un juego para dejar de autoconfirmarlo y que el agente lo detecte manualmente la próxima vez.",
+  "settings_hints_desc": "Juegos que la app ha aprendido a reconocer. Quita un juego para dejar de autoconfirmarlo y que la app lo detecte manualmente la próxima vez.",
   "settings_no_hints": "Aún no hay juegos que se autoconfirmen.",
   "settings_search_game": "Buscar un juego...",
   "settings_no_games": "No se han encontrado juegos para \"{{query}}\"",
@@ -321,9 +321,9 @@
   "settings_language_es": "Español",
   "settings_notifications": "Notificaciones",
   "settings_updates_notifications": "Actualizaciones de la app",
-  "settings_updates_notifications_desc": "Recibe una notificación cuando haya una nueva versión del Agente disponible.",
+  "settings_updates_notifications_desc": "Recibe una notificación cuando haya una nueva versión de la app disponible.",
   "settings_notifications_notifications": "Notificaciones",
-  "settings_notifications_notifications_desc": "Recibe notificaciones de escritorio para tus notificaciones de Yurnik.",
+  "settings_notifications_notifications_desc": "Recibe notificaciones de escritorio sobre tu actividad en Yurnik.",
   "settings_desktop_notifications_denied": "Las notificaciones están bloqueadas en los ajustes de tu navegador.",
   "settings_danger_zone": "Zona de peligro",
   "settings_delete_account": "Borrar cuenta",
@@ -399,7 +399,7 @@
     {
       "date": "2026-07-03",
       "title": "Juegos personalizados y sincronización de ajustes",
-      "body": "El agente de escritorio ahora permite añadir archivos ejecutables para asegurar que siempre se registren como partidas. Tus inclusiones y exclusiones se sincronizan automáticamente cada hora, y puedes sincronizarlo a mano desde el menú del icono en la barra de tareas, que además hemos rediseñado."
+      "body": "La app de escritorio ahora permite añadir archivos ejecutables para asegurar que siempre se registren como partidas. Tus inclusiones y exclusiones se sincronizan automáticamente cada hora, y puedes sincronizarlo a mano desde el menú del icono en la barra de tareas, que además hemos rediseñado."
     },
     {
       "date": "2026-07-02",
@@ -414,12 +414,12 @@
     {
       "date": "2026-06-29",
       "title": "Notificaciones nativas de escritorio",
-      "body": "El agente de escritorio ahora usa notificaciones de Windows para avisarte de actualizaciones de la app, nuevos seguidores y comentarios en tus partidas. Puedes cambiar tus preferencias de notificaciones desde los ajustes de tu cuenta."
+      "body": "La app de escritorio ahora usa notificaciones de Windows para avisarte de actualizaciones de la app, nuevos seguidores y comentarios en tus partidas. Puedes cambiar tus preferencias de notificaciones desde los ajustes de tu cuenta."
     },
     {
       "date": "2026-06-27",
       "title": "Las partidas se confirman solas",
-      "body": "¿Cansado de olvidarte de confirmar tus sesiones? Una vez confirmes un juego, el agente lo recordará y autoconfirmará futuras partidas de ese juego en cuanto dejes de jugar."
+      "body": "¿Cansado de olvidarte de confirmar tus sesiones? Una vez confirmes un juego, la app lo recordará y autoconfirmará futuras partidas de ese juego en cuanto dejes de jugar."
     },
     {
       "date": "2026-06-25",
@@ -444,12 +444,12 @@
     {
       "date": "2026-06-23",
       "title": "Se ignoran las partidas muy cortas",
-      "body": "Para evitar que arranques sin querer y cuelgues al inicio ensucien tu historial de partidas, el agente de escritorio ahora ignora las sesiones de menos de 5 minutos."
+      "body": "Para evitar que arranques sin querer y cuelgues al inicio ensucien tu historial de partidas, la app de escritorio ahora ignora las sesiones de menos de 5 minutos."
     },
     {
       "date": "2026-06-23",
       "title": "Detección de juegos más fiable",
-      "body": "El agente de escritorio ahora pilla juegos que antes se le escapaban, incluyendo los que llevan protecciones extra como anti-cheat o mods ejecutados como administrador. Actualiza a la última versión del agente para tenerlo."
+      "body": "La app de escritorio ahora pilla juegos que antes se le escapaban, incluyendo los que llevan protecciones extra como anti-cheat o mods ejecutados como administrador. Actualiza a la última versión de la app para tenerlo."
     },
     {
       "date": "2026-06-22",
