@@ -58,7 +58,7 @@ export default function LegalLayout({ title, updated, children }: LegalLayoutPro
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-10 flex h-14 items-center border-b border-border bg-background/80 px-6 backdrop-blur-sm">
         <Link
-          to="/lore"
+          to="/about"
           className="flex items-center gap-2 font-bold tracking-tight"
         >
           <img src="/favicon-32x32.png" alt="" aria-hidden className="h-5 w-5" />

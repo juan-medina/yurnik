@@ -35,7 +35,7 @@ export default function SignInPromptModal({ onClose }: Props) {
             onClick={() => signIn()}
             className="w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            {t("lore_cta_primary")}
+            {t("about_cta_primary")}
           </button>
         </div>
       </div>

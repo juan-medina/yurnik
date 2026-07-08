@@ -56,7 +56,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }: SidebarP
         )}
       >
         <NavLink
-          to="/lore"
+          to="/about"
           onClick={onClose}
           className="flex h-14 items-center gap-2 px-4 font-bold tracking-tight"
         >

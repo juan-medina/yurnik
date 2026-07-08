@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense } from "react";
 import { RouterProvider, createBrowserRouter, useRouteError } from "react-router";
 import { AlertTriangle } from "lucide-react";
 import Shell from "@/components/layout/Shell";
@@ -17,7 +17,7 @@ const Settings = lazy(() => import("@/pages/Settings"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const Backlog = lazy(() => import("@/pages/Backlog"));
 const AgentAuth = lazy(() => import("@/pages/AgentAuth"));
-const Lore = lazy(() => import("@/pages/Lore"));
+const About = lazy(() => import("@/pages/About"));
 const Terms = lazy(() => import("@/pages/Terms"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const WhatsNew = lazy(() => import("@/pages/WhatsNew"));
@@ -30,20 +30,7 @@ function withSuspense(element: React.ReactNode) {
 
 function GlobalErrorBoundary() {
   const error = useRouteError();
-  const isChunkError = error instanceof Error && error.message.includes("dynamically imported module");
-  const hasReloaded = sessionStorage.getItem("chunk_reload");
-  const shouldReload = isChunkError && !hasReloaded;
-
-  useEffect(() => {
-    if (shouldReload) {
-      sessionStorage.setItem("chunk_reload", "true");
-      window.location.reload();
-    } else if (isChunkError) {
-      sessionStorage.removeItem("chunk_reload");
-    }
-  }, [shouldReload, isChunkError]);
-
-  if (shouldReload) return null;
+  console.error("Global routing error:", error);
 
   return (
     <div className="flex h-screen flex-col items-center justify-center gap-4 text-center">
@@ -66,7 +53,7 @@ function GlobalErrorBoundary() {
 }
 
 const router = createBrowserRouter([
-  { path: "/lore", element: withSuspense(<Lore />), errorElement: <GlobalErrorBoundary /> },
+  { path: "/about", element: withSuspense(<About />), errorElement: <GlobalErrorBoundary /> },
   { path: "/terms", element: withSuspense(<Terms />), errorElement: <GlobalErrorBoundary /> },
   { path: "/privacy", element: withSuspense(<Privacy />), errorElement: <GlobalErrorBoundary /> },
   { path: "/whats-new", element: withSuspense(<WhatsNew />), errorElement: <GlobalErrorBoundary /> },

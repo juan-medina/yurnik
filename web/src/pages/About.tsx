@@ -5,14 +5,9 @@ import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
-  Home,
-  Gamepad2,
-  Compass,
-  ScrollText,
-  Monitor,
   CheckCircle2,
   ArrowDown,
-  Library,
+  Gamepad2,
 } from "lucide-react";
 
 import { getCurrentPlayer, signIn } from "@/services/auth";
@@ -20,19 +15,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import TopBar from "@/components/layout/TopBar";
 import Footer from "@/components/layout/Footer";
 
-type FeatureCardProps = { icon: React.ReactNode; title: string; body: string };
 
-function FeatureCard({ icon, title, body }: FeatureCardProps) {
-  return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/40">
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-        {icon}
-      </div>
-      <p className="font-semibold text-foreground">{title}</p>
-      <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
-    </div>
-  );
-}
 
 type StepProps = { number: number; label: string };
 
@@ -47,14 +30,14 @@ function Step({ number, label }: StepProps) {
   );
 }
 
-function LoreContent({ authenticated }: { authenticated: boolean }) {
+export function AboutContent({ authenticated }: { authenticated: boolean }) {
   const { t } = useTranslation();
 
   const openPoints = [
-    { title: t("lore_open_point_1_title"), sub: t("lore_open_point_1_sub") },
-    { title: t("lore_open_point_2_title"), sub: t("lore_open_point_2_sub") },
-    { title: t("lore_open_point_3_title"), sub: t("lore_open_point_3_sub") },
-    { title: t("lore_open_point_4_title"), sub: t("lore_open_point_4_sub") },
+    { title: t("about_open_point_1_title"), sub: t("about_open_point_1_sub") },
+    { title: t("about_open_point_2_title"), sub: t("about_open_point_2_sub") },
+    { title: t("about_open_point_3_title"), sub: t("about_open_point_3_sub") },
+    { title: t("about_open_point_4_title"), sub: t("about_open_point_4_sub") },
   ];
 
   return (
@@ -67,14 +50,14 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
             yurnik
           </h1>
         </div>
-        <p className="max-w-md text-base text-muted-foreground sm:text-lg">{t("lore_tagline")}</p>
+        <p className="max-w-md text-base text-muted-foreground sm:text-lg">{t("about_tagline")}</p>
         <div className="mt-2 flex flex-col gap-3 sm:flex-row">
           {authenticated ? (
             <Link
               to="/"
               className="rounded-md bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
-              {t("lore_auth_cta")}
+              {t("about_auth_cta")}
             </Link>
           ) : (
             <>
@@ -82,7 +65,7 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
                 onClick={() => signIn()}
                 className="rounded-md bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                {t("lore_cta_primary")}
+                {t("about_cta_primary")}
               </button>
               <Link
                 to="/explore"
@@ -94,7 +77,7 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
                 href="#how-it-works"
                 className="flex items-center justify-center gap-2 rounded-md border border-border px-6 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted"
               >
-                {t("lore_cta_secondary")}
+                {t("about_cta_secondary")}
                 <ArrowDown size={14} />
               </a>
             </>
@@ -122,52 +105,91 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
       >
         <div className="mx-auto max-w-2xl">
           <h2 className="mb-10 text-center text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-            {t("lore_how_title")}
+            {t("about_how_title")}
           </h2>
           <div className="flex justify-center">
             <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:gap-8">
-              <Step number={1} label={t("lore_step_play")} />
+              <Step number={1} label={t("about_step_play")} />
               <div className="hidden h-px w-12 self-center border-t border-dashed border-primary/30 sm:block" />
-              <Step number={2} label={t("lore_step_confirm")} />
+              <Step number={2} label={t("about_step_confirm")} />
               <div className="hidden h-px w-12 self-center border-t border-dashed border-primary/30 sm:block" />
-              <Step number={3} label={t("lore_step_share")} />
+              <Step number={3} label={t("about_step_share")} />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="px-6 py-14">
-        <div className="mx-auto max-w-2xl">
-          <h2 className="mb-8 text-center text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-            {t("lore_features_title")}
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FeatureCard
-              icon={<Home size={18} />}
-              title={t("lore_feature_feed_title")}
-              body={t("lore_feature_feed_body")}
-            />
-            <FeatureCard
-              icon={<ScrollText size={18} />}
-              title={t("lore_feature_log_title")}
-              body={t("lore_feature_log_body")}
-            />
-            <FeatureCard
-              icon={<Compass size={18} />}
-              title={t("lore_feature_explore_title")}
-              body={t("lore_feature_explore_body")}
-            />
-            <FeatureCard
-              icon={<Monitor size={18} />}
-              title={t("lore_feature_agent_title")}
-              body={t("lore_feature_agent_body")}
-            />
-            <FeatureCard
-              icon={<Library size={18} />}
-              title={t("lore_feature_backlog_title")}
-              body={t("lore_feature_backlog_body")}
-            />
+      {/* Featured Sections with Screenshots */}
+      <section className="px-6 py-14 overflow-hidden">
+        <div className="mx-auto max-w-5xl flex flex-col gap-24">
+
+          {/* Clean Social Feed */}
+          <div className="flex flex-col md:flex-row items-center gap-8 md:gap-16">
+            <div className="flex-1 space-y-4">
+              <h3 className="text-2xl font-bold text-foreground">{t("about_feature_feed_title")}</h3>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                {t("about_feature_feed_body")}
+              </p>
+            </div>
+            <div className="flex-1 w-full relative">
+              <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full" />
+              <img src="/ss/ss-feed.jpg" alt="Clean Social Feed" className="relative rounded-lg border border-border shadow-2xl w-full" />
+            </div>
+          </div>
+
+          {/* Profiles & Hard Data */}
+          <div className="flex flex-col md:flex-row-reverse items-center gap-8 md:gap-16">
+            <div className="flex-1 space-y-4">
+              <h3 className="text-2xl font-bold text-foreground">{t("about_feature_log_title")}</h3>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                {t("about_feature_log_body")}
+              </p>
+            </div>
+            <div className="flex-1 w-full relative">
+              <div className="absolute inset-0 bg-orange-400/10 blur-3xl rounded-full" />
+              <img src="/ss/ss-profile.jpg" alt="Profiles & Hard Data" className="relative rounded-lg border border-border shadow-2xl w-full" />
+            </div>
+          </div>
+
+          {/* Auto-tracking */}
+          <div className="flex flex-col md:flex-row items-center gap-8 md:gap-16">
+            <div className="flex-1 space-y-4">
+              <h3 className="text-2xl font-bold text-foreground">{t("about_feature_agent_title")}</h3>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                {t("about_feature_agent_body")}
+              </p>
+            </div>
+            <div className="flex-1 w-full relative">
+              <div className="absolute inset-0 bg-blue-400/10 blur-3xl rounded-full" />
+              <img src="/ss/ss-agent.jpg" alt="Auto-tracking (PC)" className="relative rounded-lg border border-border shadow-2xl w-full" />
+            </div>
+          </div>
+          {/* Explore */}
+          <div className="flex flex-col md:flex-row-reverse items-center gap-8 md:gap-16">
+            <div className="flex-1 space-y-4">
+              <h3 className="text-2xl font-bold text-foreground">{t("about_feature_explore_title")}</h3>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                {t("about_feature_explore_body")}
+              </p>
+            </div>
+            <div className="flex-1 w-full relative">
+              <div className="absolute inset-0 bg-purple-400/10 blur-3xl rounded-full" />
+              <img src="/ss/ss-explore.jpg" alt="Explore" className="relative rounded-lg border border-border shadow-2xl w-full" />
+            </div>
+          </div>
+
+          {/* Backlog */}
+          <div className="flex flex-col md:flex-row items-center gap-8 md:gap-16">
+            <div className="flex-1 space-y-4">
+              <h3 className="text-2xl font-bold text-foreground">{t("about_feature_backlog_title")}</h3>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                {t("about_feature_backlog_body")}
+              </p>
+            </div>
+            <div className="flex-1 w-full relative">
+              <div className="absolute inset-0 bg-emerald-400/10 blur-3xl rounded-full" />
+              <img src="/ss/ss-backlog.jpg" alt="Backlog" className="relative rounded-lg border border-border shadow-2xl w-full" />
+            </div>
           </div>
         </div>
       </section>
@@ -176,7 +198,7 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
       <section className="border-y border-border bg-muted/50 px-6 py-14">
         <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 text-center">
           <Gamepad2 size={32} className="text-primary" />
-          <h2 className="text-xl font-bold text-foreground">{t("lore_open_title")}</h2>
+          <h2 className="text-xl font-bold text-foreground">{t("about_open_title")}</h2>
           <div className="grid grid-cols-1 gap-4 text-left sm:grid-cols-2">
             {openPoints.map(({ title, sub }) => (
               <div key={title} className="flex items-start gap-3">
@@ -194,27 +216,23 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
       {/* Bottom CTA */}
       {!authenticated && (
         <section className="flex flex-col items-center gap-4 bg-gradient-to-b from-primary/5 to-background px-6 py-20 text-center">
-          <h2 className="text-2xl font-bold text-foreground">{t("lore_bottom_title")}</h2>
-          <p className="text-sm text-muted-foreground">{t("lore_bottom_sub")}</p>
+          <h2 className="text-2xl font-bold text-foreground">{t("about_bottom_title")}</h2>
+          <p className="text-sm text-muted-foreground">{t("about_bottom_sub")}</p>
           <button
             onClick={() => signIn()}
             className="mt-2 rounded-md bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            {t("lore_cta_primary")}
+            {t("about_cta_primary")}
           </button>
         </section>
       )}
 
-      {/* Footer */}
-      <p className="border-t border-border px-6 pt-6 text-center text-xs text-muted-foreground/60">
-        {t("lore_footer_open")}
-      </p>
-      <Footer />
+      {/* Footer placeholder removed */}
     </div>
   );
 }
 
-export default function Lore() {
+export default function About() {
   const { data: player, isLoading } = useQuery({
     queryKey: ["auth", "me"],
     queryFn: getCurrentPlayer,
@@ -239,10 +257,11 @@ export default function Lore() {
             onClick={() => signIn()}
             className="rounded-md bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            {t("lore_signin")}
+            {t("about_signin")}
           </button>
         </header>
-        <LoreContent authenticated={false} />
+        <AboutContent authenticated={false} />
+        <Footer />
       </div>
     );
   }
@@ -253,8 +272,9 @@ export default function Lore() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar onMenuClick={() => setSidebarOpen((o) => !o)} />
         <main className="flex-1 overflow-auto">
-          <LoreContent authenticated={true} />
+          <AboutContent authenticated={true} />
         </main>
+        <Footer />
       </div>
     </div>
   );
