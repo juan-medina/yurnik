@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { NavLink } from "react-router";
-import { Bell, Compass, Globe2, Library, ScrollText, Settings, Shield, ShieldAlert } from "lucide-react";
+import { Bell, Compass, Home, Library, ScrollText, Settings, ShieldAlert, User } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -27,12 +27,12 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }: SidebarP
   const { data: pendingCount = 0 } = usePendingJourneysCount(!!currentPlayer);
 
   const navItems: NavItem[] = [
-    { to: "/", labelKey: "nav_feed", icon: Globe2, end: true },
+    { to: "/", labelKey: "nav_feed", icon: Home, end: true },
     { to: "/journeys", labelKey: "nav_journeys", icon: ScrollText },
     { to: "/explore", labelKey: "nav_explore", icon: Compass },
     { to: "/notifications", labelKey: "nav_notifications", icon: Bell },
     { to: "/backlog", labelKey: "nav_backlog", icon: Library },
-    { to: currentPlayer ? `/player/${currentPlayer.handle}` : "/profile", labelKey: "nav_profile", icon: Shield },
+    { to: currentPlayer ? `/player/${currentPlayer.handle}` : "/profile", labelKey: "nav_profile", icon: User },
     { to: "/settings", labelKey: "nav_settings", icon: Settings },
     ...(currentPlayer?.isAdmin ? [{ to: "/admin", labelKey: "nav_admin", icon: ShieldAlert }] : []),
   ];
