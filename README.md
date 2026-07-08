@@ -1,6 +1,6 @@
 # Yurnik
 
-Yurnik is a social network for gaming journeys. Log what you play, see what people you follow are playing, discover games through the people you trust.
+Yurnik is a free, open-source social network for your gaming life. Log what you play, see what people you follow are playing, discover games through the people you trust.
 
 <p align="center">
 <a href="https://yurnik.social">
@@ -19,11 +19,10 @@ Yurnik is a social network for gaming journeys. Log what you play, see what peop
 
 - A game launcher
 - A library manager
-- A backlog tracker
 
 ## Status
 
-Early development. Not ready for use.
+Beta Testing
 
 ## Architecture
 
