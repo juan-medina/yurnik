@@ -120,11 +120,11 @@ Cloudflare's per-IP rate limit (see [DEPLOYMENT.md](DEPLOYMENT.md#rate-limiting)
 
 ---
 
-## Batched echo model
+## Batched notification model
 
-Echoes (in-app notifications) accumulate actors into a single row per `(recipient, type, subject)` rather than creating one row per actor. This produces "Juan and 2 others commented on your journey" instead of three separate notifications. The alternative — one row per actor, deduplicated at read time — produces the same UI but requires a GROUP BY on every notification panel open. The batched model pays a slightly more complex write path in exchange for a trivial read.
+Notifications (in-app notifications) accumulate actors into a single row per `(recipient, type, subject)` rather than creating one row per actor. This produces "Juan and 2 others commented on your journey" instead of three separate notifications. The alternative — one row per actor, deduplicated at read time — produces the same UI but requires a GROUP BY on every notification panel open. The batched model pays a slightly more complex write path in exchange for a trivial read.
 
-`subject_title` is snapshotted at echo creation time rather than joined at read time. If a journey is deleted, the echo continues to render with the title intact — the journey link is simply omitted. Referenced data can disappear; snapshots survive deletion.
+`subject_title` is snapshotted at notification creation time rather than joined at read time. If a journey is deleted, the notification continues to render with the title intact — the journey link is simply omitted. Referenced data can disappear; snapshots survive deletion.
 
 ---
 

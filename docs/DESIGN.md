@@ -12,12 +12,12 @@ Consistent terms used throughout this document, the codebase, and the UI. When i
 | **Pending journey** | A journey that has been detected or started but not yet confirmed by the user. Private, stored in Postgres only, never published. Evicted after 30 days. |
 | **Log** | The owner's optional narrative note on a journey. Written at confirmation time and editable by the owner afterwards. |
 | **Player** | A user of Yurnik. Identified by their internal UUID. |
-| **Realm** | The home feed — confirmed journeys from players you follow, in reverse chronological order. |
+| **Feed** | The home feed — confirmed journeys from players you follow, in reverse chronological order. |
 | **Journeys** | The page showing your own journeys — confirmed history and pending confirmation inbox. |
-| **Players** | The game-centric discovery page — browse who is playing what. Not a social graph view. |
-| **Hero** | Your own profile page — confirmed journey history and stats. |
-| **Echo** | An in-app notification. Triggered by a new comment on your journey or a new follower. Batched per subject — one echo per (recipient, type, subject) accumulates actors rather than creating one row per actor. |
-| **Horizon** | A player's public list of games they intend to play in the future, shown on their Hero page. Added from a game's detail page or the Horizon page; removable only from the Horizon page. |
+| **Explore** | The game-centric discovery page — browse who is playing what. Not a social graph view. |
+| **Profile** | Your own profile page — confirmed journey history and stats. |
+| **Notification** | An in-app notification. Triggered by a new comment on your journey or a new follower. Batched per subject — one notification per (recipient, type, subject) accumulates actors rather than creating one row per actor. |
+| **Backlog** | A player's public list of games they intend to play in the future, shown on their Profile page. Added from a game's detail page or the Backlog page; removable only from the Backlog page. |
 | **Exclusion** | An executable the agent will never create a pending journey for. |
 
 ## What we are building
@@ -48,7 +48,7 @@ The frontend is a SPA deployed to Cloudflare Pages. Static assets are served fro
 
 ## Database — Postgres
 
-Postgres runs on the same Hetzner VPS as the API server. A daily standalone maintenance binary (`yurnik-maintenance`) handles data eviction (e.g. unconfirmed journeys, old echoes).
+Postgres runs on the same Hetzner VPS as the API server. A daily standalone maintenance binary (`yurnik-maintenance`) handles data eviction (e.g. unconfirmed journeys, old notifications).
 
 ## Authentication — Discord OAuth
 
@@ -100,8 +100,8 @@ comments           — flat, chronological, attached to a journey
 exe_exclusions     — per user, executables to never detect
 exe_game_hints     — per user, exe_name → igdb_id, built from confirmed corrections
 igdb_cache         — server-side IGDB responses with TTL
-echoes             — per user, batched notifications; one row per (recipient, type, subject)
-echo_actors        — actors who contributed to an echo (commenters, followers)
+notifications             — per user, batched notifications; one row per (recipient, type, subject)
+notification_actors        — actors who contributed to a notification (commenters, followers)
 reports            — one row per (reporter, target); unique constraint prevents duplicate reports
 ```
 
@@ -117,68 +117,68 @@ localStorage       — UI preferences only
 journeys(id, user_id, igdb_id, started_at, ended_at, log, played_at, created_at)
 ```
 
-The Realm feed query joins `journeys` against `follows` to return journeys from followed players — one SQL query.
+The Feed query joins `journeys` against `follows` to return journeys from followed players — one SQL query.
 
 The journey detail query fetches the journey row, its comments, and whether the requesting user follows the journey owner — all from Postgres.
 
-## Social graph
+## Follows
 
 ```
 follows(follower_id, followee_id, created_at)
 ```
 
-Written on follow, deleted on unfollow. Powers the Realm feed join and follower/following lists. New follower echoes are written at the same time as the follow row.
+Written on follow, deleted on unfollow. Powers the Feed join and follower/following lists. New follower notifications are written at the same time as the follow row.
 
 ## Log and comments
 
 Two distinct concepts for text attached to a journey:
 
-**Log** — the journey owner's narrative, written at confirmation time and editable by the owner afterwards. A field on the `journeys` row. Shown in the Realm feed card and in the journey detail. Only the owner has a log.
+**Log** — the journey owner's narrative, written at confirmation time and editable by the owner afterwards. A field on the `journeys` row. Shown in the Feed card and in the journey detail. Only the owner has a log.
 
-**Comments** — text written by any player (including the journey owner) after the journey is confirmed. Separate rows in the `comments` table referencing the journey by ID. Shown in the journey detail only — never in the Realm feed. Flat and chronological — no threading, no hierarchy, no reply-to chains. Comments cannot be liked. A new comment on your journey by another player triggers an Echo; your own comments on your own journey do not.
+**Comments** — text written by any player (including the journey owner) after the journey is confirmed. Separate rows in the `comments` table referencing the journey by ID. Shown in the journey detail only — never in the Feed. Flat and chronological — no threading, no hierarchy, no reply-to chains. Comments cannot be liked. A new comment on your journey by another player triggers a Notification; your own comments on your own journey do not.
 
 Both fields are capped at 400 characters and rendered as plain text (`white-space: pre-wrap` — line breaks preserved, no markdown or HTML). See [CLAUDE.md](../.claude/CLAUDE.md#user-generated-text-and-spam-prevention) for the validation and anti-spam rules applied to both fields.
 
-## Echoes
+## Notifications
 
-Echoes are in-app notifications. They use a batched model: one `echoes` row per `(recipient_id, type, subject_id)` that accumulates actors over time, rather than one row per actor.
+Notifications are in-app notifications. They use a batched model: one `notifications` row per `(recipient_id, type, subject_id)` that accumulates actors over time, rather than one row per actor.
 
 ```
-echoes(id, recipient_id, type, subject_id, subject_title, seen_at, created_at, updated_at)
-echo_actors(echo_id, actor_id, created_at)
+notifications(id, recipient_id, type, subject_id, subject_title, seen_at, created_at, updated_at)
+notification_actors(notification_id, actor_id, created_at)
 ```
 
 `type` is one of `new_comment`, `new_follower`.
 
-`subject_id` is the journey ID for `new_comment` echoes; null for `new_follower` echoes.
+`subject_id` is the journey ID for `new_comment` notifications; null for `new_follower` notifications.
 
-`subject_title` is snapshotted from the journey's game name at creation time. If the journey is later deleted, the echo still renders — the link is simply omitted.
+`subject_title` is snapshotted from the journey's game name at creation time. If the journey is later deleted, the notification still renders — the link is simply omitted.
 
-`seen_at` is null until the user opens the notification panel, at which point `POST /echoes/seen` stamps `seen_at = now()` on all unseen echoes for that user in one query. There is no per-echo read action — opening the panel clears the badge.
+`seen_at` is null until the user opens the notification panel, at which point `POST /notifications/seen` stamps `seen_at = now()` on all unseen notifications for that user in one query. There is no per-notification read action — opening the panel clears the badge.
 
-`updated_at` is bumped each time a new actor is added to an existing echo, so the panel can show the time of most recent activity.
+`updated_at` is bumped each time a new actor is added to an existing notification, so the panel can show the time of most recent activity.
 
-Echoes that have received no new activity for 60 days (i.e. `updated_at` is older than 60 days) are evicted by the daily maintenance job to prevent the table from growing indefinitely. Because of the batched model, a popular journey with frequent new comments will keep its echo alive as long as people keep engaging with it.
+Notifications that have received no new activity for 60 days (i.e. `updated_at` is older than 60 days) are evicted by the daily maintenance job to prevent the table from growing indefinitely. Because of the batched model, a popular journey with frequent new comments will keep its notification alive as long as people keep engaging with it.
 
-New follower echoes are written in the same transaction as the `follows` row. New comment echoes are written in the same transaction as the `comments` row, unless the commenter is the journey owner.
+New follower notifications are written in the same transaction as the `follows` row. New comment notifications are written in the same transaction as the `comments` row, unless the commenter is the journey owner.
 
-## Realm feed
+## Feed feed
 
-The Realm is the home feed — confirmed journeys from players you follow, reverse chronological. Backed by a single SQL query joining `journeys` against `follows`.
+The Feed is the home feed — confirmed journeys from players you follow, reverse chronological. Backed by a single SQL query joining `journeys` against `follows`.
 
 Each journey card in the feed is fully renderable from the `journeys` row joined with `users` and `igdb_games` — no secondary lookups needed per card.
 
 ## Player profile
 
-The player profile (`/hero` for the authenticated user, `/player/:id` for others) is driven by a single aggregated endpoint — `GET /api/players/:id/profile` or `GET /api/me/profile`. The response includes everything the page needs in one round trip: player identity, follow counts, journey count, total playtime, recent games, and genre hours. The frontend renders; it does not aggregate.
+The player profile (`/profile` for the authenticated user, `/player/:id` for others) is driven by a single aggregated endpoint — `GET /api/players/:id/profile` or `GET /api/me/profile`. The response includes everything the page needs in one round trip: player identity, follow counts, journey count, total playtime, recent games, and genre hours. The frontend renders; it does not aggregate.
 
 **Recent games** — the five most recently played distinct games, ordered by `MAX(played_at)` descending.
 
 **Genre hours** — total seconds played in games that have a given genre, top eight by volume. A game with three genres contributes its full duration to each genre. The bars are sized relative to the highest genre — absolute hours are shown on the label. Total exceeds 100%; this is expected and correct.
 
-## Players page
+## Explore page
 
-The Players page shows recent journeys grouped by game, across all players. Powers game discovery — see who is playing what. The data backing this page is the `journeys` table, ordered by `played_at` descending, grouped by `igdb_id`.
+The Explore page shows recent journeys grouped by game, across all players. Powers game discovery — see who is playing what. The data backing this page is the `journeys` table, ordered by `played_at` descending, grouped by `igdb_id`.
 
 Each game card shows:
 - Game cover art, title, and genre chips

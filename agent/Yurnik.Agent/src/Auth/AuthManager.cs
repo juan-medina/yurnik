@@ -102,7 +102,7 @@ sealed class AuthManager : IAuthState, IDisposable
     {
         _refreshTask = RefreshLoopAsync(_cts.Token);
         Log.Info("Session refresh loop started");
-        Log.Debug($"Session refresh interval: {_config.SyncInterval}");
+        Log.Debug($"Session refresh interval: {_config.AuthRefreshInterval}");
     }
 
     /// <summary>
@@ -145,7 +145,7 @@ sealed class AuthManager : IAuthState, IDisposable
     /// </summary>
     async Task RefreshLoopAsync(CancellationToken ct)
     {
-        var delay = _config.SyncInterval;
+        var delay = _config.AuthRefreshInterval;
         var failures = 0;
 
         while (!ct.IsCancellationRequested)
@@ -156,7 +156,7 @@ sealed class AuthManager : IAuthState, IDisposable
             if (!IsAuthenticated)
             {
                 Log.Debug("Session refresh: not authenticated, skipping check");
-                delay = _config.SyncInterval;
+                delay = _config.AuthRefreshInterval;
                 continue;
             }
 
@@ -177,7 +177,7 @@ sealed class AuthManager : IAuthState, IDisposable
                     }
                     await SyncSettingsAsync();
                     failures = 0;
-                    delay = _config.SyncInterval;
+                    delay = _config.AuthRefreshInterval;
                     break;
 
                 case ApiResult.Unauthorized:
@@ -185,7 +185,7 @@ sealed class AuthManager : IAuthState, IDisposable
                     _store.DeleteToken();
                     _client.ClearToken();
                     failures = 0;
-                    delay = _config.SyncInterval;
+                    delay = _config.AuthRefreshInterval;
                     SetAuthenticated(false);
                     break;
 

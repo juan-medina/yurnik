@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 
-// Package echoes handles in-app notification routes.
-package echoes
+// Package notifications handles in-app notification routes.
+package notifications
 
 import (
 	"crypto/ed25519"
@@ -16,7 +16,7 @@ import (
 	"github.com/juan-medina/yurnik/internal/db"
 )
 
-// Handler handles echo routes.
+// Handler handles notification routes.
 type Handler struct {
 	pool    *pgxpool.Pool
 	jwtPriv ed25519.PrivateKey
@@ -27,10 +27,10 @@ func NewHandler(pool *pgxpool.Pool, jwtPriv ed25519.PrivateKey) *Handler {
 	return &Handler{pool: pool, jwtPriv: jwtPriv}
 }
 
-// Register mounts echo routes on mux.
+// Register mounts notification routes on mux.
 func (h *Handler) Register(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/echoes", h.list)
-	mux.HandleFunc("POST /api/echoes/read", h.markRead)
+	mux.HandleFunc("GET /api/notifications", h.list)
+	mux.HandleFunc("POST /api/notifications/read", h.markRead)
 }
 
 type actorResp struct {
@@ -41,7 +41,7 @@ type actorResp struct {
 	Color     string  `json:"color"`
 }
 
-type echoResp struct {
+type notificationResp struct {
 	ID            int64       `json:"id"`
 	Type          string      `json:"type"`
 	Actors        []actorResp `json:"actors"`
@@ -63,9 +63,9 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	limit := 50
 	cursor := r.URL.Query().Get("cursor")
 
-	rows, err := db.ListEchoes(r.Context(), h.pool, userID, limit+1, cursor)
+	rows, err := db.ListNotifications(r.Context(), h.pool, userID, limit+1, cursor)
 	if err != nil {
-		log.Printf("echoes/list: %v", err)
+		log.Printf("notifications/list: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return
 	}
@@ -73,11 +73,11 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	var nextCursor string
 	if len(rows) == limit+1 {
 		last := rows[limit-1]
-		nextCursor = db.EncodeEchoCursor(last.UpdatedAt, last.ID)
+		nextCursor = db.EncodeNotificationCursor(last.UpdatedAt, last.ID)
 		rows = rows[:limit]
 	}
 
-	resp := make([]echoResp, 0, len(rows))
+	resp := make([]notificationResp, 0, len(rows))
 	unreadCount := 0
 	for _, e := range rows {
 		actors := make([]actorResp, 0, len(e.Actors))
@@ -90,7 +90,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 				Color:     a.Color,
 			})
 		}
-		er := echoResp{
+		er := notificationResp{
 			ID:            e.ID,
 			Type:          e.Type,
 			Actors:        actors,
@@ -109,8 +109,8 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := map[string]any{
-		"echoes":       resp,
-		"unread_count": unreadCount,
+		"notifications": resp,
+		"unread_count":  unreadCount,
 	}
 	if nextCursor != "" {
 		result["next_cursor"] = nextCursor
@@ -124,8 +124,8 @@ func (h *Handler) markRead(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if err := db.MarkEchoesRead(r.Context(), h.pool, userID); err != nil {
-		log.Printf("echoes/markRead: %v", err)
+	if err := db.MarkNotificationsRead(r.Context(), h.pool, userID); err != nil {
+		log.Printf("notifications/markRead: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return
 	}

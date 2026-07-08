@@ -4,7 +4,7 @@ import { screen, waitFor, render } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderWithProviders } from "@/test/utils";
-import Realm from "./Realm";
+import Feed from "./Feed";
 
 function makeFetch(nextCursor?: string) {
   return vi.fn(async (input: RequestInfo | URL) => {
@@ -42,24 +42,24 @@ function makeFetch(nextCursor?: string) {
   });
 }
 
-function renderRealm() {
+function renderFeed() {
   return renderWithProviders(
     <MemoryRouter>
-      <Realm />
+      <Feed />
     </MemoryRouter>,
   );
 }
 
-describe("Realm", () => {
+describe("Feed", () => {
   it("shows a Load more button when the feed returns a next_cursor", async () => {
     vi.stubGlobal("fetch", makeFetch("2026-06-01,2026-06-01T12:00:00Z"));
-    renderRealm();
+    renderFeed();
     expect(await screen.findByRole("button", { name: /load more/i })).toBeInTheDocument();
   });
 
   it("does not show a Load more button when the feed returns no next_cursor", async () => {
     vi.stubGlobal("fetch", makeFetch());
-    renderRealm();
+    renderFeed();
     await screen.findByText("Hollow Knight");
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
@@ -70,7 +70,7 @@ describe("Realm", () => {
   // already cached and fresh (e.g. from an earlier visit within staleTime),
   // React Query serves the cached data without re-running queryFn. The old
   // code populated its item list only as a side effect inside queryFn, so on
-  // a cache hit the list stayed empty and the page rendered the "quiet realm"
+  // a cache hit the list stayed empty and the page rendered the "quiet feed"
   // empty state despite real cached data existing. A fresh-cache test (like
   // the two above) can never hit this path, since queryFn always runs there.
   it("renders cached feed items immediately on a warm cache, without re-fetching", async () => {
@@ -101,12 +101,12 @@ describe("Realm", () => {
     render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
-          <Realm />
+          <Feed />
         </MemoryRouter>
       </QueryClientProvider>,
     );
 
     expect(await screen.findByText("Hollow Knight")).toBeInTheDocument();
-    expect(screen.queryByText(/realm.*quiet/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/feed.*quiet/i)).not.toBeInTheDocument();
   });
 });

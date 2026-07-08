@@ -85,7 +85,7 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
                 {t("lore_cta_primary")}
               </button>
               <Link
-                to="/players"
+                to="/explore"
                 className="rounded-md border border-border px-6 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted"
               >
                 {t("home_explore_cta")}
@@ -145,8 +145,8 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <FeatureCard
               icon={<Globe2 size={18} />}
-              title={t("lore_feature_realm_title")}
-              body={t("lore_feature_realm_body")}
+              title={t("lore_feature_feed_title")}
+              body={t("lore_feature_feed_body")}
             />
             <FeatureCard
               icon={<ScrollText size={18} />}
@@ -155,8 +155,8 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
             />
             <FeatureCard
               icon={<Users size={18} />}
-              title={t("lore_feature_players_title")}
-              body={t("lore_feature_players_body")}
+              title={t("lore_feature_explore_title")}
+              body={t("lore_feature_explore_body")}
             />
             <FeatureCard
               icon={<Monitor size={18} />}
@@ -165,8 +165,8 @@ function LoreContent({ authenticated }: { authenticated: boolean }) {
             />
             <FeatureCard
               icon={<Telescope size={18} />}
-              title={t("lore_feature_horizon_title")}
-              body={t("lore_feature_horizon_body")}
+              title={t("lore_feature_backlog_title")}
+              body={t("lore_feature_backlog_body")}
             />
           </div>
         </div>

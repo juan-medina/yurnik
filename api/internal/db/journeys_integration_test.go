@@ -108,14 +108,14 @@ ALTER TABLE activity_events ADD COLUMN IF NOT EXISTS subject_igdb_id integer REF
 ALTER TABLE activity_events ADD COLUMN IF NOT EXISTS comment_id uuid REFERENCES comments(id) ON DELETE CASCADE;
 ALTER TABLE activity_events DROP CONSTRAINT IF EXISTS activity_events_type_check;
 ALTER TABLE activity_events ADD CONSTRAINT activity_events_type_check
-    CHECK (type IN ('new_comment', 'new_follower', 'horizon_add'));
+    CHECK (type IN ('new_comment', 'new_follower', 'backlog_add'));
 
 DELETE FROM activity_events WHERE type = 'new_comment' AND subject_id IS NULL;
 ALTER TABLE activity_events DROP CONSTRAINT IF EXISTS activity_events_subject_id_fkey;
 ALTER TABLE activity_events ADD CONSTRAINT activity_events_subject_id_fkey
     FOREIGN KEY (subject_id) REFERENCES journeys(id) ON DELETE CASCADE;
 
-CREATE TABLE IF NOT EXISTS horizon_entries (
+CREATE TABLE IF NOT EXISTS backlog_entries (
     id        bigint      PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     player_id uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     igdb_id   integer     NOT NULL REFERENCES igdb_games(igdb_id),
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS horizon_entries (
     UNIQUE (player_id, igdb_id)
 );
 
-CREATE INDEX IF NOT EXISTS horizon_entries_player_id_added_at_idx ON horizon_entries (player_id, added_at DESC);
+CREATE INDEX IF NOT EXISTS backlog_entries_player_id_added_at_idx ON backlog_entries (player_id, added_at DESC);
 `
 
 func connectTestDB(t *testing.T) *pgxpool.Pool {

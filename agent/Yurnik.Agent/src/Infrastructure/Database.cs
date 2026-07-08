@@ -52,6 +52,13 @@ sealed class Database
             dropQueueCmd.CommandText = "DROP TABLE IF EXISTS queue;";
             dropQueueCmd.ExecuteNonQuery();
         }
+        if (version < 6)
+        {
+            Log.Info($"Schema is version {version} — dropping notified_notifications table for terminology update");
+            using var dropNotificationsCmd = conn.CreateCommand();
+            dropNotificationsCmd.CommandText = "DROP TABLE IF EXISTS notified_notifications;";
+            dropNotificationsCmd.ExecuteNonQuery();
+        }
 
         using var schemaCmd = conn.CreateCommand();
         schemaCmd.CommandText = """
@@ -81,15 +88,15 @@ sealed class Database
                 exe_name TEXT PRIMARY KEY
             );
 
-            CREATE TABLE IF NOT EXISTS notified_echoes (
-                echo_id     TEXT    PRIMARY KEY,
-                notified_at INTEGER NOT NULL
+            CREATE TABLE IF NOT EXISTS notified_notifications (
+                notification_id TEXT    PRIMARY KEY,
+                notified_at     INTEGER NOT NULL
             );
             """;
         schemaCmd.ExecuteNonQuery();
 
         using var pragmaCmd = conn.CreateCommand();
-        pragmaCmd.CommandText = "PRAGMA user_version = 5;";
+        pragmaCmd.CommandText = "PRAGMA user_version = 6;";
         pragmaCmd.ExecuteNonQuery();
 
         Log.Info("Database migrations complete");
@@ -97,15 +104,22 @@ sealed class Database
 
     static void DropAll(SqliteConnection conn)
     {
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = """
-            DROP TABLE IF EXISTS sessions;
-            DROP TABLE IF EXISTS queue;
-            DROP TABLE IF EXISTS exclusions;
-            DROP TABLE IF EXISTS inclusions;
-            DROP TABLE IF EXISTS notified_echoes;
-            DROP TABLE IF EXISTS schema_version;
-            """;
-        cmd.ExecuteNonQuery();
+        var tables = new System.Collections.Generic.List<string>();
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                tables.Add(reader.GetString(0));
+            }
+        }
+
+        foreach (var table in tables)
+        {
+            using var dropCmd = conn.CreateCommand();
+            dropCmd.CommandText = $"DROP TABLE IF EXISTS \"{table}\";";
+            dropCmd.ExecuteNonQuery();
+        }
     }
 }

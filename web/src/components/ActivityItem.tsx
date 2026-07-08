@@ -22,33 +22,33 @@ export default function ActivityItem({ activity, viewerId }: ActivityItemProps) 
 
   const to =
     type === "comment" ? `/journey/${subjectId}` :
-    type === "horizon_add" ? `/game/${subjectIgdbId}` :
+    type === "backlog_add" ? `/game/${subjectIgdbId}` :
     playerHref(aboutViewer ? actor : recipient);
   const icon =
     type === "comment" ? <MessageSquare size={13} /> :
-    type === "horizon_add" ? <Telescope size={13} /> :
+    type === "backlog_add" ? <Telescope size={13} /> :
     <UserPlus size={13} />;
 
   const text =
-    type === "horizon_add"
+    type === "backlog_add"
       ? viewerIsActor
-        ? t("realm_activity_horizon_added_you", { game: subjectTitle })
-        : t("realm_activity_horizon_added", { game: subjectTitle })
+        ? t("feed_activity_backlog_added_you", { game: subjectTitle })
+        : t("feed_activity_backlog_added", { game: subjectTitle })
       : isSelfComment
         ? viewerIsActor
-          ? t("realm_activity_commented_own_you", { game: subjectTitle })
-          : t("realm_activity_commented_own", { game: subjectTitle })
+          ? t("feed_activity_commented_own_you", { game: subjectTitle })
+          : t("feed_activity_commented_own", { game: subjectTitle })
         : aboutViewer
           ? type === "comment"
-            ? t("realm_activity_commented_you", { game: subjectTitle })
-            : t("realm_activity_followed_you")
+            ? t("feed_activity_commented_you", { game: subjectTitle })
+            : t("feed_activity_followed_you")
           : viewerIsActor
             ? type === "comment"
-              ? t("realm_activity_commented_by_you", { recipient: recipient.name, game: subjectTitle })
-              : t("realm_activity_followed_by_you", { recipient: recipient.name })
+              ? t("feed_activity_commented_by_you", { recipient: recipient.name, game: subjectTitle })
+              : t("feed_activity_followed_by_you", { recipient: recipient.name })
             : type === "comment"
-              ? t("realm_activity_commented", { recipient: recipient.name, game: subjectTitle })
-              : t("realm_activity_followed", { recipient: recipient.name });
+              ? t("feed_activity_commented", { recipient: recipient.name, game: subjectTitle })
+              : t("feed_activity_followed", { recipient: recipient.name });
 
   return (
     <Link

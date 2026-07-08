@@ -9,7 +9,7 @@ import { getCurrentPlayer } from "@/services/auth";
 import ActivityFeed from "@/components/ActivityFeed";
 import type { FeedItem } from "@/models/feed";
 
-export default function Realm() {
+export default function Feed() {
   const { t } = useTranslation();
   const [extraItems, setExtraItems] = useState<FeedItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
@@ -43,13 +43,13 @@ export default function Realm() {
 
   const emptyState = (
     <div className="mx-auto max-w-2xl flex flex-col items-center justify-center py-24 gap-3 text-center">
-      <p className="text-base">{t("realm_quiet")}</p>
-      <p className="text-sm text-muted-foreground">{t("realm_follow_hint")}</p>
+      <p className="text-base">{t("feed_quiet")}</p>
+      <p className="text-sm text-muted-foreground">{t("feed_follow_hint")}</p>
       <Link
-        to="/players"
+        to="/explore"
         className="mt-2 text-sm border border-border rounded-lg px-4 py-2 hover:bg-muted transition-colors"
       >
-        {t("realm_discover")}
+        {t("feed_discover")}
       </Link>
     </div>
   );

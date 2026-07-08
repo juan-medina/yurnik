@@ -348,10 +348,10 @@ func (h *Handler) postComment(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Best-effort echo/activity — never block the response on these failures.
+	// Best-effort notification/activity — never block the response on these failures.
 	if meta, err := db.GetJourneyMeta(r.Context(), h.pool, id); err == nil {
-		if err := db.UpsertCommentEcho(r.Context(), h.pool, meta.OwnerID, userID, id, meta.GameName); err != nil {
-			log.Printf("journeys/postComment: upsert echo: %v", err)
+		if err := db.UpsertCommentNotification(r.Context(), h.pool, meta.OwnerID, userID, id, meta.GameName); err != nil {
+			log.Printf("journeys/postComment: upsert notification: %v", err)
 		}
 		if err := db.RecordActivity(r.Context(), h.pool, userID, meta.OwnerID, "new_comment", &id, &meta.GameName, &comment.ID); err != nil {
 			log.Printf("journeys/postComment: record activity: %v", err)
@@ -362,8 +362,8 @@ func (h *Handler) postComment(w http.ResponseWriter, r *http.Request) {
 				if recipientID == meta.OwnerID {
 					continue
 				}
-				if err := db.UpsertCommentReplyEcho(r.Context(), h.pool, recipientID, userID, id, meta.GameName); err != nil {
-					log.Printf("journeys/postComment: upsert reply echo: %v", err)
+				if err := db.UpsertCommentReplyNotification(r.Context(), h.pool, recipientID, userID, id, meta.GameName); err != nil {
+					log.Printf("journeys/postComment: upsert reply notification: %v", err)
 				}
 			}
 		} else {
@@ -371,8 +371,8 @@ func (h *Handler) postComment(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, recipientID := range mentionedUserIDs {
-			if err := db.UpsertMentionEcho(r.Context(), h.pool, recipientID, userID, id, meta.GameName); err != nil {
-				log.Printf("journeys/postComment: upsert mention echo: %v", err)
+			if err := db.UpsertMentionNotification(r.Context(), h.pool, recipientID, userID, id, meta.GameName); err != nil {
+				log.Printf("journeys/postComment: upsert mention notification: %v", err)
 			}
 		}
 	}

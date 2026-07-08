@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { isUpcoming, upcomingSortKey } from "./Horizon";
-import type { HorizonEntry } from "@/models/player";
+import { isUpcoming, upcomingSortKey } from "./Backlog";
+import type { BacklogEntry } from "@/models/player";
 
 // June 25, 2026 noon local — a known fixed point for all tests below
 const FIXED_NOW = new Date(2026, 5, 25, 12, 0, 0);
 
-function entry(overrides: Partial<HorizonEntry> = {}): HorizonEntry {
+function entry(overrides: Partial<BacklogEntry> = {}): BacklogEntry {
   return { igdbId: 1, name: "Some Game", genres: [], ...overrides };
 }
 

@@ -10,7 +10,7 @@ import { _reset as resetPlayers } from "@/services/players";
 import { renderWithProviders } from "@/test/utils";
 import GameDetail from "./GameDetail";
 
-function gameDetailResponse(withTrailer: boolean, withStoreLinks: boolean, inHorizon = false) {
+function gameDetailResponse(withTrailer: boolean, withStoreLinks: boolean, inBacklog = false) {
   return JSON.stringify({
     id: MOCK_GAME_DETAIL.id,
     name: MOCK_GAME_DETAIL.name,
@@ -24,7 +24,7 @@ function gameDetailResponse(withTrailer: boolean, withStoreLinks: boolean, inHor
     screenshots: MOCK_GAME_DETAIL.screenshots,
     videos: withTrailer ? MOCK_GAME_DETAIL.videos : [],
     store_links: withStoreLinks ? MOCK_GAME_DETAIL.storeLinks : {},
-    in_horizon: inHorizon,
+    in_backlog: inBacklog,
   });
 }
 
@@ -57,7 +57,7 @@ function multipleOwnJourneysResponse() {
   });
 }
 
-function makeFetch({ withTrailer = true, withStoreLinks = true, withFollowing = true, notFound = false, inHorizon = false, anonymous = false, journeysBody = "" } = {}) {
+function makeFetch({ withTrailer = true, withStoreLinks = true, withFollowing = true, notFound = false, inBacklog = false, anonymous = false, journeysBody = "" } = {}) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = input.toString();
     const method = init?.method ?? "GET";
@@ -73,7 +73,7 @@ function makeFetch({ withTrailer = true, withStoreLinks = true, withFollowing = 
     if (url.includes("/api/players/") && url.endsWith("/follow") && method === "DELETE") {
       return new Response(null, { status: 204 });
     }
-    if (url.endsWith("/api/me/horizon") && method === "POST") {
+    if (url.endsWith("/api/me/backlog") && method === "POST") {
       return new Response(null, { status: 204 });
     }
     if (/\/api\/games\/\d+\/journeys/.test(url)) {
@@ -81,7 +81,7 @@ function makeFetch({ withTrailer = true, withStoreLinks = true, withFollowing = 
     }
     if (/\/api\/games\/\d+$/.test(url)) {
       if (notFound) return new Response("not found", { status: 404 });
-      return json(gameDetailResponse(withTrailer, withStoreLinks, inHorizon));
+      return json(gameDetailResponse(withTrailer, withStoreLinks, inBacklog));
     }
     return new Response("not found", { status: 404 });
   });
@@ -166,33 +166,33 @@ describe("GameDetail", () => {
     );
   });
 
-  it("shows an Add to horizon button when the game is not in the player's horizon", async () => {
+  it("shows an Add to backlog button when the game is not in the player's backlog", async () => {
     renderGame("1");
-    expect(await screen.findByRole("button", { name: /Add to horizon/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Add to backlog/i })).toBeInTheDocument();
   });
 
-  it("shows an In horizon indicator when the game is already in the player's horizon", async () => {
-    vi.stubGlobal("fetch", makeFetch({ inHorizon: true }));
+  it("shows an In backlog indicator when the game is already in the player's backlog", async () => {
+    vi.stubGlobal("fetch", makeFetch({ inBacklog: true }));
     renderGame("1");
     await screen.findByRole("heading", { name: /Elden Ring/ });
-    expect(screen.getByText(/In horizon/i)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Add to horizon/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/In backlog/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Add to backlog/i })).not.toBeInTheDocument();
   });
 
-  it("clicking Add to horizon switches to the In horizon indicator", async () => {
+  it("clicking Add to backlog switches to the In backlog indicator", async () => {
     const user = userEvent.setup();
     renderGame("1");
-    const addButton = await screen.findByRole("button", { name: /Add to horizon/i });
+    const addButton = await screen.findByRole("button", { name: /Add to backlog/i });
     await user.click(addButton);
-    expect(await screen.findByText(/In horizon/i)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Add to horizon/i })).not.toBeInTheDocument();
+    expect(await screen.findByText(/In backlog/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Add to backlog/i })).not.toBeInTheDocument();
   });
 
-  it("clicking Add to horizon as an anonymous user shows a sign-in prompt", async () => {
+  it("clicking Add to backlog as an anonymous user shows a sign-in prompt", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", makeFetch({ anonymous: true }));
     renderGame("1");
-    const addButton = await screen.findByRole("button", { name: /Add to horizon/i });
+    const addButton = await screen.findByRole("button", { name: /Add to backlog/i });
     await user.click(addButton);
     expect(await screen.findByRole("button", { name: /sign in/i })).toBeInTheDocument();
   });

@@ -123,7 +123,7 @@ export default function Settings() {
             {t("lore_cta_primary")}
           </button>
           <Link
-            to="/players"
+            to="/explore"
             className="rounded-md border border-border px-6 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted"
           >
             {t("home_explore_cta")}
@@ -239,7 +239,7 @@ export default function Settings() {
                 aria-label={t("settings_updates_notifications")}
                 onClick={() => updatePrefsMutation.mutate({ 
                   updates: !(player?.notificationPreferences?.updates ?? true), 
-                  echoes: player?.notificationPreferences?.echoes ?? true 
+                  notifications: player?.notificationPreferences?.notifications ?? true 
                 })}
                 className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
                   (player?.notificationPreferences?.updates ?? true) ? "bg-primary" : "bg-muted"
@@ -256,26 +256,26 @@ export default function Settings() {
           <div className="rounded-lg border border-border bg-card p-5">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-medium">{t("settings_echoes_notifications")}</p>
+                <p className="font-medium">{t("settings_notifications_notifications")}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {t("settings_echoes_notifications_desc")}
+                  {t("settings_notifications_notifications_desc")}
                 </p>
               </div>
               <button
                 role="switch"
-                aria-checked={player?.notificationPreferences?.echoes ?? true}
-                aria-label={t("settings_echoes_notifications")}
+                aria-checked={player?.notificationPreferences?.notifications ?? true}
+                aria-label={t("settings_notifications_notifications")}
                 onClick={() => updatePrefsMutation.mutate({ 
                   updates: player?.notificationPreferences?.updates ?? true, 
-                  echoes: !(player?.notificationPreferences?.echoes ?? true) 
+                  notifications: !(player?.notificationPreferences?.notifications ?? true) 
                 })}
                 className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                  (player?.notificationPreferences?.echoes ?? true) ? "bg-primary" : "bg-muted"
+                  (player?.notificationPreferences?.notifications ?? true) ? "bg-primary" : "bg-muted"
                 }`}
               >
                 <span
                   className={`absolute top-0.5 h-5 w-5 rounded-full bg-background transition-transform ${
-                    (player?.notificationPreferences?.echoes ?? true) ? "translate-x-5" : "translate-x-0.5"
+                    (player?.notificationPreferences?.notifications ?? true) ? "translate-x-5" : "translate-x-0.5"
                   }`}
                 />
               </button>

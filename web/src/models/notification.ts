@@ -3,11 +3,11 @@
 
 import type { Player } from "./player";
 
-export type EchoType = "new_comment" | "new_comment_reply" | "new_follower" | "new_mention" | "horizon_release";
+export type NotificationType = "new_comment" | "new_comment_reply" | "new_follower" | "new_mention" | "backlog_release";
 
-export type Echo = {
+export type Notification = {
   id: string;
-  type: EchoType;
+  type: NotificationType;
   actors: Player[];
   actorCount: number;
   subjectId: string | null;

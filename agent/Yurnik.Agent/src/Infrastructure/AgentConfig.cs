@@ -26,9 +26,13 @@ sealed class AgentConfig
     // (e.g. game crashes or accidental launches) are discarded.
     public TimeSpan MinSessionDuration { get; init; } = TimeSpan.FromMinutes(5);
 
-    // How often the agent syncs with the server (heartbeat, settings, echoes).
-    // Replaces AuthRefreshInterval and EchoRefreshInterval.
-    public TimeSpan SyncInterval { get; init; } = TimeSpan.FromHours(1);
+    // How often the agent checks /api/v1/agent/heartbeat to keep the session
+    // token from expiring. The server renews tokens older than 24h, and the
+    // session itself lasts 7 days, so a multi-day interval leaves ample margin.
+    public TimeSpan AuthRefreshInterval { get; init; } = TimeSpan.FromDays(3);
+
+    // How often the agent checks for new notifications.
+    public TimeSpan NotificationRefreshInterval { get; init; } = TimeSpan.FromHours(1);
 
     public static AgentConfig Load()
     {
@@ -41,8 +45,10 @@ sealed class AgentConfig
             ApiBaseUrl = dev?.ApiBaseUrl ?? base_?.ApiBaseUrl ?? "https://api.yurnik.social",
             WebBaseUrl = dev?.WebBaseUrl ?? base_?.WebBaseUrl ?? "https://yurnik.social",
             Language   = dev?.Language   ?? base_?.Language,
-            SyncInterval = TimeSpan.FromSeconds(
-                dev?.SyncIntervalSeconds ?? base_?.SyncIntervalSeconds ?? 3600),
+            AuthRefreshInterval = TimeSpan.FromSeconds(
+                dev?.AuthRefreshIntervalSeconds ?? base_?.AuthRefreshIntervalSeconds ?? (3 * 24 * 60 * 60)),
+            NotificationRefreshInterval = TimeSpan.FromSeconds(
+                dev?.NotificationRefreshIntervalSeconds ?? base_?.NotificationRefreshIntervalSeconds ?? 3600),
             MinSessionDuration = TimeSpan.FromSeconds(
                 dev?.MinSessionDurationSeconds ?? base_?.MinSessionDurationSeconds ?? 300),
         };
@@ -60,7 +66,8 @@ sealed class AgentConfig
         string? ApiBaseUrl,
         string? WebBaseUrl,
         string? Language,
-        int? SyncIntervalSeconds,
+        int? AuthRefreshIntervalSeconds,
+        int? NotificationRefreshIntervalSeconds,
         int? MinSessionDurationSeconds);
 
     static string DefaultDbPath()

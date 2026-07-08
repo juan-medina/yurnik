@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "@/hooks/useTheme";
 import PlayerAvatar from "@/components/PlayerAvatar";
 import { getCurrentPlayer } from "@/services/auth";
-import { useEchoes } from "@/hooks/useEchoes";
+import { useNotifications } from "@/hooks/useNotifications";
 
 type TopBarProps = { onMenuClick?: () => void };
 
@@ -21,8 +21,8 @@ export default function TopBar({ onMenuClick = () => {} }: TopBarProps) {
     refetchInterval: (query) => (query.state.data ? 6 * 60 * 60 * 1000 : false),
     refetchIntervalInBackground: false,
   });
-  const { data: echoes = [] } = useEchoes(!!player);
-  const hasUnread = echoes.some((e) => !e.read);
+  const { data: notifications = [] } = useNotifications(!!player);
+  const hasUnread = notifications.some((e) => !e.read);
 
   return (
     <header className="flex h-14 shrink-0 items-center border-b border-border px-6">
@@ -35,7 +35,7 @@ export default function TopBar({ onMenuClick = () => {} }: TopBarProps) {
       </button>
       <div className="ml-auto flex items-center gap-3">
         <NavLink
-          to="/echoes"
+          to="/notifications"
           className={({ isActive }) =>
             `relative flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
               isActive
@@ -43,7 +43,7 @@ export default function TopBar({ onMenuClick = () => {} }: TopBarProps) {
                 : "bg-secondary text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             }`
           }
-          aria-label={t("topbar_echoes_label")}
+          aria-label={t("topbar_notifications_label")}
         >
           <Bell size={16} />
           {hasUnread && (
@@ -59,7 +59,7 @@ export default function TopBar({ onMenuClick = () => {} }: TopBarProps) {
         </button>
         <NavLink
           to={player ? `/player/${player.handle}` : "#"}
-          aria-label={t("nav_hero")}
+          aria-label={t("nav_profile")}
           className={({ isActive }) =>
             `block rounded-full transition-opacity ${isActive ? "opacity-100" : "opacity-70 hover:opacity-100"}`
           }

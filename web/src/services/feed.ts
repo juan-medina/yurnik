@@ -27,7 +27,7 @@ type RawJourneyEntry = {
 };
 
 type RawActivityEntry = {
-  type: "follow" | "comment" | "horizon_add";
+  type: "follow" | "comment" | "backlog_add";
   created_at: string;
   actor: RawPlayer;
   recipient: RawPlayer;

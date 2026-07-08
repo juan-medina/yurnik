@@ -28,7 +28,7 @@ func TestMaintenanceEvictsOldData(t *testing.T) {
 	defer pool.Close()
 
 	// Defensive cleanup: delete these exact test users in case a previous bad test run
-	// crashed before it could clean them up, leaving orphan echoes behind.
+	// crashed before it could clean them up, leaving orphan notifications behind.
 	pool.Exec(ctx, "DELETE FROM users WHERE provider_id IN ('maint_old', 'maint_new')")
 
 	// Create test user 1 (for old data)
@@ -64,8 +64,8 @@ func TestMaintenanceEvictsOldData(t *testing.T) {
 	now := time.Now()
 	pendingOld := now.Add(-31 * 24 * time.Hour)
 	pendingNew := now.Add(-29 * 24 * time.Hour)
-	echoesOld := now.Add(-61 * 24 * time.Hour)
-	echoesNew := now.Add(-59 * 24 * time.Hour)
+	notificationsOld := now.Add(-61 * 24 * time.Hour)
+	notificationsNew := now.Add(-59 * 24 * time.Hour)
 
 	// Insert pending journeys
 	insertPending := `INSERT INTO pending_journeys (user_id, status, created_at) VALUES ($1, 'active', $2)`
@@ -76,13 +76,13 @@ func TestMaintenanceEvictsOldData(t *testing.T) {
 		t.Fatalf("insert new pending journey: %v", err)
 	}
 
-	// Insert echoes (one per user to avoid unique constraint)
-	insertEcho := `INSERT INTO echoes (recipient_id, type, updated_at, batch_until) VALUES ($1, 'new_follower', $2, $2)`
-	if _, err := pool.Exec(ctx, insertEcho, userID1, echoesOld); err != nil {
-		t.Fatalf("insert old echo: %v", err)
+	// Insert notifications (one per user to avoid unique constraint)
+	insertNotification := `INSERT INTO notifications (recipient_id, type, updated_at, batch_until) VALUES ($1, 'new_follower', $2, $2)`
+	if _, err := pool.Exec(ctx, insertNotification, userID1, notificationsOld); err != nil {
+		t.Fatalf("insert old notification: %v", err)
 	}
-	if _, err := pool.Exec(ctx, insertEcho, userID2, echoesNew); err != nil {
-		t.Fatalf("insert new echo: %v", err)
+	if _, err := pool.Exec(ctx, insertNotification, userID2, notificationsNew); err != nil {
+		t.Fatalf("insert new notification: %v", err)
 	}
 
 	// Run maintenance
@@ -99,13 +99,13 @@ func TestMaintenanceEvictsOldData(t *testing.T) {
 		t.Errorf("expected 1 pending journey, got %d", pendingCount)
 	}
 
-	// Assert ONLY ONE echo remains for our test users (the new one)
-	var echoesCount int
-	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM echoes WHERE recipient_id IN ($1, $2)", userID1, userID2).Scan(&echoesCount); err != nil {
-		t.Fatalf("count echoes: %v", err)
+	// Assert ONLY ONE notification remains for our test users (the new one)
+	var notificationsCount int
+	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM notifications WHERE recipient_id IN ($1, $2)", userID1, userID2).Scan(&notificationsCount); err != nil {
+		t.Fatalf("count notifications: %v", err)
 	}
-	if echoesCount != 1 {
-		t.Errorf("expected 1 echo, got %d", echoesCount)
+	if notificationsCount != 1 {
+		t.Errorf("expected 1 notification, got %d", notificationsCount)
 	}
 }
 
@@ -149,9 +149,9 @@ func TestMaintenanceRefreshUpcomingReleases(t *testing.T) {
 	_, err = pool.Exec(ctx, "INSERT INTO igdb_games (igdb_id, name, cover_url, genres) VALUES (999991, 'Test Game 1', '', '{}'), (999992, 'Test Game 2', '', '{}')")
 	if err != nil { t.Fatalf("insert games: %v", err) }
 
-	// Create horizon entries
-	_, err = pool.Exec(ctx, "INSERT INTO horizon_entries (player_id, igdb_id) VALUES ($1, 999991), ($2, 999992)", u1, u2)
-	if err != nil { t.Fatalf("insert horizon: %v", err) }
+	// Create backlog entries
+	_, err = pool.Exec(ctx, "INSERT INTO backlog_entries (player_id, igdb_id) VALUES ($1, 999991), ($2, 999992)", u1, u2)
+	if err != nil { t.Fatalf("insert backlog: %v", err) }
 
 	// Mock IGDB response: Game 1 releases in 3 days, Game 2 has no release date
 	now := time.Now()
@@ -177,35 +177,35 @@ func TestMaintenanceRefreshUpcomingReleases(t *testing.T) {
 		t.Error("game 1 release_date not updated")
 	}
 
-	// Assert 1 echo created for user 1
+	// Assert 1 notification created for user 1
 	var c int
 	var title string
-	if err := pool.QueryRow(ctx, "SELECT COUNT(*), MAX(subject_title) FROM echoes WHERE recipient_id = $1 AND type = 'horizon_release'", u1).Scan(&c, &title); err != nil {
-		t.Fatalf("count echoes u1: %v", err)
+	if err := pool.QueryRow(ctx, "SELECT COUNT(*), MAX(subject_title) FROM notifications WHERE recipient_id = $1 AND type = 'backlog_release'", u1).Scan(&c, &title); err != nil {
+		t.Fatalf("count notifications u1: %v", err)
 	}
 	if c != 1 {
-		t.Errorf("expected 1 echo for user 1, got %d", c)
+		t.Errorf("expected 1 notification for user 1, got %d", c)
 	}
 	if title != "Test Game 1" {
 		t.Errorf("expected subject_title 'Test Game 1', got %q", title)
 	}
 
-	// Assert 0 echoes for user 2
-	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM echoes WHERE recipient_id = $1 AND type = 'horizon_release'", u2).Scan(&c); err != nil {
-		t.Fatalf("count echoes u2: %v", err)
+	// Assert 0 notifications for user 2
+	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM notifications WHERE recipient_id = $1 AND type = 'backlog_release'", u2).Scan(&c); err != nil {
+		t.Fatalf("count notifications u2: %v", err)
 	}
 	if c != 0 {
-		t.Errorf("expected 0 echoes for user 2, got %d", c)
+		t.Errorf("expected 0 notifications for user 2, got %d", c)
 	}
 
-	// 2. Second run - should NOT create duplicate echoes due to NOT EXISTS
+	// 2. Second run - should NOT create duplicate notifications due to NOT EXISTS
 	if err := refreshUpcomingReleases(ctx, pool, mockFetcher); err != nil {
 		t.Fatalf("refreshUpcomingReleases second run failed: %v", err)
 	}
-	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM echoes WHERE recipient_id = $1 AND type = 'horizon_release'", u1).Scan(&c); err != nil {
-		t.Fatalf("count echoes u1 second run: %v", err)
+	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM notifications WHERE recipient_id = $1 AND type = 'backlog_release'", u1).Scan(&c); err != nil {
+		t.Fatalf("count notifications u1 second run: %v", err)
 	}
 	if c != 1 {
-		t.Errorf("expected still 1 echo for user 1, got %d", c)
+		t.Errorf("expected still 1 notification for user 1, got %d", c)
 	}
 }

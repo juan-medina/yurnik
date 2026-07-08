@@ -392,7 +392,7 @@ export default function JourneyDetail() {
         </div>
       </div>
 
-      {/* Hero */}
+      {/* Profile */}
       <div className="rounded-lg border border-border bg-card p-4">
         {isEditing ? (
           <JourneyForm

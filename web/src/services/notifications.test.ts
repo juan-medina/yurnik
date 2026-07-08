@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { getEchoes } from "@/services/echoes";
+import { getNotifications } from "@/services/notifications";
 
 function mockFetch(body: unknown, status = 200): void {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status })));
@@ -9,30 +9,30 @@ function mockFetch(body: unknown, status = 200): void {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("getEchoes", () => {
+describe("getNotifications", () => {
   it("forwards next_cursor when the API returns one", async () => {
-    mockFetch({ echoes: [], next_cursor: "2026-06-01T12:00:00Z|42" });
+    mockFetch({ notifications: [], next_cursor: "2026-06-01T12:00:00Z|42" });
 
-    const { nextCursor } = await getEchoes();
+    const { nextCursor } = await getNotifications();
 
     expect(nextCursor).toBe("2026-06-01T12:00:00Z|42");
   });
 
   it("returns undefined nextCursor when the API omits it", async () => {
-    mockFetch({ echoes: [] });
+    mockFetch({ notifications: [] });
 
-    const { nextCursor } = await getEchoes();
+    const { nextCursor } = await getNotifications();
 
     expect(nextCursor).toBeUndefined();
   });
 
   it("passes cursor as a query param", async () => {
     const fetchSpy = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ echoes: [] }), { status: 200 }),
+      new Response(JSON.stringify({ notifications: [] }), { status: 200 }),
     );
     vi.stubGlobal("fetch", fetchSpy);
 
-    await getEchoes("2026-06-01T12:00:00Z|42");
+    await getNotifications("2026-06-01T12:00:00Z|42");
 
     const calledUrl = fetchSpy.mock.calls[0][0].toString();
     expect(calledUrl).toContain("cursor=");

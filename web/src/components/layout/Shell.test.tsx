@@ -5,33 +5,33 @@ import { screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { render } from "@testing-library/react";
-import { PLAYERS, MOCK_ECHOES } from "@/test/fixtures";
-import * as echoesService from "@/services/echoes";
+import { PLAYERS, MOCK_NOTIFICATIONS } from "@/test/fixtures";
+import * as notificationsService from "@/services/notifications";
 import * as authService from "@/services/auth";
 import * as journeysService from "@/services/journeys";
 import Shell from "./Shell";
-import Echoes from "@/pages/Echoes";
+import Notifications from "@/pages/Notifications";
 
-vi.mock("@/services/echoes");
+vi.mock("@/services/notifications");
 vi.mock("@/services/auth");
 vi.mock("@/services/journeys");
 
-// Regression test for a real production bug: Echoes.tsx and useEchoes.ts (used
+// Regression test for a real production bug: Notifications.tsx and useNotifications.ts (used
 // by Shell/Sidebar/TopBar on every page) both queried the React Query cache
-// under the key ["echoes"] but with two different response shapes. Because
+// under the key ["notifications"] but with two different response shapes. Because
 // Shell mounts on every route, its query populated the cache first, and the
-// Echoes page then read the wrong-shaped cached value instead of running its
-// own fetch — corrupting its state. A test that renders the Echoes page in
+// Notifications page then read the wrong-shaped cached value instead of running its
+// own fetch — corrupting its state. A test that renders the Notifications page in
 // isolation (its own fresh QueryClient, no Shell) can never observe this,
 // since the collision only exists when both consumers share one cache. This
-// test mounts the real Shell > Outlet > Echoes tree, the way App.tsx actually
+// test mounts the real Shell > Outlet > Notifications tree, the way App.tsx actually
 // assembles it, under one shared QueryClient.
 function renderRealApp(initialPath: string) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false }, mutations: { retry: false } },
   });
   const router = createMemoryRouter(
-    [{ element: <Shell />, children: [{ path: "echoes", element: <Echoes /> }] }],
+    [{ element: <Shell />, children: [{ path: "notifications", element: <Notifications /> }] }],
     { initialEntries: [initialPath] },
   );
   return render(
@@ -43,14 +43,14 @@ function renderRealApp(initialPath: string) {
 
 beforeEach(() => {
   vi.mocked(authService.getCurrentPlayer).mockResolvedValue(PLAYERS[0]);
-  vi.mocked(echoesService.getEchoes).mockResolvedValue({ echoes: [...MOCK_ECHOES] });
-  vi.mocked(echoesService.markAllRead).mockResolvedValue(undefined);
+  vi.mocked(notificationsService.getNotifications).mockResolvedValue({ notifications: [...MOCK_NOTIFICATIONS] });
+  vi.mocked(notificationsService.markAllRead).mockResolvedValue(undefined);
   vi.mocked(journeysService.getPendingJourneysCount).mockResolvedValue(0);
 });
 
-describe("Shell + Echoes integration", () => {
-  it("renders the echoes list when navigating to /echoes alongside the global nav badge", async () => {
-    renderRealApp("/echoes");
+describe("Shell + Notifications integration", () => {
+  it("renders the notifications list when navigating to /notifications alongside the global nav badge", async () => {
+    renderRealApp("/notifications");
     expect(await screen.findAllByText(/commented on your/)).not.toHaveLength(0);
     expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
   });

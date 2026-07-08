@@ -34,7 +34,7 @@ type User struct {
 // NotificationPreferences holds the user's notification settings.
 type NotificationPreferences struct {
 	Updates bool `json:"updates"`
-	Echoes  bool `json:"echoes"`
+	Notifications  bool `json:"notifications"`
 }
 
 // SuspendedUser holds the fields needed to display a suspended user in the admin UI.
@@ -365,7 +365,7 @@ func UpdateDisplayName(ctx context.Context, pool *pgxpool.Pool, id, displayName 
 }
 
 // DeleteUser deletes the user row for the given internal UUID. All owned
-// data (journeys, comments, follows, echoes, horizon entries, pending
+// data (journeys, comments, follows, notifications, backlog entries, pending
 // journeys, exclusions, and game hints) is removed via ON DELETE CASCADE.
 func DeleteUser(ctx context.Context, pool *pgxpool.Pool, id string) error {
 	_, err := pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, id)

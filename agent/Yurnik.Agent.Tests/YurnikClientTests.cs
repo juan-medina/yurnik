@@ -25,11 +25,11 @@ public class YurnikClientTests
     }
 
     [Fact]
-    public async Task GetEchoesAsync_ParsesApiResponseCorrectly()
+    public async Task GetNotificationsAsync_ParsesApiResponseCorrectly()
     {
         var json = """
         {
-            "echoes": [
+            "notifications": [
                 {
                     "id": 123456789,
                     "type": "comment",
@@ -51,20 +51,20 @@ public class YurnikClientTests
         var handler = new MockHttpMessageHandler(json);
         var client = new YurnikClient("http://localhost", handler);
 
-        var result = await client.GetEchoesAsync();
+        var result = await client.GetNotificationsAsync();
 
         Assert.Equal(ApiResult.Ok, result.Status);
-        Assert.NotNull(result.Echoes);
-        Assert.Equal(2, result.Echoes.Count);
+        Assert.NotNull(result.Notifications);
+        Assert.Equal(2, result.Notifications.Count);
 
-        var e1 = result.Echoes[0];
+        var e1 = result.Notifications[0];
         Assert.Equal("123456789", e1.Id);
         Assert.Equal("comment", e1.Type);
         Assert.Equal(2, e1.ActorCount);
         Assert.Equal("Journey in TestGame", e1.SubjectTitle);
         Assert.False(e1.Read);
 
-        var e2 = result.Echoes[1];
+        var e2 = result.Notifications[1];
         Assert.Equal("987654321", e2.Id);
         Assert.Equal("follow", e2.Type);
         Assert.Equal(1, e2.ActorCount);

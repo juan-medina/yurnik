@@ -54,7 +54,7 @@ type RawProfileSummary = {
     seconds_played: number;
   }[];
   genre_hours: { genre: string; seconds: number }[];
-  horizon: { igdb_id: number; name: string; cover_url?: string; genres: string[]; release_year?: number }[];
+  backlog: { igdb_id: number; name: string; cover_url?: string; genres: string[]; release_year?: number }[];
 };
 
 function rawToPlayerProfile(r: RawProfileSummary): PlayerProfile {
@@ -82,7 +82,7 @@ function rawToPlayerProfile(r: RawProfileSummary): PlayerProfile {
       secondsPlayed: g.seconds_played,
     })),
     genreHours: r.genre_hours ?? [],
-    horizon: (r.horizon ?? []).map((g) => ({
+    backlog: (r.backlog ?? []).map((g) => ({
       igdbId: g.igdb_id,
       name: g.name,
       coverUrl: g.cover_url,

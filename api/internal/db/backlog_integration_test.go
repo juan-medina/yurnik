@@ -26,68 +26,68 @@ func insertTestGame(t *testing.T, pool *pgxpool.Pool, igdbID int, name string) {
 	t.Cleanup(func() { pool.Exec(ctx, "DELETE FROM igdb_games WHERE igdb_id = $1", igdbID) })
 }
 
-func TestAddHorizonEntry_IsIdempotent(t *testing.T) {
+func TestAddBacklogEntry_IsIdempotent(t *testing.T) {
 	pool := connectTestDB(t)
 	ctx := context.Background()
 	playerID := createTestUser(t, pool)
 	insertTestGame(t, pool, 91001, "Test Game")
 
-	added, err := db.AddHorizonEntry(ctx, pool, playerID, 91001)
+	added, err := db.AddBacklogEntry(ctx, pool, playerID, 91001)
 	if err != nil {
-		t.Fatalf("add horizon entry: %v", err)
+		t.Fatalf("add backlog entry: %v", err)
 	}
 	if !added {
 		t.Errorf("expected first add to report added=true")
 	}
 
-	added, err = db.AddHorizonEntry(ctx, pool, playerID, 91001)
+	added, err = db.AddBacklogEntry(ctx, pool, playerID, 91001)
 	if err != nil {
-		t.Fatalf("add horizon entry again: %v", err)
+		t.Fatalf("add backlog entry again: %v", err)
 	}
 	if added {
 		t.Errorf("expected second add to report added=false")
 	}
 }
 
-func TestRemoveHorizonEntry(t *testing.T) {
+func TestRemoveBacklogEntry(t *testing.T) {
 	pool := connectTestDB(t)
 	ctx := context.Background()
 	playerID := createTestUser(t, pool)
 	insertTestGame(t, pool, 91002, "Test Game 2")
 
-	if _, err := db.AddHorizonEntry(ctx, pool, playerID, 91002); err != nil {
-		t.Fatalf("add horizon entry: %v", err)
+	if _, err := db.AddBacklogEntry(ctx, pool, playerID, 91002); err != nil {
+		t.Fatalf("add backlog entry: %v", err)
 	}
-	if err := db.RemoveHorizonEntry(ctx, pool, playerID, 91002); err != nil {
-		t.Fatalf("remove horizon entry: %v", err)
+	if err := db.RemoveBacklogEntry(ctx, pool, playerID, 91002); err != nil {
+		t.Fatalf("remove backlog entry: %v", err)
 	}
 
-	entries, err := db.ListHorizonEntries(ctx, pool, playerID)
+	entries, err := db.ListBacklogEntries(ctx, pool, playerID)
 	if err != nil {
-		t.Fatalf("list horizon entries: %v", err)
+		t.Fatalf("list backlog entries: %v", err)
 	}
 	if len(entries) != 0 {
 		t.Fatalf("expected 0 entries after removal, got %d", len(entries))
 	}
 }
 
-func TestListHorizonEntries_OrderedByPosition(t *testing.T) {
+func TestListBacklogEntries_OrderedByPosition(t *testing.T) {
 	pool := connectTestDB(t)
 	ctx := context.Background()
 	playerID := createTestUser(t, pool)
 	insertTestGame(t, pool, 91003, "First Added Game")
 	insertTestGame(t, pool, 91004, "Second Added Game")
 
-	if _, err := db.AddHorizonEntry(ctx, pool, playerID, 91003); err != nil {
-		t.Fatalf("add horizon entry 1: %v", err)
+	if _, err := db.AddBacklogEntry(ctx, pool, playerID, 91003); err != nil {
+		t.Fatalf("add backlog entry 1: %v", err)
 	}
-	if _, err := db.AddHorizonEntry(ctx, pool, playerID, 91004); err != nil {
-		t.Fatalf("add horizon entry 2: %v", err)
+	if _, err := db.AddBacklogEntry(ctx, pool, playerID, 91004); err != nil {
+		t.Fatalf("add backlog entry 2: %v", err)
 	}
 
-	entries, err := db.ListHorizonEntries(ctx, pool, playerID)
+	entries, err := db.ListBacklogEntries(ctx, pool, playerID)
 	if err != nil {
-		t.Fatalf("list horizon entries: %v", err)
+		t.Fatalf("list backlog entries: %v", err)
 	}
 	if len(entries) != 2 {
 		t.Fatalf("expected 2 entries, got %d", len(entries))
@@ -97,7 +97,7 @@ func TestListHorizonEntries_OrderedByPosition(t *testing.T) {
 	}
 }
 
-func TestReorderHorizonEntries(t *testing.T) {
+func TestReorderBacklogEntries(t *testing.T) {
 	pool := connectTestDB(t)
 	ctx := context.Background()
 	playerID := createTestUser(t, pool)
@@ -106,18 +106,18 @@ func TestReorderHorizonEntries(t *testing.T) {
 	insertTestGame(t, pool, 91012, "Third Game")
 
 	for _, id := range []int{91010, 91011, 91012} {
-		if _, err := db.AddHorizonEntry(ctx, pool, playerID, id); err != nil {
-			t.Fatalf("add horizon entry %d: %v", id, err)
+		if _, err := db.AddBacklogEntry(ctx, pool, playerID, id); err != nil {
+			t.Fatalf("add backlog entry %d: %v", id, err)
 		}
 	}
 
-	if err := db.ReorderHorizonEntries(ctx, pool, playerID, []int{91012, 91010, 91011}); err != nil {
-		t.Fatalf("reorder horizon entries: %v", err)
+	if err := db.ReorderBacklogEntries(ctx, pool, playerID, []int{91012, 91010, 91011}); err != nil {
+		t.Fatalf("reorder backlog entries: %v", err)
 	}
 
-	entries, err := db.ListHorizonEntries(ctx, pool, playerID)
+	entries, err := db.ListBacklogEntries(ctx, pool, playerID)
 	if err != nil {
-		t.Fatalf("list horizon entries: %v", err)
+		t.Fatalf("list backlog entries: %v", err)
 	}
 	if len(entries) != 3 {
 		t.Fatalf("expected 3 entries, got %d", len(entries))
@@ -127,56 +127,56 @@ func TestReorderHorizonEntries(t *testing.T) {
 	}
 }
 
-func TestReorderHorizonEntries_Mismatch(t *testing.T) {
+func TestReorderBacklogEntries_Mismatch(t *testing.T) {
 	pool := connectTestDB(t)
 	ctx := context.Background()
 	playerID := createTestUser(t, pool)
 	insertTestGame(t, pool, 91013, "Lone Game")
 
-	if _, err := db.AddHorizonEntry(ctx, pool, playerID, 91013); err != nil {
-		t.Fatalf("add horizon entry: %v", err)
+	if _, err := db.AddBacklogEntry(ctx, pool, playerID, 91013); err != nil {
+		t.Fatalf("add backlog entry: %v", err)
 	}
 
-	if err := db.ReorderHorizonEntries(ctx, pool, playerID, []int{91013, 99999}); !errors.Is(err, db.ErrHorizonOrderMismatch) {
-		t.Errorf("expected ErrHorizonOrderMismatch, got %v", err)
+	if err := db.ReorderBacklogEntries(ctx, pool, playerID, []int{91013, 99999}); !errors.Is(err, db.ErrBacklogOrderMismatch) {
+		t.Errorf("expected ErrBacklogOrderMismatch, got %v", err)
 	}
 }
 
-func TestIsInHorizon(t *testing.T) {
+func TestIsInBacklog(t *testing.T) {
 	pool := connectTestDB(t)
 	ctx := context.Background()
 	playerID := createTestUser(t, pool)
 	insertTestGame(t, pool, 91005, "Maybe Game")
 
-	in, err := db.IsInHorizon(ctx, pool, playerID, 91005)
+	in, err := db.IsInBacklog(ctx, pool, playerID, 91005)
 	if err != nil {
-		t.Fatalf("is in horizon: %v", err)
+		t.Fatalf("is in backlog: %v", err)
 	}
 	if in {
-		t.Errorf("expected not in horizon before add")
+		t.Errorf("expected not in backlog before add")
 	}
 
-	if _, err := db.AddHorizonEntry(ctx, pool, playerID, 91005); err != nil {
-		t.Fatalf("add horizon entry: %v", err)
+	if _, err := db.AddBacklogEntry(ctx, pool, playerID, 91005); err != nil {
+		t.Fatalf("add backlog entry: %v", err)
 	}
 
-	in, err = db.IsInHorizon(ctx, pool, playerID, 91005)
+	in, err = db.IsInBacklog(ctx, pool, playerID, 91005)
 	if err != nil {
-		t.Fatalf("is in horizon after add: %v", err)
+		t.Fatalf("is in backlog after add: %v", err)
 	}
 	if !in {
-		t.Errorf("expected in horizon after add")
+		t.Errorf("expected in backlog after add")
 	}
 }
 
-func TestRecordHorizonAdd_RoundTrip(t *testing.T) {
+func TestRecordBacklogAdd_RoundTrip(t *testing.T) {
 	pool := connectTestDB(t)
 	ctx := context.Background()
 	playerID := createTestUser(t, pool)
-	insertTestGame(t, pool, 91006, "Horizon Game")
+	insertTestGame(t, pool, 91006, "Backlog Game")
 
-	if err := db.RecordHorizonAdd(ctx, pool, playerID, 91006, "Horizon Game"); err != nil {
-		t.Fatalf("record horizon add: %v", err)
+	if err := db.RecordBacklogAdd(ctx, pool, playerID, 91006, "Backlog Game"); err != nil {
+		t.Fatalf("record backlog add: %v", err)
 	}
 
 	events, err := db.GetUserActivity(ctx, pool, playerID, 10, "")
@@ -187,8 +187,8 @@ func TestRecordHorizonAdd_RoundTrip(t *testing.T) {
 		t.Fatalf("expected 1 event, got %d", len(events))
 	}
 	e := events[0]
-	if e.Type != "horizon_add" {
-		t.Errorf("expected type horizon_add, got %s", e.Type)
+	if e.Type != "backlog_add" {
+		t.Errorf("expected type backlog_add, got %s", e.Type)
 	}
 	if e.ActorID != playerID || e.RecipientID != playerID {
 		t.Errorf("expected self-directed event, got actor %s, recipient %s", e.ActorID, e.RecipientID)
@@ -196,7 +196,7 @@ func TestRecordHorizonAdd_RoundTrip(t *testing.T) {
 	if e.SubjectIGDBID == nil || *e.SubjectIGDBID != 91006 {
 		t.Errorf("expected subject igdb id 91006, got %v", e.SubjectIGDBID)
 	}
-	if e.SubjectTitle == nil || *e.SubjectTitle != "Horizon Game" {
-		t.Errorf("expected subject title 'Horizon Game', got %v", e.SubjectTitle)
+	if e.SubjectTitle == nil || *e.SubjectTitle != "Backlog Game" {
+		t.Errorf("expected subject title 'Backlog Game', got %v", e.SubjectTitle)
 	}
 }

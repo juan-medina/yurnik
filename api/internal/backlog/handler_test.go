@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
-package horizon
+package backlog
 
 import (
 	"net/http"
@@ -9,12 +9,12 @@ import (
 	"testing"
 )
 
-func TestAddHorizon_unauthenticated(t *testing.T) {
+func TestAddBacklog_unauthenticated(t *testing.T) {
 	h := &Handler{}
 	mux := http.NewServeMux()
 	h.Register(mux)
 
-	r := httptest.NewRequest(http.MethodPost, "/api/me/horizon", strings.NewReader(`{"igdb_id":1234}`))
+	r := httptest.NewRequest(http.MethodPost, "/api/me/backlog", strings.NewReader(`{"igdb_id":1234}`))
 	r.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, r)
@@ -24,12 +24,12 @@ func TestAddHorizon_unauthenticated(t *testing.T) {
 	}
 }
 
-func TestRemoveHorizon_unauthenticated(t *testing.T) {
+func TestRemoveBacklog_unauthenticated(t *testing.T) {
 	h := &Handler{}
 	mux := http.NewServeMux()
 	h.Register(mux)
 
-	r := httptest.NewRequest(http.MethodDelete, "/api/me/horizon/1234", nil)
+	r := httptest.NewRequest(http.MethodDelete, "/api/me/backlog/1234", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, r)
 
@@ -38,12 +38,12 @@ func TestRemoveHorizon_unauthenticated(t *testing.T) {
 	}
 }
 
-func TestReorderHorizon_unauthenticated(t *testing.T) {
+func TestReorderBacklog_unauthenticated(t *testing.T) {
 	h := &Handler{}
 	mux := http.NewServeMux()
 	h.Register(mux)
 
-	r := httptest.NewRequest(http.MethodPatch, "/api/me/horizon/order", strings.NewReader(`{"igdb_ids":[1,2,3]}`))
+	r := httptest.NewRequest(http.MethodPatch, "/api/me/backlog/order", strings.NewReader(`{"igdb_ids":[1,2,3]}`))
 	r.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, r)

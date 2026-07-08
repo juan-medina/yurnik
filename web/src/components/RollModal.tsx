@@ -5,9 +5,9 @@ import { Link } from "react-router";
 import { Dices, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { GameCover } from "@/components/GameSelector";
-import type { HorizonEntry } from "@/models/player";
+import type { BacklogEntry } from "@/models/player";
 
-type Props = { entries: HorizonEntry[]; onClose: () => void };
+type Props = { entries: BacklogEntry[]; onClose: () => void };
 
 const SPIN_INTERVAL_MS = 80;
 const SPIN_DURATION_MS = 1200;
@@ -57,7 +57,7 @@ export default function RollModal({ entries, onClose }: Props) {
         </button>
         <div className="flex flex-col items-center gap-4 text-center">
           <h2 className="font-semibold text-foreground">
-            {settled ? t("horizon_roll_result") : t("horizon_roll_rolling")}
+            {settled ? t("backlog_roll_result") : t("backlog_roll_rolling")}
           </h2>
           <div className={settled ? undefined : "opacity-70"}>
             <GameCover game={entry.name} coverUrl={entry.coverUrl} size="lg" />
@@ -70,7 +70,7 @@ export default function RollModal({ entries, onClose }: Props) {
                 onClick={onClose}
                 className="w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                {t("horizon_roll_view")}
+                {t("backlog_roll_view")}
               </Link>
               {entries.length > 1 && (
                 <button
@@ -79,7 +79,7 @@ export default function RollModal({ entries, onClose }: Props) {
                   className="flex w-full items-center justify-center gap-1.5 rounded-md bg-muted px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   <Dices size={15} />
-                  {t("horizon_roll_again")}
+                  {t("backlog_roll_again")}
                 </button>
               )}
             </div>

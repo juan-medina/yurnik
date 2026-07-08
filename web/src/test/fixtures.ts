@@ -3,9 +3,9 @@
 
 import type { Player } from "@/models/player";
 import type { Journey, PendingJourney } from "@/models/journey";
-import type { Echo } from "@/models/echo";
+import type { Notification } from "@/models/notification";
 import type { Game, GameActivity, GameDetail, Comment, JourneyPlayer } from "@/models/game";
-import type { HorizonEntry } from "@/models/player";
+import type { BacklogEntry } from "@/models/player";
 
 export const PLAYERS: Player[] = [
   {
@@ -262,10 +262,10 @@ export const MOCK_GAME_DETAIL: GameDetail = {
     steam: "https://store.steampowered.com/app/1245620",
     epic: "https://store.epicgames.com/p/elden-ring",
   },
-  inHorizon: false,
+  inBacklog: false,
 };
 
-export const MOCK_HORIZON: HorizonEntry[] = [
+export const MOCK_BACKLOG: BacklogEntry[] = [
   { igdbId: 4, name: "Cyberpunk 2077", coverUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1091500/library_600x900.jpg", genres: ["RPG", "Open World", "Sci-fi"], releaseYear: 2020 },
   { igdbId: 5, name: "Hades", coverUrl: "https://cdn.akamai.steamstatic.com/steam/apps/1145360/library_600x900.jpg", genres: ["Roguelike", "Action"], releaseYear: 2020 },
 ];
@@ -295,7 +295,7 @@ export const MOCK_PENDING_JOURNEYS: PendingJourney[] = [
   },
 ];
 
-export const MOCK_ECHOES: Echo[] = [
+export const MOCK_NOTIFICATIONS: Notification[] = [
   {
     id: "e1", type: "new_comment",
     actors: [PLAYERS[1], PLAYERS[2]],
@@ -340,7 +340,7 @@ export const MOCK_ECHOES: Echo[] = [
     createdAt: minsAgo(5), updatedAt: minsAgo(5),
   },
   {
-    id: "e6", type: "horizon_release",
+    id: "e6", type: "backlog_release",
     actors: [],
     actorCount: 0,
     subjectId: null, subjectIgdbId: 1, subjectTitle: "Elden Ring: Shadow of the Erdtree",

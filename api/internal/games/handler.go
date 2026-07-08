@@ -143,7 +143,7 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 		StoreLinks       map[string]string `json:"store_links,omitempty"`
 		AggregatedRating *float64          `json:"aggregated_rating,omitempty"`
 		Rating           *float64          `json:"rating,omitempty"`
-		InHorizon        bool              `json:"in_horizon"`
+		InBacklog        bool              `json:"in_backlog"`
 	}
 
 	var coverURL *string
@@ -162,11 +162,11 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 		releaseDate = &s
 	}
 
-	var inHorizon bool
+	var inBacklog bool
 	if userID, ok := h.tryAuthenticate(r); ok {
-		inHorizon, err = db.IsInHorizon(r.Context(), h.pool, userID, igdbID)
+		inBacklog, err = db.IsInBacklog(r.Context(), h.pool, userID, igdbID)
 		if err != nil {
-			log.Printf("games/detail: in_horizon %d: %v", igdbID, err)
+			log.Printf("games/detail: in_backlog %d: %v", igdbID, err)
 		}
 	}
 
@@ -189,7 +189,7 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 		StoreLinks:       detail.StoreLinks,
 		AggregatedRating: detail.AggregatedRating,
 		Rating:           detail.Rating,
-		InHorizon:        inHorizon,
+		InBacklog:        inBacklog,
 	})
 }
 

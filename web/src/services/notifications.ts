@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 
-import type { Echo } from "@/models/echo";
+import type { Notification } from "@/models/notification";
 import type { Player } from "@/models/player";
 import { API_BASE, apiFetch } from "@/lib/api";
 
@@ -13,7 +13,7 @@ type RawActor = {
   color: string;
 };
 
-type RawEcho = {
+type RawNotification = {
   id: number;
   type: string;
   actors: RawActor[];
@@ -30,17 +30,17 @@ function rawToPlayer(a: RawActor): Player {
   return { id: a.id, handle: a.handle, name: a.name, avatarUrl: a.avatar_url, color: a.color };
 }
 
-export async function getEchoes(cursor?: string): Promise<{ echoes: Echo[]; nextCursor?: string }> {
-  const url = new URL(`${API_BASE}/api/echoes`);
+export async function getNotifications(cursor?: string): Promise<{ notifications: Notification[]; nextCursor?: string }> {
+  const url = new URL(`${API_BASE}/api/notifications`);
   if (cursor) url.searchParams.set("cursor", cursor);
   const resp = await apiFetch(url.toString(), { credentials: "include" });
-  if (!resp.ok) throw new Error(`get echoes: ${resp.status}`);
-  const data: { echoes: RawEcho[]; next_cursor?: string } = await resp.json();
+  if (!resp.ok) throw new Error(`get notifications: ${resp.status}`);
+  const data: { notifications: RawNotification[]; next_cursor?: string } = await resp.json();
   return {
-    echoes: (data.echoes ?? []).map(
-      (r): Echo => ({
+    notifications: (data.notifications ?? []).map(
+      (r): Notification => ({
         id: String(r.id),
-        type: r.type as Echo["type"],
+        type: r.type as Notification["type"],
         actors: (r.actors ?? []).map(rawToPlayer),
         actorCount: r.actor_count,
         subjectId: r.subject_id ?? null,
@@ -56,9 +56,9 @@ export async function getEchoes(cursor?: string): Promise<{ echoes: Echo[]; next
 }
 
 export async function markAllRead(): Promise<void> {
-  const resp = await apiFetch(`${API_BASE}/api/echoes/read`, {
+  const resp = await apiFetch(`${API_BASE}/api/notifications/read`, {
     method: "POST",
     credentials: "include",
   });
-  if (!resp.ok) throw new Error(`mark echoes read: ${resp.status}`);
+  if (!resp.ok) throw new Error(`mark notifications read: ${resp.status}`);
 }

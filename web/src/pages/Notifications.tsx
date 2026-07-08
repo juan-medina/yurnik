@@ -6,12 +6,12 @@ import { AtSign, MessageSquare, UserPlus, CalendarDays } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { getEchoes, markAllRead } from "@/services/echoes";
+import { getNotifications, markAllRead } from "@/services/notifications";
 import { getCurrentPlayer } from "@/services/auth";
 import PlayerAvatar from "@/components/PlayerAvatar";
 import { formatCommentAge } from "@/lib/time";
 import FollowListModal from "@/components/FollowListModal";
-import type { Echo, Player } from "@/models";
+import type { Notification, Player } from "@/models";
 
 type Filter = "all" | "comments" | "followers";
 
@@ -25,9 +25,9 @@ function ActorAvatars({ actors }: { actors: Player[] }) {
   );
 }
 
-function EchoIcon({ type }: { type: Echo["type"] }) {
+function NotificationIcon({ type }: { type: Notification["type"] }) {
   const icon =
-    type === "horizon_release" ? (
+    type === "backlog_release" ? (
       <CalendarDays size={13} />
     ) : type === "new_mention" ? (
       <AtSign size={13} />
@@ -44,79 +44,79 @@ function EchoIcon({ type }: { type: Echo["type"] }) {
 }
 
 function formatActors(actors: Player[], actorCount: number, t: TFunction): string {
-  if (actors.length === 0) return t("echoes_someone");
+  if (actors.length === 0) return t("notifications_someone");
   const names = actors.map((a) => a.name);
   const extra = actorCount - names.length;
-  if (extra > 0) return `${names.join(", ")} ${t("echoes_others", { count: extra })}`;
+  if (extra > 0) return `${names.join(", ")} ${t("notifications_others", { count: extra })}`;
   if (names.length === 1) return names[0];
-  return `${names.slice(0, -1).join(", ")} ${t("echoes_and")} ${names[names.length - 1]}`;
+  return `${names.slice(0, -1).join(", ")} ${t("notifications_and")} ${names[names.length - 1]}`;
 }
 
-function EchoRow({ echo }: { echo: Echo }) {
+function NotificationRow({ notification }: { notification: Notification }) {
   const { t } = useTranslation();
   const [showActors, setShowActors] = useState(false);
 
-  const isReleaseEcho = echo.type === "horizon_release";
-  const isCommentEcho = echo.type === "new_comment" || echo.type === "new_comment_reply";
-  const isMentionEcho = echo.type === "new_mention";
-  const linksToJourney = isCommentEcho || isMentionEcho;
-  const isFollowerBatch = echo.type === "new_follower" && echo.actorCount > 1;
-  const journeyDeleted = linksToJourney && echo.subjectId === null;
-  const to = isReleaseEcho
-    ? `/game/${echo.subjectIgdbId}`
+  const isReleaseNotification = notification.type === "backlog_release";
+  const isCommentNotification = notification.type === "new_comment" || notification.type === "new_comment_reply";
+  const isMentionNotification = notification.type === "new_mention";
+  const linksToJourney = isCommentNotification || isMentionNotification;
+  const isFollowerBatch = notification.type === "new_follower" && notification.actorCount > 1;
+  const journeyDeleted = linksToJourney && notification.subjectId === null;
+  const to = isReleaseNotification
+    ? `/game/${notification.subjectIgdbId}`
     : linksToJourney
-    ? `/journey/${echo.subjectId}`
-    : `/player/${echo.actors[0]?.handle}`;
+    ? `/journey/${notification.subjectId}`
+    : `/player/${notification.actors[0]?.handle}`;
 
-  const actorLabel = isReleaseEcho ? "" : formatActors(echo.actors, echo.actorCount, t);
+  const actorLabel = isReleaseNotification ? "" : formatActors(notification.actors, notification.actorCount, t);
 
   const rowClass = `flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-accent/5 ${
-    !echo.read ? "border-l-2 border-primary bg-primary/5" : "border-l-2 border-transparent"
+    !notification.read ? "border-l-2 border-primary bg-primary/5" : "border-l-2 border-transparent"
   }`;
 
   const body = (
     <>
-      <EchoIcon type={echo.type} />
-      {!isReleaseEcho && <ActorAvatars actors={echo.actors} />}
+      <NotificationIcon type={notification.type} />
+      {!isReleaseNotification && <ActorAvatars actors={notification.actors} />}
       <div className="min-w-0 flex-1">
         <p className="text-sm">
-          {isReleaseEcho ? (
+          {isReleaseNotification ? (
             <>
-              <span className="font-semibold">{echo.subjectTitle}</span>{" "}
-              {t("echoes_releasing_soon")}
+              <span className="font-semibold">{notification.subjectTitle}</span>{" "}
+              {t("notifications_releasing_soon")}
             </>
           ) : (
             <span className="font-semibold">{actorLabel} </span>
           )}
-          {isMentionEcho ? (
+          {isMentionNotification ? (
             <>
-              {t("echoes_mentioned")}
-              <span className="font-medium">{echo.subjectTitle}</span>
-              {t("echoes_mentioned_suffix")}
+              {t("notifications_mentioned")}
+              <span className="font-medium">{notification.subjectTitle}</span>
+              {t("notifications_mentioned_suffix")}
               {journeyDeleted && (
                 <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground">
-                  {t("echoes_removed")}
+                  {t("notifications_removed")}
                 </span>
               )}
             </>
-          ) : isCommentEcho ? (
+          ) : isCommentNotification ? (
             <>
-              {echo.type === "new_comment" ? t("echoes_commented") : t("echoes_replied")}
-              <span className="font-medium">{echo.subjectTitle}</span>
-              {echo.type === "new_comment" ? t("echoes_commented_suffix") : t("echoes_replied_suffix")}
+              {notification.type === "new_comment" ? t("notifications_commented") : t("notifications_replied")}
+              <span className="font-medium">{notification.subjectTitle}</span>
+              {notification.type === "new_comment" ? t("notifications_commented_suffix") : t("notifications_replied_suffix")}
               {journeyDeleted && (
                 <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground">
-                  {t("echoes_removed")}
+                  {t("notifications_removed")}
                 </span>
               )}
             </>
-          ) : !isReleaseEcho ? (
-            <>{t("echoes_followed")}</>
+          ) : !isReleaseNotification ? (
+            <>{t("notifications_followed")}</>
           ) : null}
         </p>
       </div>
       <span className="shrink-0 text-xs text-muted-foreground">
-        {formatCommentAge(echo.updatedAt)}
+        {formatCommentAge(notification.updatedAt)}
       </span>
     </>
   );
@@ -138,8 +138,8 @@ function EchoRow({ echo }: { echo: Echo }) {
       )}
       {showActors && (
         <FollowListModal
-          title={t("echoes_new_followers")}
-          players={echo.actors}
+          title={t("notifications_new_followers")}
+          players={notification.actors}
           onClose={() => setShowActors(false)}
         />
       )}
@@ -147,10 +147,10 @@ function EchoRow({ echo }: { echo: Echo }) {
   );
 }
 
-export default function Echoes() {
+export default function Notifications() {
   const { t } = useTranslation();
   const [filter, setFilter] = useState<Filter>("all");
-  const [allEchoes, setAllEchoes] = useState<Echo[]>([]);
+  const [allNotifications, setAllNotifications] = useState<Notification[]>([]);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -160,25 +160,25 @@ export default function Echoes() {
     retry: false,
   });
 
-  const { data: echoesPage } = useQuery({
-    queryKey: ["echoes", "page"],
-    queryFn: () => getEchoes(),
+  const { data: notificationsPage } = useQuery({
+    queryKey: ["notifications", "page"],
+    queryFn: () => getNotifications(),
     enabled: !!player,
   });
 
   useEffect(() => {
-    if (echoesPage) {
-      setAllEchoes(echoesPage.echoes);
-      setNextCursor(echoesPage.nextCursor);
+    if (notificationsPage) {
+      setAllNotifications(notificationsPage.notifications);
+      setNextCursor(notificationsPage.nextCursor);
     }
-  }, [echoesPage]);
+  }, [notificationsPage]);
 
   const queryClient = useQueryClient();
   const markReadMutation = useMutation({
     mutationFn: markAllRead,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["echoes"] });
-      setAllEchoes((prev) => prev.map((e) => ({ ...e, read: true })));
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      setAllNotifications((prev) => prev.map((e) => ({ ...e, read: true })));
     },
   });
 
@@ -186,8 +186,8 @@ export default function Echoes() {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
     try {
-      const page = await getEchoes(nextCursor);
-      setAllEchoes((prev) => [...prev, ...page.echoes]);
+      const page = await getNotifications(nextCursor);
+      setAllNotifications((prev) => [...prev, ...page.notifications]);
       setNextCursor(page.nextCursor);
     } finally {
       setLoadingMore(false);
@@ -200,18 +200,18 @@ export default function Echoes() {
   }, [player]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filterLabels: { value: Filter; labelKey: string }[] = [
-    { value: "all", labelKey: "echoes_filter_all" },
-    { value: "comments", labelKey: "echoes_filter_comments" },
-    { value: "followers", labelKey: "echoes_filter_followers" },
+    { value: "all", labelKey: "notifications_filter_all" },
+    { value: "comments", labelKey: "notifications_filter_comments" },
+    { value: "followers", labelKey: "notifications_filter_followers" },
   ];
 
   const emptyKey: Record<Filter, string> = {
-    all: "echoes_empty_all",
-    comments: "echoes_empty_comments",
-    followers: "echoes_empty_followers",
+    all: "notifications_empty_all",
+    comments: "notifications_empty_comments",
+    followers: "notifications_empty_followers",
   };
 
-  const visible = allEchoes.filter((e) => {
+  const visible = allNotifications.filter((e) => {
     if (filter === "comments") return e.type === "new_comment" || e.type === "new_comment_reply" || e.type === "new_mention";
     if (filter === "followers") return e.type === "new_follower";
     return true;
@@ -220,7 +220,7 @@ export default function Echoes() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-4">
-        <h1 className="text-2xl font-bold">{t("echoes_title")}</h1>
+        <h1 className="text-2xl font-bold">{t("notifications_title")}</h1>
       </div>
 
       {/* Filter tabs */}
@@ -240,12 +240,12 @@ export default function Echoes() {
         ))}
       </div>
 
-      {/* Echo list */}
+      {/* Notification list */}
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         {visible.length > 0 ? (
           <div className="divide-y divide-border">
-            {visible.map((echo) => (
-              <EchoRow key={echo.id} echo={echo} />
+            {visible.map((notification) => (
+              <NotificationRow key={notification.id} notification={notification} />
             ))}
           </div>
         ) : (

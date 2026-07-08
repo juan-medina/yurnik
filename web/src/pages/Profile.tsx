@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { Navigate } from "react-router";
 import { getCurrentPlayer, signIn } from "@/services/auth";
 
-export default function Hero() {
+export default function Profile() {
   const { t } = useTranslation();
   const { data: player, isLoading } = useQuery({
     queryKey: ["auth", "me"],
@@ -34,7 +34,7 @@ export default function Hero() {
           {t("lore_cta_primary")}
         </button>
         <Link
-          to="/players"
+          to="/explore"
           className="rounded-md border border-border px-6 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted"
         >
           {t("home_explore_cta")}

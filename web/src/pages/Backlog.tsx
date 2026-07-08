@@ -25,7 +25,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { getCurrentPlayer, signIn } from "@/services/auth";
-import { getHorizon, addToHorizon, removeFromHorizon, reorderHorizon } from "@/services/horizon";
+import { getBacklog, addToBacklog, removeFromBacklog, reorderBacklog } from "@/services/backlog";
 import { GameSelector, GameCover } from "@/components/GameSelector";
 import GenreChip from "@/components/GenreChip";
 import RollModal from "@/components/RollModal";
@@ -34,12 +34,12 @@ import { cn } from "@/lib/utils";
 import { genreBarColor } from "@/lib/genres";
 import { formatReleaseDate } from "@/lib/time";
 import type { Game } from "@/models/game";
-import type { HorizonEntry } from "@/models/player";
+import type { BacklogEntry } from "@/models/player";
 
 // A game counts as upcoming if it has a confirmed future release date, or if
 // it has no confirmed date at all (TBA) and isn't already known to be out —
 // i.e. its release year, if any, isn't in the past.
-export function isUpcoming(entry: HorizonEntry): boolean {
+export function isUpcoming(entry: BacklogEntry): boolean {
   if (entry.releaseDate) {
     const todayMs = new Date(new Date().toDateString()).getTime();
     return entry.releaseDate.getTime() >= todayMs;
@@ -51,21 +51,21 @@ export function isUpcoming(entry: HorizonEntry): boolean {
 // Sort key for the upcoming list: dated entries sort by their exact date,
 // year-only entries sort after all dated ones (by year), and fully TBA
 // entries (no date, no year) sort last of all.
-export function upcomingSortKey(entry: HorizonEntry): number {
+export function upcomingSortKey(entry: BacklogEntry): number {
   if (entry.releaseDate) return entry.releaseDate.getTime();
   if (entry.releaseYear) return new Date(entry.releaseYear, 11, 31).getTime();
   return Infinity;
 }
 
-function ReleaseLabel({ entry, className }: { entry: HorizonEntry; className: string }) {
+function ReleaseLabel({ entry, className }: { entry: BacklogEntry; className: string }) {
   if (entry.releaseDate) return <span className={className}>({formatReleaseDate(entry.releaseDate)})</span>;
   if (entry.releaseYear) return <span className={className}>({entry.releaseYear})</span>;
   return null;
 }
 
-function HorizonRow({
-  entry, hero, onRemove, removing,
-}: { entry: HorizonEntry; hero: boolean; onRemove: () => void; removing: boolean }) {
+function BacklogRow({
+  entry, profile, onRemove, removing,
+}: { entry: BacklogEntry; profile: boolean; onRemove: () => void; removing: boolean }) {
   const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: entry.igdbId });
 
@@ -79,7 +79,7 @@ function HorizonRow({
       type="button"
       {...attributes}
       {...listeners}
-      aria-label={t("horizon_drag_handle")}
+      aria-label={t("backlog_drag_handle")}
       className="shrink-0 cursor-grab touch-none rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground active:cursor-grabbing"
     >
       <GripVertical size={15} />
@@ -91,14 +91,14 @@ function HorizonRow({
       type="button"
       onClick={onRemove}
       disabled={removing}
-      aria-label={t("horizon_remove")}
+      aria-label={t("backlog_remove")}
       className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-destructive disabled:opacity-40"
     >
       <Trash2 size={15} />
     </button>
   );
 
-  if (hero) {
+  if (profile) {
     return (
       <div
         ref={setNodeRef}
@@ -111,7 +111,7 @@ function HorizonRow({
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
             <Sparkles size={14} />
-            {t("horizon_next_up")}
+            {t("backlog_next_up")}
           </div>
           {dragHandle}
         </div>
@@ -158,7 +158,7 @@ function HorizonRow({
   );
 }
 
-function DragPreview({ entry }: { entry: HorizonEntry }) {
+function DragPreview({ entry }: { entry: BacklogEntry }) {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-2 shadow-lg">
       <GameCover game={entry.name} coverUrl={entry.coverUrl} size="sm" />
@@ -220,7 +220,7 @@ function FilterDropdown({
   );
 }
 
-function FilteredRow({ entry, onRemove, removing }: { entry: HorizonEntry; onRemove: () => void; removing: boolean }) {
+function FilteredRow({ entry, onRemove, removing }: { entry: BacklogEntry; onRemove: () => void; removing: boolean }) {
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-3 py-2">
@@ -240,7 +240,7 @@ function FilteredRow({ entry, onRemove, removing }: { entry: HorizonEntry; onRem
         type="button"
         onClick={onRemove}
         disabled={removing}
-        aria-label={t("horizon_remove")}
+        aria-label={t("backlog_remove")}
         className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-destructive disabled:opacity-40"
       >
         <Trash2 size={15} />
@@ -249,7 +249,7 @@ function FilteredRow({ entry, onRemove, removing }: { entry: HorizonEntry; onRem
   );
 }
 
-export default function Horizon() {
+export default function Backlog() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [selectorKey, setSelectorKey] = useState(0);
@@ -263,30 +263,30 @@ export default function Horizon() {
     retry: false,
   });
 
-  const queryKey = ["horizon", currentPlayer?.handle];
+  const queryKey = ["backlog", currentPlayer?.handle];
 
   const { data: entries = [] } = useQuery({
     queryKey,
-    queryFn: () => getHorizon(currentPlayer!.handle),
+    queryFn: () => getBacklog(currentPlayer!.handle),
     enabled: !!currentPlayer,
   });
 
   const addMutation = useMutation({
-    mutationFn: (igdbId: number) => addToHorizon(igdbId),
+    mutationFn: (igdbId: number) => addToBacklog(igdbId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
     },
   });
 
   const removeMutation = useMutation({
-    mutationFn: (igdbId: number) => removeFromHorizon(igdbId),
+    mutationFn: (igdbId: number) => removeFromBacklog(igdbId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
     },
   });
 
   const reorderMutation = useMutation({
-    mutationFn: (igdbIds: number[]) => reorderHorizon(igdbIds),
+    mutationFn: (igdbIds: number[]) => reorderBacklog(igdbIds),
     onError: () => {
       queryClient.invalidateQueries({ queryKey });
     },
@@ -326,7 +326,7 @@ export default function Horizon() {
     setSelectorKey((k) => k + 1);
   }
 
-  const [activeEntry, setActiveEntry] = useState<HorizonEntry | null>(null);
+  const [activeEntry, setActiveEntry] = useState<BacklogEntry | null>(null);
 
   function handleDragStart(event: DragStartEvent) {
     setActiveEntry(entries.find((e) => e.igdbId === event.active.id) ?? null);
@@ -350,8 +350,8 @@ export default function Horizon() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="mb-1 text-2xl font-bold">{t("horizon_title")}</h1>
-      <p className="mb-6 text-sm text-muted-foreground">{t("horizon_subtitle")}</p>
+      <h1 className="mb-1 text-2xl font-bold">{t("backlog_title")}</h1>
+      <p className="mb-6 text-sm text-muted-foreground">{t("backlog_subtitle")}</p>
 
       {!currentPlayer ? (
         <div className="flex flex-col items-center gap-4 rounded-lg border border-border bg-card px-4 py-12 text-center">
@@ -376,7 +376,7 @@ export default function Horizon() {
                 <div className="flex items-center gap-1">
                   {allGenres.length > 1 && (
                     <FilterDropdown
-                      label={t("horizon_filter_genre")}
+                      label={t("backlog_filter_genre")}
                       allLabel={t("players_all")}
                       value={activeGenre}
                       options={allGenres}
@@ -386,12 +386,12 @@ export default function Horizon() {
                   )}
                   {allYears.length > 1 && (
                     <FilterDropdown
-                      label={t("horizon_filter_year")}
+                      label={t("backlog_filter_year")}
                       allLabel={t("players_all")}
                       value={activeYear}
                       options={allYears}
                       onChange={setActiveYear}
-                      labelFor={(option) => (option === "upcoming" ? t("horizon_filter_upcoming") : option)}
+                      labelFor={(option) => (option === "upcoming" ? t("backlog_filter_upcoming") : option)}
                     />
                   )}
                 </div>
@@ -401,7 +401,7 @@ export default function Horizon() {
                   className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   <Dices size={14} />
-                  {t("horizon_roll")}
+                  {t("backlog_roll")}
                 </button>
               </div>
 
@@ -424,19 +424,19 @@ export default function Horizon() {
                   onDragEnd={handleDragEnd}
                 >
                   <SortableContext items={entries.map((e) => e.igdbId)} strategy={verticalListSortingStrategy}>
-                    <HorizonRow
+                    <BacklogRow
                       entry={entries[0]}
-                      hero
+                      profile
                       onRemove={() => removeMutation.mutate(entries[0].igdbId)}
                       removing={removeMutation.isPending && removeMutation.variables === entries[0].igdbId}
                     />
                     {entries.length > 1 && (
                       <div className="divide-y divide-border rounded-lg border border-border bg-card px-4">
                         {entries.slice(1).map((entry) => (
-                          <HorizonRow
+                          <BacklogRow
                             key={entry.igdbId}
                             entry={entry}
-                            hero={false}
+                            profile={false}
                             onRemove={() => removeMutation.mutate(entry.igdbId)}
                             removing={removeMutation.isPending && removeMutation.variables === entry.igdbId}
                           />
@@ -451,7 +451,7 @@ export default function Horizon() {
           ) : (
             <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card px-4 py-12 text-center">
               <Telescope size={28} className="text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">{t("horizon_empty")}</p>
+              <p className="text-sm text-muted-foreground">{t("backlog_empty")}</p>
             </div>
           )}
         </>

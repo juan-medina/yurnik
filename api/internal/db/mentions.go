@@ -98,9 +98,9 @@ func ResolveMentions(ctx context.Context, pool *pgxpool.Pool, tokens []MentionTo
 }
 
 // InsertCommentMentions writes the resolved mentions for a comment and
-// returns the distinct mentioned user IDs that were recorded (for echo
-// writes). A mention of the comment's own author is skipped — no
-// self-mention record or echo.
+// returns the distinct mentioned user IDs that were recorded (for notification
+// generation). Mentions of the actor themselves are ignored and do not generate a
+// self-mention record or notification.
 func InsertCommentMentions(ctx context.Context, pool *pgxpool.Pool, commentID, authorID string, tokens []MentionToken, resolved map[string]string) ([]string, error) {
 	type mention struct {
 		userID      string

@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { getCurrentPlayer, signIn } from "@/services/auth";
 import { withContactLink } from "@/components/layout/LegalLayout";
-import Realm from "@/pages/Realm";
+import Feed from "@/pages/Feed";
 
 export default function Home() {
   const { t } = useTranslation();
@@ -18,7 +18,7 @@ export default function Home() {
   });
 
   if (isLoading) return null;
-  if (player) return <Realm />;
+  if (player) return <Feed />;
 
   if (searchParams.get("error") === "suspended") {
     return (
@@ -62,7 +62,7 @@ export default function Home() {
           {t("lore_cta_primary")}
         </button>
         <Link
-          to="/players"
+          to="/explore"
           className="rounded-md border border-border px-6 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted"
         >
           {t("home_explore_cta")}

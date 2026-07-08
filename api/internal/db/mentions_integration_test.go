@@ -18,7 +18,7 @@ const maxMentionsPerCommentForTest = 10
 
 // simulatePostCommentWithMentions mirrors the @mention side effects of
 // journeys.Handler.postComment exactly (parse -> resolve -> insert comment ->
-// insert mentions -> echo), so this test exercises the same db-layer
+// insert mentions -> notification), so this test exercises the same db-layer
 // sequence the HTTP handler runs.
 func simulatePostCommentWithMentions(t *testing.T, ctx context.Context, pool *pgxpool.Pool, journeyID, actorID, text string) db.JourneyComment {
 	t.Helper()
@@ -48,8 +48,8 @@ func simulatePostCommentWithMentions(t *testing.T, ctx context.Context, pool *pg
 			t.Fatalf("get journey meta: %v", err)
 		}
 		for _, recipientID := range mentionedUserIDs {
-			if err := db.UpsertMentionEcho(ctx, pool, recipientID, actorID, journeyID, meta.GameName); err != nil {
-				t.Fatalf("upsert mention echo: %v", err)
+			if err := db.UpsertMentionNotification(ctx, pool, recipientID, actorID, journeyID, meta.GameName); err != nil {
+				t.Fatalf("upsert mention notification: %v", err)
 			}
 		}
 	}
@@ -74,7 +74,7 @@ func setupMentionJourney(t *testing.T, pool *pgxpool.Pool, ownerID string, igdbI
 	return journey
 }
 
-func TestMentions_BasicResolutionAndEcho(t *testing.T) {
+func TestMentions_BasicResolutionAndNotification(t *testing.T) {
 	pool := connectTestDB(t)
 	ctx := context.Background()
 
@@ -95,12 +95,12 @@ func TestMentions_BasicResolutionAndEcho(t *testing.T) {
 		t.Errorf("mentioned handle = %s, want %s", comment.Mentions[0].Handle, targetHandle)
 	}
 
-	echoes, err := db.ListEchoes(ctx, pool, target, 10, "")
+	notifications, err := db.ListNotifications(ctx, pool, target, 10, "")
 	if err != nil {
-		t.Fatalf("list echoes: %v", err)
+		t.Fatalf("list notifications: %v", err)
 	}
-	if len(echoes) != 1 || echoes[0].Type != "new_mention" {
-		t.Fatalf("target echoes = %+v, want one new_mention echo", echoes)
+	if len(notifications) != 1 || notifications[0].Type != "new_mention" {
+		t.Fatalf("target notifications = %+v, want one new_mention notification", notifications)
 	}
 }
 
@@ -135,7 +135,7 @@ func TestMentions_UnknownHandleIsIgnored(t *testing.T) {
 	}
 }
 
-func TestMentions_SelfMentionIsSkippedAndNotEchoed(t *testing.T) {
+func TestMentions_SelfMentionIsSkippedAndNotNotificationed(t *testing.T) {
 	pool := connectTestDB(t)
 	ctx := context.Background()
 
@@ -148,12 +148,12 @@ func TestMentions_SelfMentionIsSkippedAndNotEchoed(t *testing.T) {
 	if len(comment.Mentions) != 0 {
 		t.Fatalf("comment.Mentions = %+v, want none for a self-mention", comment.Mentions)
 	}
-	echoes, err := db.ListEchoes(ctx, pool, owner, 10, "")
+	notifications, err := db.ListNotifications(ctx, pool, owner, 10, "")
 	if err != nil {
-		t.Fatalf("list echoes: %v", err)
+		t.Fatalf("list notifications: %v", err)
 	}
-	if len(echoes) != 0 {
-		t.Fatalf("owner echoes = %+v, want none from self-mentioning", echoes)
+	if len(notifications) != 0 {
+		t.Fatalf("owner notifications = %+v, want none from self-mentioning", notifications)
 	}
 }
 
@@ -174,12 +174,12 @@ func TestMentions_DuplicateHandleInSameCommentInsertsOnce(t *testing.T) {
 		t.Fatalf("len(comment.Mentions) = %d, want 1 (deduplicated)", len(comment.Mentions))
 	}
 
-	echoes, err := db.ListEchoes(ctx, pool, target, 10, "")
+	notifications, err := db.ListNotifications(ctx, pool, target, 10, "")
 	if err != nil {
-		t.Fatalf("list echoes: %v", err)
+		t.Fatalf("list notifications: %v", err)
 	}
-	if len(echoes) != 1 {
-		t.Fatalf("target echoes = %+v, want exactly one echo, not one per occurrence", echoes)
+	if len(notifications) != 1 {
+		t.Fatalf("target notifications = %+v, want exactly one notification, not one per occurrence", notifications)
 	}
 }
 
@@ -302,16 +302,16 @@ func TestMentions_CommentAuthorDeletedRemovesTheirComment(t *testing.T) {
 		t.Fatalf("comments after author deleted = %+v, want none — the comment cascades away with its author", comments)
 	}
 
-	// The mentioned target should not retain a dangling echo pointing at
-	// content that no longer exists; the existing echo row is left as-is
+	// The mentioned target should not retain a dangling notification pointing at
+	// content that no longer exists; the existing notification row is left as-is
 	// (subject_title still resolves via journey, not the deleted comment),
 	// but at minimum it must not error to read.
-	if _, err := db.ListEchoes(ctx, pool, target, 10, ""); err != nil {
-		t.Fatalf("list target echoes after author deleted: %v", err)
+	if _, err := db.ListNotifications(ctx, pool, target, 10, ""); err != nil {
+		t.Fatalf("list target notifications after author deleted: %v", err)
 	}
 }
 
-func TestMentions_MultipleMentionsInOneCommentEachGetEchoed(t *testing.T) {
+func TestMentions_MultipleMentionsInOneCommentEachGetNotificationed(t *testing.T) {
 	pool := connectTestDB(t)
 	ctx := context.Background()
 
@@ -329,12 +329,12 @@ func TestMentions_MultipleMentionsInOneCommentEachGetEchoed(t *testing.T) {
 	}
 
 	for _, target := range []string{targetA, targetB} {
-		echoes, err := db.ListEchoes(ctx, pool, target, 10, "")
+		notifications, err := db.ListNotifications(ctx, pool, target, 10, "")
 		if err != nil {
-			t.Fatalf("list echoes for %s: %v", target, err)
+			t.Fatalf("list notifications for %s: %v", target, err)
 		}
-		if len(echoes) != 1 || echoes[0].Type != "new_mention" {
-			t.Fatalf("echoes for %s = %+v, want one new_mention echo", target, echoes)
+		if len(notifications) != 1 || notifications[0].Type != "new_mention" {
+			t.Fatalf("notifications for %s = %+v, want one new_mention notification", target, notifications)
 		}
 	}
 }

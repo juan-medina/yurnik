@@ -26,7 +26,7 @@ class FakeYurnikClient : IYurnikClient
     public void ClearToken() { }
     public Task<HeartbeatResult> HeartbeatAsync() => Task.FromResult(new HeartbeatResult(ApiResult.Ok));
     public Task<MeResult> GetMeAsync() => Task.FromResult(new MeResult(ApiResult.Ok, null, null));
-    public Task<EchoesResult> GetEchoesAsync() => Task.FromResult(new EchoesResult(ApiResult.Ok, new List<Echo>()));
+    public Task<NotificationsResult> GetNotificationsAsync() => Task.FromResult(new NotificationsResult(ApiResult.Ok, new List<Notification>()));
     public Task<ExclusionsResult> GetExclusionsAsync() => Task.FromResult(new ExclusionsResult(ApiResult.Ok, []));
     public Task<InclusionsResult> GetInclusionsAsync() => Task.FromResult(new InclusionsResult(ApiResult.Ok, []));
 

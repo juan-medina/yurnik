@@ -5,20 +5,20 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { MOCK_GAME_ACTIVITY } from "@/test/fixtures";
 import { renderWithProviders } from "@/test/utils";
-import Players from "./Players";
+import Explore from "./Explore";
 
-function renderPlayers() {
+function renderExplore() {
   return renderWithProviders(
     <MemoryRouter>
-      <Players />
+      <Explore />
     </MemoryRouter>,
   );
 }
 
-describe("Players", () => {
+describe("Explore", () => {
   it("search by game name hides non-matching games", async () => {
     const user = userEvent.setup();
-    renderPlayers();
+    renderExplore();
     await screen.findByText(MOCK_GAME_ACTIVITY[0].game);
     await user.type(screen.getByPlaceholderText("Search by game or genre…"), "Elden");
     expect(screen.getByText("Elden Ring")).toBeInTheDocument();
@@ -27,7 +27,7 @@ describe("Players", () => {
 
   it("search by genre shows only games with that genre", async () => {
     const user = userEvent.setup();
-    renderPlayers();
+    renderExplore();
     await screen.findByText(MOCK_GAME_ACTIVITY[0].game);
     await user.type(screen.getByPlaceholderText("Search by game or genre…"), "Metroidvania");
     expect(screen.getByText("Hollow Knight")).toBeInTheDocument();
@@ -36,7 +36,7 @@ describe("Players", () => {
 
   it("genre chip filters to games with that genre", async () => {
     const user = userEvent.setup();
-    renderPlayers();
+    renderExplore();
     await user.click(await screen.findByRole("button", { name: "Indie" }));
     expect(screen.getByText("Hollow Knight")).toBeInTheDocument();
     expect(screen.getByText("Hades II")).toBeInTheDocument();
@@ -45,7 +45,7 @@ describe("Players", () => {
 
   it("clicking All chip after genre filter restores all games", async () => {
     const user = userEvent.setup();
-    renderPlayers();
+    renderExplore();
     await user.click(await screen.findByRole("button", { name: "Indie" }));
     await user.click(screen.getByRole("button", { name: "All" }));
     expect(screen.getByText("Elden Ring")).toBeInTheDocument();
@@ -54,7 +54,7 @@ describe("Players", () => {
 
   it("clicking an active genre chip deactivates it", async () => {
     const user = userEvent.setup();
-    renderPlayers();
+    renderExplore();
     await user.click(await screen.findByRole("button", { name: "Indie" }));
     expect(screen.queryByText("Elden Ring")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Indie" }));
@@ -62,7 +62,7 @@ describe("Players", () => {
   });
 
   it("player name in a journey row links to their profile", async () => {
-    renderPlayers();
+    renderExplore();
     const firstGame = MOCK_GAME_ACTIVITY[0];
     const firstEntry = firstGame.entries[0];
     const links = await screen.findAllByRole("link", { name: new RegExp(firstEntry.player.name) });
@@ -74,7 +74,7 @@ describe("Players", () => {
 
   it("empty state appears when nothing matches search", async () => {
     const user = userEvent.setup();
-    renderPlayers();
+    renderExplore();
     await screen.findByText(MOCK_GAME_ACTIVITY[0].game);
     await user.type(screen.getByPlaceholderText("Search by game or genre…"), "xyznothing");
     expect(screen.getByText("No games match your search.")).toBeInTheDocument();

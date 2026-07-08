@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 import { getGameDetail, getGameJourneys } from "@/services/games";
 import { followPlayer, unfollowPlayer } from "@/services/players";
 import { getCurrentPlayer } from "@/services/auth";
-import { addToHorizon } from "@/services/horizon";
+import { addToBacklog } from "@/services/backlog";
 import { playerHref } from "@/lib/display";
 import PlayerAvatar from "@/components/PlayerAvatar";
 import { formatJourneyDate, formatReleaseDate } from "@/lib/time";
@@ -200,27 +200,27 @@ function JourneyPlayerRow({ entry }: { entry: JourneyPlayer }) {
   );
 }
 
-function AddToHorizonButton({ game }: { game: GameDetailModel }) {
+function AddToBacklogButton({ game }: { game: GameDetailModel }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [inHorizon, setInHorizon] = useState(game.inHorizon);
+  const [inBacklog, setInBacklog] = useState(game.inBacklog);
   const [showSignIn, setShowSignIn] = useState(false);
   const { data: currentPlayer } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer, retry: false });
   const addMutation = useMutation({
-    mutationFn: () => addToHorizon(parseInt(game.id, 10)),
+    mutationFn: () => addToBacklog(parseInt(game.id, 10)),
     onSuccess: () => {
-      setInHorizon(true);
-      queryClient.invalidateQueries({ queryKey: ["horizon"] });
+      setInBacklog(true);
+      queryClient.invalidateQueries({ queryKey: ["backlog"] });
       queryClient.invalidateQueries({ queryKey: ["player-profile"] });
       queryClient.invalidateQueries({ queryKey: ["game", game.id] });
     },
   });
 
-  if (inHorizon) {
+  if (inBacklog) {
     return (
       <span className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground">
         <Check size={11} />
-        {t("horizon_added")}
+        {t("backlog_added")}
       </span>
     );
   }
@@ -233,7 +233,7 @@ function AddToHorizonButton({ game }: { game: GameDetailModel }) {
         className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-40"
       >
         <Telescope size={11} />
-        {t("horizon_add")}
+        {t("backlog_add")}
       </button>
       {showSignIn && <SignInPromptModal onClose={() => setShowSignIn(false)} />}
     </>
@@ -589,7 +589,7 @@ export default function GameDetail() {
 
             {/* Links */}
             <div className="mt-4 flex flex-wrap gap-2">
-              <AddToHorizonButton game={game} />
+              <AddToBacklogButton game={game} />
               {STORE_LABELS.filter(({ key }) => game.storeLinks[key]).map(({ key, label, color, bg, icon }) => (
                 <a
                   key={key}

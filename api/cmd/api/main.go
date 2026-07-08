@@ -16,9 +16,9 @@ import (
 	"github.com/juan-medina/yurnik/internal/agent"
 	"github.com/juan-medina/yurnik/internal/auth"
 	"github.com/juan-medina/yurnik/internal/db"
-	"github.com/juan-medina/yurnik/internal/echoes"
+	"github.com/juan-medina/yurnik/internal/notifications"
 	"github.com/juan-medina/yurnik/internal/games"
-	"github.com/juan-medina/yurnik/internal/horizon"
+	"github.com/juan-medina/yurnik/internal/backlog"
 	"github.com/juan-medina/yurnik/internal/journeys"
 	"github.com/juan-medina/yurnik/internal/middleware"
 	"github.com/juan-medina/yurnik/internal/profile"
@@ -75,8 +75,8 @@ func main() {
 	profile.NewHandler(pool, jwtPriv, r2Client).Register(mux)
 	games.NewHandler(igdbClient, pool, jwtPriv).Register(mux)
 	journeys.NewHandler(pool, jwtPriv).Register(mux)
-	echoes.NewHandler(pool, jwtPriv).Register(mux)
-	horizon.NewHandler(pool, jwtPriv).Register(mux)
+	notifications.NewHandler(pool, jwtPriv).Register(mux)
+	backlog.NewHandler(pool, jwtPriv).Register(mux)
 	settings.NewHandler(pool, jwtPriv).Register(mux)
 	reports.NewHandler(pool, jwtPriv).Register(mux)
 	sitemap.NewHandler(pool).Register(mux)

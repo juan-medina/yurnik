@@ -75,7 +75,7 @@ Most errors return a JSON body:
 | 400 | `invalid_request` | Malformed body, missing required field, or a value outside its allowed range |
 | 400 | `disallowed_content` | Journey log or comment contains a URL |
 | 400 | `duplicate_content` | Journey log or comment is identical to the author's immediately previous one |
-| 400 | `order_mismatch` | Horizon reorder payload doesn't match the player's current Horizon entries |
+| 400 | `order_mismatch` | Backlog reorder payload doesn't match the player's current Backlog entries |
 | 400 | `invalid_target_type` | Report target type is not one of the accepted values |
 | 400 | `invalid_reason` | Report reason is not one of the accepted values |
 | 400 | `missing_target_id` | Report submitted without a `target_id` |
@@ -95,7 +95,7 @@ Most errors return a JSON body:
 
 ### PlayerSummary
 
-The minimal player representation, embedded in lists, comments, echoes, and journey entries.
+The minimal player representation, embedded in lists, comments, notifications, and journey entries.
 
 ```json
 {
@@ -224,11 +224,11 @@ Returned for a single player's profile (`GET /api/players/{handle}`).
   "store_links": { "steam": "https://..." },
   "aggregated_rating": 95.2,
   "rating": 88.4,
-  "in_horizon": false
+  "in_backlog": false
 }
 ```
 
-All fields except `id`, `name`, `genres`, `screenshots`, `platforms`, and `in_horizon` are omitted if not available. `in_horizon` reflects the authenticated caller and is `false` for anonymous requests.
+All fields except `id`, `name`, `genres`, `screenshots`, `platforms`, and `in_backlog` are omitted if not available. `in_backlog` reflects the authenticated caller and is `false` for anonymous requests.
 
 ---
 
@@ -342,7 +342,7 @@ GET /api/players/{handle}/profile
   "genre_hours": [
     { "genre": "RPG", "seconds": 180000 }
   ],
-  "horizon": [
+  "backlog": [
     {
       "igdb_id": 119388,
       "name": "Elden Ring",
@@ -354,7 +354,7 @@ GET /api/players/{handle}/profile
 }
 ```
 
-`recent_games` is the five most recently played distinct games, ordered by most recent first. `genre_hours` is the top eight genres by total seconds played. `horizon` is the player's full Horizon list, in display order. See [DESIGN.md](DESIGN.md#player-profile) for the reasoning behind these fields.
+`recent_games` is the five most recently played distinct games, ordered by most recent first. `genre_hours` is the top eight genres by total seconds played. `backlog` is the player's full Backlog list, in display order. See [DESIGN.md](DESIGN.md#player-profile) for the reasoning behind these fields.
 
 ### Get player activity
 
@@ -362,7 +362,7 @@ GET /api/players/{handle}/profile
 GET /api/players/{handle}/activity
 ```
 
-A merged, paginated feed of the player's own journeys and activity they triggered (follows, comments, Horizon additions). Same item shape as [Feed](#feed).
+A merged, paginated feed of the player's own journeys and activity they triggered (follows, comments, Backlog additions). Same item shape as [Feed](#feed).
 
 **Response** — see [Feed](#feed)
 
@@ -409,7 +409,7 @@ GET /api/players/{handle}/following
 GET /api/feed
 ```
 
-Requires authentication. A reverse-chronological, merged feed of confirmed journeys and activity events (new comments, new followers, Horizon additions) from players the caller follows. This is the Realm — see [DESIGN.md](DESIGN.md#realm-feed).
+Requires authentication. A reverse-chronological, merged feed of confirmed journeys and activity events (new comments, new followers, Backlog additions) from players the caller follows. This is the Feed — see [DESIGN.md](DESIGN.md#feed-feed).
 
 **Response**
 
@@ -448,7 +448,7 @@ Requires authentication. A reverse-chronological, merged feed of confirmed journ
 }
 ```
 
-`kind` is `journey` or `activity`; exactly one of `journey` / `activity` is present per item. `activity.type` is `follow`, `comment`, or `horizon_add`. `subject_id`, `subject_title`, and `subject_igdb_id` are present for `comment` and `horizon_add` activity and omitted for `follow`.
+`kind` is `journey` or `activity`; exactly one of `journey` / `activity` is present per item. `activity.type` is `follow`, `comment`, or `backlog_add`. `subject_id`, `subject_title`, and `subject_igdb_id` are present for `comment` and `backlog_add` activity and omitted for `follow`.
 
 ---
 
@@ -716,14 +716,14 @@ Requires authentication. Only the comment author can delete their own comments.
 
 ---
 
-## Echoes
+## Notifications
 
-Echoes are in-app notifications, batched — one echo per `(type, subject)` accumulates actors over time rather than producing one notification per actor. See [DESIGN.md](DESIGN.md#echoes).
+Notifications are in-app notifications, batched — one notification per `(type, subject)` accumulates actors over time rather than producing one notification per actor. See [DESIGN.md](DESIGN.md#notifications).
 
-### List echoes
+### List notifications
 
 ```
-GET /api/echoes
+GET /api/notifications
 ```
 
 Requires authentication. Reverse chronological by `updated_at`.
@@ -732,7 +732,7 @@ Requires authentication. Reverse chronological by `updated_at`.
 
 ```json
 {
-  "echoes": [
+  "notifications": [
     {
       "id": 12345,
       "type": "new_comment",
@@ -760,28 +760,28 @@ Requires authentication. Reverse chronological by `updated_at`.
 }
 ```
 
-`type` is `new_comment` or `new_follower`. `subject_id` and `subject_title` are `null` for `new_follower` echoes. `actors` contains at most 3 players — `actor_count` gives the full total. `subject_title` is snapshotted at creation and remains even if the journey is later deleted. `read` is `false` until the notification panel has been opened.
+`type` is `new_comment` or `new_follower`. `subject_id` and `subject_title` are `null` for `new_follower` notifications. `actors` contains at most 3 players — `actor_count` gives the full total. `subject_title` is snapshotted at creation and remains even if the journey is later deleted. `read` is `false` until the notification panel has been opened.
 
-### Mark all echoes as read
+### Mark all notifications as read
 
 ```
-POST /api/echoes/read
+POST /api/notifications/read
 ```
 
-Requires authentication. Called when the notification panel opens. Marks all unread echoes for the authenticated user as read in one operation.
+Requires authentication. Called when the notification panel opens. Marks all unread notifications for the authenticated user as read in one operation.
 
 **Response** — `204 No Content`
 
 ---
 
-## Horizon
+## Backlog
 
 A player's public list of games they intend to play in the future. See [DESIGN.md](DESIGN.md#terminology).
 
-### List a player's Horizon
+### List a player's Backlog
 
 ```
-GET /api/players/{handle}/horizon
+GET /api/players/{handle}/backlog
 ```
 
 **Response**
@@ -801,10 +801,10 @@ GET /api/players/{handle}/horizon
 }
 ```
 
-### Add to own Horizon
+### Add to own Backlog
 
 ```
-POST /api/me/horizon
+POST /api/me/backlog
 ```
 
 Requires authentication.
@@ -817,20 +817,20 @@ Requires authentication.
 
 **Response** — `204 No Content`
 
-### Remove from own Horizon
+### Remove from own Backlog
 
 ```
-DELETE /api/me/horizon/{igdb_id}
+DELETE /api/me/backlog/{igdb_id}
 ```
 
 Requires authentication.
 
 **Response** — `204 No Content`
 
-### Reorder own Horizon
+### Reorder own Backlog
 
 ```
-PATCH /api/me/horizon/order
+PATCH /api/me/backlog/order
 ```
 
 Requires authentication.
@@ -841,7 +841,7 @@ Requires authentication.
 { "igdb_ids": [119388, 1942, 1020] }
 ```
 
-Must contain exactly the IGDB IDs currently in the caller's Horizon, in the desired display order. Returns `400 order_mismatch` if the set doesn't match.
+Must contain exactly the IGDB IDs currently in the caller's Backlog, in the desired display order. Returns `400 order_mismatch` if the set doesn't match.
 
 **Response** — `204 No Content`
 
@@ -977,7 +977,7 @@ GET /api/games/{igdb_id}
 GET /api/games/{igdb_id}/journeys
 ```
 
-Recent journeys logged for this game, across all players — backs the Players page (see [DESIGN.md](DESIGN.md#players-page)).
+Recent journeys logged for this game, across all players — backs the Explore page (see [DESIGN.md](DESIGN.md#explore-page)).
 
 **Response**
 

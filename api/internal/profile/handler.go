@@ -193,9 +193,9 @@ func (h *Handler) followPlayer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Best-effort echo/activity — never block the response on these failures.
-	if err := db.UpsertFollowerEcho(r.Context(), h.pool, targetID, callerID); err != nil {
-		log.Printf("profile/follow: upsert echo: %v", err)
+	// Best-effort notification/activity — never block the response on these failures.
+	if err := db.UpsertFollowerNotification(r.Context(), h.pool, targetID, callerID); err != nil {
+		log.Printf("profile/follow: upsert notification: %v", err)
 	}
 	if err := db.RecordActivity(r.Context(), h.pool, callerID, targetID, "new_follower", nil, nil, nil); err != nil {
 		log.Printf("profile/follow: record activity: %v", err)
@@ -316,7 +316,8 @@ type feedEntry struct {
 }
 
 type activityResp struct {
-	Type          string     `json:"type"` // "follow" | "comment" | "horizon_add"
+	Type          string     `json:"type"` // "follow" | "comment" | "backlog_add"
+	SessionID     *string    `json:"session_id,omitempty"`
 	CreatedAt     string     `json:"created_at"`
 	Actor         playerResp `json:"actor"`
 	Recipient     playerResp `json:"recipient"`
@@ -357,8 +358,8 @@ func activityToFeedEntry(a db.ActivityEvent) activityResp {
 	switch a.Type {
 	case "new_follower":
 		t = "follow"
-	case "horizon_add":
-		t = "horizon_add"
+	case "backlog_add":
+		t = "backlog_add"
 	}
 	return activityResp{
 		Type:      t,
@@ -560,7 +561,7 @@ type genreHoursItem struct {
 	Seconds int    `json:"seconds"`
 }
 
-type horizonItem struct {
+type backlogItem struct {
 	IGDBID      int      `json:"igdb_id"`
 	Name        string   `json:"name"`
 	CoverURL    *string  `json:"cover_url,omitempty"`
@@ -583,10 +584,10 @@ type profileSummaryResponse struct {
 	TotalSeconds int              `json:"total_seconds"`
 	RecentGames  []recentGameItem `json:"recent_games"`
 	GenreHours   []genreHoursItem `json:"genre_hours"`
-	Horizon      []horizonItem    `json:"horizon"`
+	Backlog      []backlogItem    `json:"backlog"`
 }
 
-func buildProfileSummaryResponse(user db.User, followers, following int, isFollowing bool, summary db.ProfileSummary, horizon []db.HorizonEntry) profileSummaryResponse {
+func buildProfileSummaryResponse(user db.User, followers, following int, isFollowing bool, summary db.ProfileSummary, backlog []db.BacklogEntry) profileSummaryResponse {
 	resp := profileSummaryResponse{
 		ID:           user.ID,
 		Handle:       user.Handle,
@@ -602,7 +603,7 @@ func buildProfileSummaryResponse(user db.User, followers, following int, isFollo
 		TotalSeconds: summary.TotalSeconds,
 		RecentGames:  make([]recentGameItem, 0, len(summary.RecentGames)),
 		GenreHours:   make([]genreHoursItem, 0, len(summary.GenreHours)),
-		Horizon:      make([]horizonItem, 0, len(horizon)),
+		Backlog:      make([]backlogItem, 0, len(backlog)),
 	}
 	for _, g := range summary.RecentGames {
 		resp.RecentGames = append(resp.RecentGames, recentGameItem{
@@ -617,12 +618,12 @@ func buildProfileSummaryResponse(user db.User, followers, following int, isFollo
 	for _, gh := range summary.GenreHours {
 		resp.GenreHours = append(resp.GenreHours, genreHoursItem{Genre: gh.Genre, Seconds: gh.Seconds})
 	}
-	for _, e := range horizon {
+	for _, e := range backlog {
 		genres := e.Genres
 		if genres == nil {
 			genres = []string{}
 		}
-		resp.Horizon = append(resp.Horizon, horizonItem{
+		resp.Backlog = append(resp.Backlog, backlogItem{
 			IGDBID:      e.IGDBID,
 			Name:        e.Name,
 			CoverURL:    e.CoverURL,
@@ -670,12 +671,12 @@ func (h *Handler) writeProfileSummary(w http.ResponseWriter, r *http.Request, us
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	horizonEntries, err := db.ListHorizonEntries(r.Context(), h.pool, userID)
+	backlogEntries, err := db.ListBacklogEntries(r.Context(), h.pool, userID)
 	if err != nil {
-		log.Printf("profile/summary: horizon %s: %v", userID, err)
+		log.Printf("profile/summary: backlog %s: %v", userID, err)
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(buildProfileSummaryResponse(user, followers, following, isFollowing, summary, horizonEntries))
+	_ = json.NewEncoder(w).Encode(buildProfileSummaryResponse(user, followers, following, isFollowing, summary, backlogEntries))
 }
 
 func (h *Handler) patchMe(w http.ResponseWriter, r *http.Request) {

@@ -6,36 +6,36 @@ using Yurnik.Agent.Infrastructure;
 
 namespace Yurnik.Agent.Notifications;
 
-sealed class EchoStore
+sealed class NotificationStore
 {
     readonly Database _db;
 
-    public EchoStore(Database db)
+    public NotificationStore(Database db)
     {
         _db = db;
     }
 
-    public bool IsNotified(string echoId)
+    public bool IsNotified(string notificationId)
     {
         using var conn = _db.OpenConnection();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT 1 FROM notified_echoes WHERE echo_id = @echo_id LIMIT 1;";
-        cmd.Parameters.AddWithValue("@echo_id", echoId);
+        cmd.CommandText = "SELECT 1 FROM notified_notifications WHERE notification_id = @notification_id LIMIT 1;";
+        cmd.Parameters.AddWithValue("@notification_id", notificationId);
 
         var result = cmd.ExecuteScalar();
         return result != null;
     }
 
-    public void MarkNotified(string echoId)
+    public void MarkNotified(string notificationId)
     {
         using var conn = _db.OpenConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO notified_echoes (echo_id, notified_at)
-            VALUES (@echo_id, @notified_at)
-            ON CONFLICT(echo_id) DO NOTHING;
+            INSERT INTO notified_notifications (notification_id, notified_at)
+            VALUES (@notification_id, @notified_at)
+            ON CONFLICT(notification_id) DO NOTHING;
             """;
-        cmd.Parameters.AddWithValue("@echo_id", echoId);
+        cmd.Parameters.AddWithValue("@notification_id", notificationId);
         cmd.Parameters.AddWithValue("@notified_at", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         cmd.ExecuteNonQuery();
     }

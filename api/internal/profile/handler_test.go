@@ -31,7 +31,7 @@ func TestPutPreferences_unauthenticated(t *testing.T) {
 	mux := http.NewServeMux()
 	h.Register(mux)
 
-	r := httptest.NewRequest(http.MethodPut, "/api/me/preferences", strings.NewReader(`{"updates":false,"echoes":true}`))
+	r := httptest.NewRequest(http.MethodPut, "/api/me/preferences", strings.NewReader(`{"updates":false,"notifications":true}`))
 	r.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, r)

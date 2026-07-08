@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package echoes
+package notifications
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 	"github.com/juan-medina/yurnik/internal/db"
 )
 
-func TestHandlerListEchoesWithHorizonRelease(t *testing.T) {
+func TestHandlerListNotificationsWithBacklogRelease(t *testing.T) {
 	dbURL := os.Getenv("TEST_DATABASE_URL")
 	if dbURL == "" {
 		t.Fatal("TEST_DATABASE_URL not set")
@@ -32,11 +32,11 @@ func TestHandlerListEchoesWithHorizonRelease(t *testing.T) {
 	defer pool.Close()
 
 	// Seed data
-	pool.Exec(ctx, "DELETE FROM users WHERE provider_id = 'echoes_test_u1'")
+	pool.Exec(ctx, "DELETE FROM users WHERE provider_id = 'notifications_test_u1'")
 	pool.Exec(ctx, "DELETE FROM igdb_games WHERE igdb_id = 999993")
 
 	var userID string
-	err = pool.QueryRow(ctx, "INSERT INTO users (provider, provider_id, handle, name) VALUES ('test', 'echoes_test_u1', 'echou1', 'Echo U1') RETURNING id").Scan(&userID)
+	err = pool.QueryRow(ctx, "INSERT INTO users (provider, provider_id, handle, name) VALUES ('test', 'notifications_test_u1', 'notificationu1', 'Notification U1') RETURNING id").Scan(&userID)
 	if err != nil {
 		t.Fatalf("insert user: %v", err)
 	}
@@ -51,10 +51,10 @@ func TestHandlerListEchoesWithHorizonRelease(t *testing.T) {
 		pool.Exec(ctx, "DELETE FROM igdb_games WHERE igdb_id = 999993")
 	})
 
-	// Insert an echo
-	_, err = pool.Exec(ctx, "INSERT INTO echoes (recipient_id, type, subject_igdb_id, updated_at, batch_until) VALUES ($1, 'horizon_release', 999993, now(), now())", userID)
+	// Insert a notification
+	_, err = pool.Exec(ctx, "INSERT INTO notifications (recipient_id, type, subject_igdb_id, updated_at, batch_until) VALUES ($1, 'backlog_release', 999993, now(), now())", userID)
 	if err != nil {
-		t.Fatalf("insert echo: %v", err)
+		t.Fatalf("insert notification: %v", err)
 	}
 
 	// Make request
@@ -66,7 +66,7 @@ func TestHandlerListEchoesWithHorizonRelease(t *testing.T) {
 
 	token, _ := auth.CreateSessionJWT(userID, priv)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/echoes", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/notifications", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
 
@@ -77,21 +77,21 @@ func TestHandlerListEchoesWithHorizonRelease(t *testing.T) {
 	}
 
 	var result struct {
-		Echoes []echoResp `json:"echoes"`
+		Notifications []notificationResp `json:"notifications"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
-	if len(result.Echoes) == 0 {
-		t.Fatal("expected echoes, got 0")
+	if len(result.Notifications) == 0 {
+		t.Fatal("expected notifications, got 0")
 	}
 
-	echo := result.Echoes[0]
-	if echo.Type != "horizon_release" {
-		t.Errorf("expected horizon_release, got %s", echo.Type)
+	notification := result.Notifications[0]
+	if notification.Type != "backlog_release" {
+		t.Errorf("expected backlog_release, got %s", notification.Type)
 	}
-	if echo.SubjectIgdbID == nil || *echo.SubjectIgdbID != 999993 {
-		t.Errorf("expected SubjectIgdbID 999993, got %v", echo.SubjectIgdbID)
+	if notification.SubjectIgdbID == nil || *notification.SubjectIgdbID != 999993 {
+		t.Errorf("expected SubjectIgdbID 999993, got %v", notification.SubjectIgdbID)
 	}
 }

@@ -4,7 +4,7 @@ import { screen, waitFor, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MOCK_FRIENDS_ON_JOURNEY, MOCK_HORIZON, MY_PLAYER, MY_PLAYER_ID, PLAYERS, JOURNEYS } from "@/test/fixtures";
+import { MOCK_FRIENDS_ON_JOURNEY, MOCK_BACKLOG, MY_PLAYER, MY_PLAYER_ID, PLAYERS, JOURNEYS } from "@/test/fixtures";
 import { _reset as resetPlayers } from "@/services/players";
 import { renderWithProviders } from "@/test/utils";
 import PlayerProfile from "./PlayerProfile";
@@ -90,16 +90,16 @@ describe("PlayerProfile", () => {
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
   });
 
-  it("shows the Horizon section with entries on your own profile", async () => {
+  it("shows the Backlog section with entries on your own profile", async () => {
     renderProfile(MY_PLAYER.handle);
-    expect(await screen.findByText("Horizon")).toBeInTheDocument();
-    expect(await screen.findByText(MOCK_HORIZON[0].name)).toBeInTheDocument();
+    expect(await screen.findByText("Backlog")).toBeInTheDocument();
+    expect(await screen.findByText(MOCK_BACKLOG[0].name)).toBeInTheDocument();
   });
 
-  it("does not show the Horizon section on another player's profile with an empty horizon", async () => {
+  it("does not show the Backlog section on another player's profile with an empty backlog", async () => {
     renderProfile(PLAYERS[1].handle);
     await screen.findByText(PLAYERS[1].name);
-    expect(screen.queryByText("Horizon")).not.toBeInTheDocument();
+    expect(screen.queryByText("Backlog")).not.toBeInTheDocument();
   });
 
   it("shows a Load more button when the player activity returns a next_cursor", async () => {
@@ -182,7 +182,7 @@ describe("PlayerProfile", () => {
       totalSeconds: 0,
       recentGames: [],
       genreHours: [],
-      horizon: [],
+      backlog: [],
     });
     queryClient.setQueryData(["activity", "player", target.handle], {
       items: [
@@ -230,7 +230,7 @@ describe("PlayerProfile", () => {
       totalSeconds: 0,
       recentGames: [],
       genreHours: [],
-      horizon: [],
+      backlog: [],
     });
     queryClient.setQueryData(["activity", "player", target.handle], { items: [] });
     queryClient.setQueryData(["follow-list", target.id, "followers"], { players: [follower] });
@@ -265,7 +265,7 @@ describe("PlayerProfile", () => {
       totalSeconds: 0,
       recentGames: [],
       genreHours: [],
-      horizon: [],
+      backlog: [],
     });
     queryClient.setQueryData(["activity", "player", target.handle], { items: [] });
     queryClient.setQueryData(["follow-list", target.id, "following"], { players: [followee] });

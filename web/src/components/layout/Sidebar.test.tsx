@@ -15,6 +15,6 @@ describe("Sidebar", () => {
     );
 
     expect(screen.getByRole("link", { name: "Journeys" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Realm" })).not.toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Feed" })).not.toHaveAttribute("aria-current", "page");
   });
 });

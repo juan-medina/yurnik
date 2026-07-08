@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 
-// Package horizon handles routes for a player's Horizon — a public list of
+// Package backlog handles routes for a player's Backlog — a public list of
 // games they intend to play in the future.
-package horizon
+package backlog
 
 import (
 	"crypto/ed25519"
@@ -19,7 +19,7 @@ import (
 	"github.com/juan-medina/yurnik/internal/db"
 )
 
-// Handler handles Horizon routes.
+// Handler handles Backlog routes.
 type Handler struct {
 	pool    *pgxpool.Pool
 	jwtPriv ed25519.PrivateKey
@@ -30,12 +30,12 @@ func NewHandler(pool *pgxpool.Pool, jwtPriv ed25519.PrivateKey) *Handler {
 	return &Handler{pool: pool, jwtPriv: jwtPriv}
 }
 
-// Register mounts Horizon routes on mux.
+// Register mounts Backlog routes on mux.
 func (h *Handler) Register(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/players/{handle}/horizon", h.list)
-	mux.HandleFunc("POST /api/me/horizon", h.add)
-	mux.HandleFunc("DELETE /api/me/horizon/{igdbId}", h.remove)
-	mux.HandleFunc("PATCH /api/me/horizon/order", h.reorder)
+	mux.HandleFunc("GET /api/players/{handle}/backlog", h.list)
+	mux.HandleFunc("POST /api/me/backlog", h.add)
+	mux.HandleFunc("DELETE /api/me/backlog/{igdbId}", h.remove)
+	mux.HandleFunc("PATCH /api/me/backlog/order", h.reorder)
 }
 
 type entryResp struct {
@@ -48,7 +48,7 @@ type entryResp struct {
 	AddedAt     string   `json:"added_at"`
 }
 
-func toEntryResp(e db.HorizonEntry) entryResp {
+func toEntryResp(e db.BacklogEntry) entryResp {
 	genres := e.Genres
 	if genres == nil {
 		genres = []string{}
@@ -76,9 +76,9 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entries, err := db.ListHorizonEntries(r.Context(), h.pool, user.ID)
+	entries, err := db.ListBacklogEntries(r.Context(), h.pool, user.ID)
 	if err != nil {
-		log.Printf("horizon/list: %v", err)
+		log.Printf("backlog/list: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return
 	}
@@ -112,16 +112,16 @@ func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	added, err := db.AddHorizonEntry(r.Context(), h.pool, userID, body.IGDBID)
+	added, err := db.AddBacklogEntry(r.Context(), h.pool, userID, body.IGDBID)
 	if err != nil {
-		log.Printf("horizon/add: %v", err)
+		log.Printf("backlog/add: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return
 	}
 
 	if added {
-		if err := db.RecordHorizonAdd(r.Context(), h.pool, userID, body.IGDBID, game.Name); err != nil {
-			log.Printf("horizon/add: record activity: %v", err)
+		if err := db.RecordBacklogAdd(r.Context(), h.pool, userID, body.IGDBID, game.Name); err != nil {
+			log.Printf("backlog/add: record activity: %v", err)
 		}
 	}
 
@@ -140,8 +140,8 @@ func (h *Handler) remove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := db.RemoveHorizonEntry(r.Context(), h.pool, userID, igdbID); err != nil {
-		log.Printf("horizon/remove: %v", err)
+	if err := db.RemoveBacklogEntry(r.Context(), h.pool, userID, igdbID); err != nil {
+		log.Printf("backlog/remove: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return
 	}
@@ -163,12 +163,12 @@ func (h *Handler) reorder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := db.ReorderHorizonEntries(r.Context(), h.pool, userID, body.IGDBIDs); err != nil {
-		if errors.Is(err, db.ErrHorizonOrderMismatch) {
+	if err := db.ReorderBacklogEntries(r.Context(), h.pool, userID, body.IGDBIDs); err != nil {
+		if errors.Is(err, db.ErrBacklogOrderMismatch) {
 			http.Error(w, `{"error":"order_mismatch"}`, http.StatusBadRequest)
 			return
 		}
-		log.Printf("horizon/reorder: %v", err)
+		log.Printf("backlog/reorder: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return
 	}

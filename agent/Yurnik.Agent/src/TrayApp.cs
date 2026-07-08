@@ -25,7 +25,7 @@ sealed class TrayApp : IDisposable
     readonly QueueProcessor _processor;
     readonly Updater _updater;
     readonly DetectableGamesCache _detectableGames;
-    readonly EchoMonitor _echoMonitor;
+    readonly NotificationMonitor _notificationMonitor;
     readonly string _webBaseUrl;
     readonly NotifyIcon _tray;
     readonly Icon _normalIcon;
@@ -38,7 +38,7 @@ sealed class TrayApp : IDisposable
     ToolStripMenuItem? _signOutItem;
     ToolStripMenuItem? _syncSettingsItem;
 
-    public TrayApp(string webBaseUrl, AuthManager auth, IYurnikClient client, ProcessWatcher watcher, SessionMonitor sessionMonitor, QueueProcessor processor, Updater updater, DetectableGamesCache detectableGames, EchoMonitor echoMonitor)
+    public TrayApp(string webBaseUrl, AuthManager auth, IYurnikClient client, ProcessWatcher watcher, SessionMonitor sessionMonitor, QueueProcessor processor, Updater updater, DetectableGamesCache detectableGames, NotificationMonitor notificationMonitor)
     {
         _webBaseUrl = webBaseUrl;
         _auth = auth;
@@ -48,7 +48,7 @@ sealed class TrayApp : IDisposable
         _processor = processor;
         _updater = updater;
         _detectableGames = detectableGames;
-        _echoMonitor = echoMonitor;
+        _notificationMonitor = notificationMonitor;
 
         var iconStream = typeof(TrayApp).Assembly.GetManifestResourceStream("Yurnik.Agent.Resources.tray.ico");
         _normalIcon = iconStream is not null ? new Icon(iconStream) : SystemIcons.Application;
@@ -92,10 +92,10 @@ sealed class TrayApp : IDisposable
         {
             _auth.StartLoginFlow();
         }
-        else if (e.Argument == "echoes")
+        else if (e.Argument == "notifications")
         {
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
-                $"{_webBaseUrl}/echoes") { UseShellExecute = true });
+                $"{_webBaseUrl}/notifications") { UseShellExecute = true });
         }
     }
 
@@ -241,13 +241,13 @@ sealed class TrayApp : IDisposable
         _sessionMonitor.Start();
         _processor.Start();
         _watcher.Start();
-        _echoMonitor.Start();
+        _notificationMonitor.Start();
         Log.Info("Workers started");
     }
 
     void StopWorkers()
     {
-        _echoMonitor.Stop();
+        _notificationMonitor.Stop();
         _watcher.Stop();
         _sessionMonitor.Stop();
         _processor.Stop();
@@ -353,6 +353,6 @@ sealed class TrayApp : IDisposable
         _sessionMonitor.Dispose();
         _processor.Dispose();
         _detectableGames.Dispose();
-        _echoMonitor.Dispose();
+        _notificationMonitor.Dispose();
     }
 }

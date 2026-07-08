@@ -31,9 +31,9 @@ interface ProfileViewProps {
   header?: ReactNode;
   /** Follow/unfollow button rendered at the trailing edge of the profile card */
   profileActions?: ReactNode;
-  /** Avatar area: upload widget (Hero) or static image (PlayerProfile) */
+  /** Avatar area: upload widget (Profile) or static image (PlayerProfile) */
   avatarContent?: ReactNode;
-  /** Bio area: editable widget (Hero) or plain text (PlayerProfile) */
+  /** Bio area: editable widget (Profile) or plain text (PlayerProfile) */
   bioContent?: ReactNode;
   /** Called when admin clicks the suspend button */
   onSuspend?: () => void;
@@ -74,7 +74,7 @@ export default function ProfileView({
   const [followList, setFollowList] = useState<{ title: string; kind: "followers" | "following" } | null>(null);
   const [reporting, setReporting] = useState<ReportTargetType | null>(null);
 
-  const { player, journeyCount, totalSeconds, recentGames, genreHours, horizon } = profile;
+  const { player, journeyCount, totalSeconds, recentGames, genreHours, backlog } = profile;
   const isOwnProfile = player.id === viewerId;
   const canReport = !!viewerId && !isOwnProfile;
   const maxGenreSeconds = genreHours[0]?.seconds ?? 1;
@@ -249,15 +249,15 @@ export default function ProfileView({
         </div>
       )}
 
-      {/* Horizon */}
-      {(horizon.length > 0 || isOwnProfile) && (
+      {/* Backlog */}
+      {(backlog.length > 0 || isOwnProfile) && (
         <div className="mb-6">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            {t("profile_horizon")}
+            {t("profile_backlog")}
           </h2>
-          {horizon.length > 0 ? (
+          {backlog.length > 0 ? (
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
-              {horizon.map((g) => (
+              {backlog.map((g) => (
                 <Link key={g.igdbId} to={`/game/${g.igdbId}`} className="group block">
                   {g.coverUrl ? (
                     <img
@@ -281,9 +281,9 @@ export default function ProfileView({
             </div>
           ) : (
             <div className="rounded-lg border border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
-              {t("profile_horizon_empty_you")}{" "}
-              <Link to="/horizon" className="text-primary underline-offset-2 hover:underline">
-                {t("nav_horizon")}
+              {t("profile_backlog_empty_you")}{" "}
+              <Link to="/backlog" className="text-primary underline-offset-2 hover:underline">
+                {t("nav_backlog")}
               </Link>
             </div>
           )}

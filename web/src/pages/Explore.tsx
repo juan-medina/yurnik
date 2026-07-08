@@ -84,7 +84,7 @@ function GameCard({ activity }: { activity: GameActivity }) {
           </div>
         </div>
         <span className="shrink-0 text-xs text-muted-foreground">
-          {t("players_journey_count", { count: activity.entries.length })}
+          {t("explore_journey_count", { count: activity.entries.length })}
         </span>
       </div>
       <div className="divide-y divide-border border-t border-border">
@@ -96,7 +96,7 @@ function GameCard({ activity }: { activity: GameActivity }) {
   );
 }
 
-export default function Players() {
+export default function Explore() {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [activeGenre, setActiveGenre] = useState<string | null>(null);
@@ -121,14 +121,14 @@ export default function Players() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="mb-4 text-2xl font-bold">{t("players_title")}</h1>
+      <h1 className="mb-4 text-2xl font-bold">{t("explore_title")}</h1>
 
       {/* Search */}
       <div className="mb-3 flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
         <Search size={14} className="shrink-0 text-muted-foreground" />
         <input
           type="text"
-          placeholder={t("players_search_placeholder")}
+          placeholder={t("explore_search_placeholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
@@ -145,7 +145,7 @@ export default function Players() {
               : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
           }`}
         >
-          {t("players_all")}
+          {t("explore_all")}
         </button>
         {allGenres.map((genre) => (
           <button
@@ -169,7 +169,7 @@ export default function Players() {
           visible.map((activity) => <GameCard key={activity.id} activity={activity} />)
         ) : (
           <div className="rounded-lg border border-border bg-card px-4 py-12 text-center text-sm text-muted-foreground">
-            {t("players_no_results")}
+            {t("explore_no_results")}
           </div>
         )}
       </div>

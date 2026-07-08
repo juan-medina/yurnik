@@ -157,9 +157,9 @@ describe("ActivityItem", () => {
     expect(screen.getByRole("link")).toHaveAttribute("href", "/journey/j99");
   });
 
-  it("renders 'You added <game> to your horizon' when the viewer is the actor", () => {
+  it("renders 'You added <game> to your backlog' when the viewer is the actor", () => {
     const activity: Activity = {
-      type: "horizon_add",
+      type: "backlog_add",
       createdAt: new Date("2026-06-01T12:00:00Z"),
       actor: PLAYERS[0],
       recipient: PLAYERS[0],
@@ -172,13 +172,13 @@ describe("ActivityItem", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText(/You added Elden Ring to your horizon/i)).toBeInTheDocument();
+    expect(screen.getByText(/You added Elden Ring to your backlog/i)).toBeInTheDocument();
     expect(screen.getByRole("link")).toHaveAttribute("href", "/game/1234");
   });
 
-  it("renders '<actor> added <game> to their horizon' when viewing another player's horizon addition", () => {
+  it("renders '<actor> added <game> to their backlog' when viewing another player's backlog addition", () => {
     const activity: Activity = {
-      type: "horizon_add",
+      type: "backlog_add",
       createdAt: new Date("2026-06-01T12:00:00Z"),
       actor: PLAYERS[0],
       recipient: PLAYERS[0],
@@ -188,7 +188,7 @@ describe("ActivityItem", () => {
     renderActivity(activity);
 
     expect(screen.getByText(PLAYERS[0].name, { exact: false })).toBeInTheDocument();
-    expect(screen.getByText(/added Elden Ring to their horizon/i)).toBeInTheDocument();
+    expect(screen.getByText(/added Elden Ring to their backlog/i)).toBeInTheDocument();
     expect(screen.getByRole("link")).toHaveAttribute("href", "/game/1234");
   });
 });

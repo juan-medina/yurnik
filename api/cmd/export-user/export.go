@@ -46,7 +46,7 @@ type Export struct {
 	Comments      []CommentRow   `json:"comments"`
 	Following     []FollowRow    `json:"following"`
 	Followers     []FollowRow    `json:"followers"`
-	Echoes        []EchoRow      `json:"echoes"`
+	Notifications        []NotificationRow      `json:"notifications"`
 	ExeExclusions []ExclusionRow `json:"exe_exclusions"`
 	ExeGameHints  []GameHintRow  `json:"exe_game_hints"`
 }
@@ -91,7 +91,7 @@ type FollowRow struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-type EchoRow struct {
+type NotificationRow struct {
 	ID           int64      `json:"id"`
 	Type         string     `json:"type"`
 	SubjectID    *string    `json:"subject_id"`
@@ -175,18 +175,18 @@ func buildExport(ctx context.Context, pool *pgxpool.Pool, userID string) (Export
 	}
 	export.Followers = followers
 
-	echoes, err := queryRows(ctx, pool, `
+	notifications, err := queryRows(ctx, pool, `
 		SELECT id, type, subject_id, subject_title, seen_at, created_at, updated_at
-		FROM echoes WHERE recipient_id = $1 ORDER BY created_at
-	`, userID, func(scan scanFunc) (EchoRow, error) {
-		var r EchoRow
+		FROM notifications WHERE recipient_id = $1 ORDER BY created_at
+	`, userID, func(scan scanFunc) (NotificationRow, error) {
+		var r NotificationRow
 		err := scan(&r.ID, &r.Type, &r.SubjectID, &r.SubjectTitle, &r.SeenAt, &r.CreatedAt, &r.UpdatedAt)
 		return r, err
 	})
 	if err != nil {
-		return Export{}, fmt.Errorf("query echoes: %w", err)
+		return Export{}, fmt.Errorf("query notifications: %w", err)
 	}
-	export.Echoes = echoes
+	export.Notifications = notifications
 
 	exclusions, err := queryRows(ctx, pool, `
 		SELECT id, exe_name, created_at FROM exe_exclusions WHERE user_id = $1 ORDER BY created_at

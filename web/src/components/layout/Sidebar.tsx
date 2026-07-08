@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { NavLink } from "react-router";
-import { Bell, Globe2, ScrollText, Settings, Shield, ShieldAlert, Telescope, Users } from "lucide-react";
+import { Bell, Compass, Globe2, Library, ScrollText, Settings, Shield, ShieldAlert } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { getCurrentPlayer } from "@/services/auth";
-import { useEchoes } from "@/hooks/useEchoes";
+import { useNotifications } from "@/hooks/useNotifications";
 import { usePendingJourneysCount } from "@/hooks/usePendingJourneysCount";
 import { cn } from "@/lib/utils";
 
@@ -22,17 +22,17 @@ type SidebarProps = { isOpen?: boolean; onClose?: () => void };
 export default function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
   const { t } = useTranslation();
   const { data: currentPlayer } = useQuery({ queryKey: ["auth", "me"], queryFn: getCurrentPlayer });
-  const { data: echoes = [] } = useEchoes(!!currentPlayer);
-  const hasUnread = echoes.some((e) => !e.read);
+  const { data: notifications = [] } = useNotifications(!!currentPlayer);
+  const hasUnread = notifications.some((e) => !e.read);
   const { data: pendingCount = 0 } = usePendingJourneysCount(!!currentPlayer);
 
   const navItems: NavItem[] = [
-    { to: "/", labelKey: "nav_realm", icon: Globe2, end: true },
+    { to: "/", labelKey: "nav_feed", icon: Globe2, end: true },
     { to: "/journeys", labelKey: "nav_journeys", icon: ScrollText },
-    { to: "/players", labelKey: "nav_players", icon: Users },
-    { to: "/echoes", labelKey: "nav_echoes", icon: Bell },
-    { to: "/horizon", labelKey: "nav_horizon", icon: Telescope },
-    { to: currentPlayer ? `/player/${currentPlayer.handle}` : "/hero", labelKey: "nav_hero", icon: Shield },
+    { to: "/explore", labelKey: "nav_explore", icon: Compass },
+    { to: "/notifications", labelKey: "nav_notifications", icon: Bell },
+    { to: "/backlog", labelKey: "nav_backlog", icon: Library },
+    { to: currentPlayer ? `/player/${currentPlayer.handle}` : "/profile", labelKey: "nav_profile", icon: Shield },
     { to: "/settings", labelKey: "nav_settings", icon: Settings },
     ...(currentPlayer?.isAdmin ? [{ to: "/admin", labelKey: "nav_admin", icon: ShieldAlert }] : []),
   ];
@@ -83,7 +83,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }: SidebarP
             >
               <span className="relative flex shrink-0 items-center justify-center">
                 <Icon size={18} aria-hidden />
-                {to === "/echoes" && hasUnread && (
+                {to === "/notifications" && hasUnread && (
                   <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive ring-2 ring-sidebar" />
                 )}
               </span>

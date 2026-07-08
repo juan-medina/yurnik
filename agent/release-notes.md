@@ -1,1 +1,1 @@
-- Fix duplicated game journeys
+- Update notifications to match the web naming conventions

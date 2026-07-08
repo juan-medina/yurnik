@@ -54,12 +54,12 @@ type IGDBReleaseFetcher interface {
 }
 
 func refreshUpcomingReleases(ctx context.Context, pool *pgxpool.Pool, igdbClient IGDBReleaseFetcher) error {
-	log.Println("Refreshing upcoming releases in horizon...")
+	log.Println("Refreshing upcoming releases in backlog...")
 
-	// Find games in horizon that need refresh (no release date, or release date >= 1 year ago)
+	// Find games in backlog that need refresh (no release date, or release date >= 1 year ago)
 	rows, err := pool.Query(ctx, `
 		SELECT DISTINCT h.igdb_id 
-		FROM horizon_entries h
+		FROM backlog_entries h
 		JOIN igdb_games g ON h.igdb_id = g.igdb_id
 		WHERE g.release_date IS NULL OR g.release_date >= NOW() - INTERVAL '1 year'
 	`)
@@ -109,25 +109,25 @@ func refreshUpcomingReleases(ctx context.Context, pool *pgxpool.Pool, igdbClient
 		}
 	}
 
-	// Insert new horizon_release echoes
+	// Insert new backlog_release notifications
 	res, err := pool.Exec(ctx, `
-		INSERT INTO echoes (recipient_id, type, subject_igdb_id, subject_title, batch_until)
-		SELECT h.player_id, 'horizon_release', h.igdb_id, g.name, NOW()
-		FROM horizon_entries h
+		INSERT INTO notifications (recipient_id, type, subject_igdb_id, subject_title, batch_until)
+		SELECT h.player_id, 'backlog_release', h.igdb_id, g.name, NOW()
+		FROM backlog_entries h
 		JOIN igdb_games g ON h.igdb_id = g.igdb_id
 		WHERE g.release_date BETWEEN NOW() AND NOW() + INTERVAL '7 days'
 		AND NOT EXISTS (
-			SELECT 1 FROM echoes e
+			SELECT 1 FROM notifications e
 			WHERE e.recipient_id = h.player_id 
 			  AND e.subject_igdb_id = h.igdb_id 
-			  AND e.type = 'horizon_release'
+			  AND e.type = 'backlog_release'
 		)
 	`)
 	if err != nil {
-		return fmt.Errorf("insert horizon_release echoes: %w", err)
+		return fmt.Errorf("insert backlog_release notifications: %w", err)
 	}
 	
-	log.Printf("Created %d new horizon_release echoes", res.RowsAffected())
+	log.Printf("Created %d new backlog_release notifications", res.RowsAffected())
 	return nil
 }
 
@@ -142,15 +142,15 @@ func evictData(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 	log.Printf("Evicted %d pending journeys older than 30 days", res.RowsAffected())
 
-	// 2. Evict echoes older than 60 days
+	// 2. Evict notifications older than 60 days
 	res, err = pool.Exec(ctx, `
-		DELETE FROM echoes 
+		DELETE FROM notifications 
 		WHERE updated_at < NOW() - INTERVAL '60 days'
 	`)
 	if err != nil {
-		return fmt.Errorf("delete old echoes: %w", err)
+		return fmt.Errorf("delete old notifications: %w", err)
 	}
-	log.Printf("Evicted %d echoes older than 60 days", res.RowsAffected())
+	log.Printf("Evicted %d notifications older than 60 days", res.RowsAffected())
 
 	return nil
 }

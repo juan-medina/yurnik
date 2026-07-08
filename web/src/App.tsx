@@ -8,14 +8,14 @@ import Shell from "@/components/layout/Shell";
 const AuthComplete = lazy(() => import("@/pages/AuthComplete"));
 const Home = lazy(() => import("@/pages/Home"));
 const Journeys = lazy(() => import("@/pages/Journeys"));
-const Players = lazy(() => import("@/pages/Players"));
-const Echoes = lazy(() => import("@/pages/Echoes"));
+const Explore = lazy(() => import("@/pages/Explore"));
+const Notifications = lazy(() => import("@/pages/Notifications"));
 const JourneyDetail = lazy(() => import("@/pages/JourneyDetail"));
 const GameDetail = lazy(() => import("@/pages/GameDetail"));
 const PlayerProfile = lazy(() => import("@/pages/PlayerProfile"));
 const Settings = lazy(() => import("@/pages/Settings"));
-const Hero = lazy(() => import("@/pages/Hero"));
-const Horizon = lazy(() => import("@/pages/Horizon"));
+const Profile = lazy(() => import("@/pages/Profile"));
+const Backlog = lazy(() => import("@/pages/Backlog"));
 const AgentAuth = lazy(() => import("@/pages/AgentAuth"));
 const Lore = lazy(() => import("@/pages/Lore"));
 const Terms = lazy(() => import("@/pages/Terms"));
@@ -78,14 +78,14 @@ const router = createBrowserRouter([
     children: [
       { path: "/", element: withSuspense(<Home />) },
       { path: "journeys", element: withSuspense(<Journeys />) },
-      { path: "players", element: withSuspense(<Players />) },
+      { path: "explore", element: withSuspense(<Explore />) },
       { path: "journey/:id", element: withSuspense(<JourneyDetail />) },
       { path: "game/:igdbId", element: withSuspense(<GameDetail />) },
       { path: "player/:handle", element: withSuspense(<PlayerProfile />) },
-      { path: "echoes", element: withSuspense(<Echoes />) },
+      { path: "notifications", element: withSuspense(<Notifications />) },
       { path: "settings", element: withSuspense(<Settings />) },
-      { path: "hero", element: withSuspense(<Hero />) },
-      { path: "horizon", element: withSuspense(<Horizon />) },
+      { path: "profile", element: withSuspense(<Profile />) },
+      { path: "backlog", element: withSuspense(<Backlog />) },
       { path: "admin", element: withSuspense(<Admin />) },
       { path: "*", element: withSuspense(<NotFound />) },
     ],

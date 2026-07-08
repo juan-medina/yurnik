@@ -19,7 +19,7 @@ export type Player = {
 
 export type NotificationPreferences = {
   updates: boolean;
-  echoes: boolean;
+  notifications: boolean;
 };
 
 export type RecentGame = {
@@ -36,7 +36,7 @@ export type GenreHours = {
   seconds: number;
 };
 
-export type HorizonEntry = {
+export type BacklogEntry = {
   igdbId: number;
   name: string;
   coverUrl?: string;
@@ -51,5 +51,5 @@ export type PlayerProfile = {
   totalSeconds: number;
   recentGames: RecentGame[];
   genreHours: GenreHours[];
-  horizon: HorizonEntry[];
+  backlog: BacklogEntry[];
 };

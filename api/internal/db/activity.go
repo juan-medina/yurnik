@@ -12,10 +12,10 @@ import (
 )
 
 // ActivityEvent is a "X followed Y", "X commented on Y's <game> journey", or
-// "X added <game> to their Horizon" event, where X (the actor) is followed by
-// the viewer.
+// "X added <game> to their Backlog" event, where X (the actor) is followed by
+// the viewer (the recipient).
 type ActivityEvent struct {
-	Type          string // "new_comment" | "new_follower" | "horizon_add"
+	Type          string // "new_comment" | "new_follower" | "backlog_add"
 	SubjectID     *string
 	SubjectTitle  *string
 	SubjectIGDBID *int
@@ -34,7 +34,7 @@ type ActivityEvent struct {
 	RecipientColor     string
 }
 
-// RecordActivity inserts a row into activity_events for the Realm/Hero
+// RecordActivity inserts a row into activity_events for the Feed/Profile
 // activity feeds. targetID is the player the action concerns (the journey
 // owner for new_comment, the followee for new_follower). commentID is set
 // for new_comment events so the row is removed automatically (ON DELETE
@@ -50,17 +50,17 @@ func RecordActivity(ctx context.Context, pool *pgxpool.Pool, actorID, targetID, 
 	return nil
 }
 
-// RecordHorizonAdd inserts a horizon_add row into activity_events for the
-// Realm/Hero activity feeds. The actor and target are the same player —
-// adding a game to your Horizon is self-directed and never generates an
-// Echo notification.
-func RecordHorizonAdd(ctx context.Context, pool *pgxpool.Pool, actorID string, igdbID int, gameName string) error {
+// RecordBacklogAdd inserts a backlog_add row into activity_events for the
+// Feed/Profile activity feeds. The actor and target are the same player —
+// adding a game to your Backlog is self-directed and never generates a
+// Notification.
+func RecordBacklogAdd(ctx context.Context, pool *pgxpool.Pool, actorID string, igdbID int, gameName string) error {
 	_, err := pool.Exec(ctx, `
 		INSERT INTO activity_events (actor_id, target_id, type, subject_igdb_id, subject_title)
-		VALUES ($1, $1, 'horizon_add', $2, $3)
+		VALUES ($1, $1, 'backlog_add', $2, $3)
 	`, actorID, igdbID, gameName)
 	if err != nil {
-		return fmt.Errorf("record horizon add: %w", err)
+		return fmt.Errorf("record backlog add: %w", err)
 	}
 	return nil
 }

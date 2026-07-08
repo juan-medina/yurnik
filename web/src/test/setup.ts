@@ -12,7 +12,7 @@ import {
   MOCK_FOLLOW_LISTS,
   GAME_LIBRARY,
   MOCK_PENDING_JOURNEYS,
-  MOCK_HORIZON,
+  MOCK_BACKLOG,
 } from "@/test/fixtures";
 import type { Player } from "@/models/player";
 import { formatLocalDate } from "@/lib/time";
@@ -37,7 +37,7 @@ function toRawPlayer(p: Player) {
   };
 }
 
-function toRawHorizonEntry(g: (typeof MOCK_HORIZON)[number]) {
+function toRawBacklogEntry(g: (typeof MOCK_BACKLOG)[number]) {
   return {
     igdb_id: g.igdbId,
     name: g.name,
@@ -55,9 +55,9 @@ function makeDefaultFetch() {
   // Mutable pending journeys state for this test.
   const pendingJourneys = [...MOCK_PENDING_JOURNEYS];
 
-  // Mutable horizon state for this test. Only MY_PLAYER starts with entries.
-  const horizonState: Record<string, (typeof MOCK_HORIZON)[number][]> = {
-    [MY_PLAYER.id]: [...MOCK_HORIZON],
+  // Mutable backlog state for this test. Only MY_PLAYER starts with entries.
+  const backlogState: Record<string, (typeof MOCK_BACKLOG)[number][]> = {
+    [MY_PLAYER.id]: [...MOCK_BACKLOG],
   };
 
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -98,7 +98,7 @@ function makeDefaultFetch() {
             last_played: formatLocalDate(j.playedAt),
           })),
           genre_hours: [...genreMap.entries()].map(([genre, seconds]) => ({ genre, seconds })),
-          horizon: (horizonState[MY_PLAYER.id] ?? []).map(toRawHorizonEntry),
+          backlog: (backlogState[MY_PLAYER.id] ?? []).map(toRawBacklogEntry),
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
@@ -308,44 +308,44 @@ function makeDefaultFetch() {
             last_played: formatLocalDate(j.playedAt),
           })),
           genre_hours: [...genreMap.entries()].map(([genre, seconds]) => ({ genre, seconds })),
-          horizon: (horizonState[pid] ?? []).map(toRawHorizonEntry),
+          backlog: (backlogState[pid] ?? []).map(toRawBacklogEntry),
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }
 
-    // GET /api/players/:handle/horizon
-    const horizonMatch = url.match(/\/api\/players\/([^/]+)\/horizon$/);
-    if (horizonMatch && method === "GET") {
-      const target = resolvePlayer(horizonMatch[1]);
-      const entries = (target && horizonState[target.id]) ?? [];
+    // GET /api/players/:handle/backlog
+    const backlogMatch = url.match(/\/api\/players\/([^/]+)\/backlog$/);
+    if (backlogMatch && method === "GET") {
+      const target = resolvePlayer(backlogMatch[1]);
+      const entries = (target && backlogState[target.id]) ?? [];
       return new Response(
-        JSON.stringify({ entries: entries.map(toRawHorizonEntry) }),
+        JSON.stringify({ entries: entries.map(toRawBacklogEntry) }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }
 
-    // POST /api/me/horizon
-    if (url.endsWith("/api/me/horizon") && method === "POST") {
+    // POST /api/me/backlog
+    if (url.endsWith("/api/me/backlog") && method === "POST") {
       return new Response(null, { status: 204 });
     }
 
-    // DELETE /api/me/horizon/:igdbId
-    const removeHorizonMatch = url.match(/\/api\/me\/horizon\/(\d+)$/);
-    if (removeHorizonMatch && method === "DELETE") {
-      const igdbId = Number(removeHorizonMatch[1]);
-      const entries = horizonState[MY_PLAYER.id] ?? [];
-      horizonState[MY_PLAYER.id] = entries.filter((e) => e.igdbId !== igdbId);
+    // DELETE /api/me/backlog/:igdbId
+    const removeBacklogMatch = url.match(/\/api\/me\/backlog\/(\d+)$/);
+    if (removeBacklogMatch && method === "DELETE") {
+      const igdbId = Number(removeBacklogMatch[1]);
+      const entries = backlogState[MY_PLAYER.id] ?? [];
+      backlogState[MY_PLAYER.id] = entries.filter((e) => e.igdbId !== igdbId);
       return new Response(null, { status: 204 });
     }
 
-    // PATCH /api/me/horizon/order
-    if (url.endsWith("/api/me/horizon/order") && method === "PATCH") {
+    // PATCH /api/me/backlog/order
+    if (url.endsWith("/api/me/backlog/order") && method === "PATCH") {
       const { igdb_ids } = JSON.parse((init?.body as string) ?? "{}") as { igdb_ids: number[] };
-      const entries = horizonState[MY_PLAYER.id] ?? [];
-      horizonState[MY_PLAYER.id] = igdb_ids
+      const entries = backlogState[MY_PLAYER.id] ?? [];
+      backlogState[MY_PLAYER.id] = igdb_ids
         .map((id) => entries.find((e) => e.igdbId === id))
-        .filter((e): e is (typeof MOCK_HORIZON)[number] => !!e);
+        .filter((e): e is (typeof MOCK_BACKLOG)[number] => !!e);
       return new Response(null, { status: 204 });
     }
 

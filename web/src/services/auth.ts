@@ -46,7 +46,7 @@ export async function updateProfile(patch: { bio?: string; displayName?: string 
   if (!resp.ok) throw new Error(`update profile: ${resp.status}`);
 }
 
-export async function updateNotificationPreferences(prefs: { updates: boolean; echoes: boolean }): Promise<void> {
+export async function updateNotificationPreferences(prefs: { updates: boolean; notifications: boolean }): Promise<void> {
   const resp = await apiFetch(`${API_BASE}/api/me/preferences`, {
     method: "PUT",
     credentials: "include",

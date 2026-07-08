@@ -18,12 +18,6 @@ static class Program
     [STAThread]
     static void Main()
     {
-        using var mutex = new Mutex(true, "YurnikAgentMutex", out bool createdNew);
-        if (!createdNew)
-        {
-            return;
-        }
-
         // Must run before anything else — handles Velopack install/uninstall hooks.
         VelopackApp.Build()
             .WithBeforeUninstallFastCallback(_ =>
@@ -40,6 +34,12 @@ static class Program
         if (args.Length > 1 && args[1].StartsWith("yurnik://", StringComparison.OrdinalIgnoreCase))
         {
             UrlSchemeListener.TryForward(args[1]);
+            return;
+        }
+
+        using var mutex = new Mutex(true, "YurnikAgentMutex", out bool createdNew);
+        if (!createdNew)
+        {
             return;
         }
 
@@ -77,10 +77,10 @@ static class Program
         var queueProcessor = new QueueProcessor(eventQueue, agentClient, authManager);
         var processWatcher = new ProcessWatcher(sessionStore, exclusionStore, inclusionStore, detectableGames, config.MinSessionDuration);
         var updater = new Updater();
-        var echoStore = new EchoStore(db);
-        var echoMonitor = new EchoMonitor(agentClient, config, echoStore);
+        var notificationStore = new NotificationStore(db);
+        var notificationMonitor = new NotificationMonitor(agentClient, config, notificationStore);
 
-        using var trayApp = new TrayApp(config.WebBaseUrl, authManager, agentClient, processWatcher, sessionMonitor, queueProcessor, updater, detectableGames, echoMonitor);
+        using var trayApp = new TrayApp(config.WebBaseUrl, authManager, agentClient, processWatcher, sessionMonitor, queueProcessor, updater, detectableGames, notificationMonitor);
         trayApp.Run();
 
         Log.Info("Yurnik agent stopped");
