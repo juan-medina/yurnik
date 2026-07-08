@@ -8,7 +8,6 @@
   "nav_settings": "Ajustes",
   "nav_admin": "Admin",
   "admin_badge": "Admin",
-
   "report_button": "Denunciar",
   "report_title": "Denunciar",
   "report_reason_label": "Motivo",
@@ -35,7 +34,6 @@
   "report_journey_log_tooltip": "Denunciar esta nota de partida",
   "report_comment_tooltip": "Denunciar este comentario",
   "report_profile_tooltip": "Denunciar este perfil",
-
   "admin_title": "Admin",
   "admin_reports_title": "Denuncias",
   "admin_reports_empty": "No hay denuncias aún.",
@@ -80,16 +78,13 @@
   "admin_delete_comment": "Eliminar comentario",
   "account_suspended_title": "Cuenta suspendida",
   "account_suspended_body": "Tu cuenta ha sido suspendida. Si crees que es un error, contáctanos en contact@yurnik.social.",
-
   "topbar_menu": "Abrir menú de navegación",
   "topbar_switch_light": "Cambiar a modo claro",
   "topbar_switch_dark": "Cambiar a modo oscuro",
   "topbar_notifications_label": "Ecos",
-
   "login_tagline": "La red social abierta para compartir tus partidas",
   "login_signin_discord": "Entrar con Discord",
   "login_learn_more": "¿Qué es Yurnik?",
-
   "about_signin": "Iniciar sesión",
   "about_tagline": "La red social abierta para compartir tus partidas",
   "about_cta_primary": "Entrar con Discord",
@@ -98,7 +93,6 @@
   "about_step_play": "Juega",
   "about_step_confirm": "Confirma tu partida",
   "about_step_share": "Comparte con tus seguidores",
-
   "about_feature_feed_title": "El Reino",
   "about_feature_feed_body": "Tu feed principal. Las partidas confirmadas de los jugadores que sigues, en orden cronológico inverso, según ocurren.",
   "about_feature_log_title": "Nota de partida",
@@ -121,7 +115,6 @@
   "about_bottom_title": "¿Listo para empezar tu primera partida?",
   "about_bottom_sub": "Entra con Discord y empieza a registrar tus partidas de juego.",
   "about_auth_cta": "Ir al Reino",
-
   "about_footer_signin": "Iniciar sesión",
   "home_explore_cta": "Explorar el sitio",
   "settings_signin_hint": "Inicia sesión para gestionar tu perfil, preferencias y ajustes del agente.",
@@ -130,17 +123,14 @@
   "home_learn_more": "Saber más sobre Yurnik",
   "signin_prompt_title": "Inicia sesión para continuar",
   "signin_prompt_sub": "Únete a Yurnik con tu cuenta de Discord para empezar.",
-
   "agent_connected": "Agente conectado",
   "agent_close_tab": "Puedes cerrar esta pestaña.",
   "agent_failed": "No se ha podido conectar el agente. Inténtalo de nuevo.",
   "agent_connecting": "Conectando agente…",
   "auth_completing": "Completando inicio de sesión…",
-
   "not_found_title": "Página no encontrada",
   "not_found_desc": "Esta ruta no existe en Yurnik.",
   "not_found_back": "Volver al Reino",
-
   "journeys_title": "Partidas",
   "journeys_add": "Añadir partida",
   "journeys_hint_link": "instalando el cliente de Windows",
@@ -175,14 +165,13 @@
   "journeys_exclude_desc": "Las futuras partidas de este ejecutable se ignorarán.",
   "journeys_exclude_btn": "Excluir",
   "journeys_never_detect": "No detectar nunca",
-
+  "journeys_auto_detect_note": "Una vez confirmado, el agente detectará y confirmará este juego automáticamente la próxima vez.",
   "explore_title": "Explorar",
   "explore_search_placeholder": "Buscar por juego o género…",
   "explore_all": "Todos",
   "explore_no_results": "Ningún juego coincide con la búsqueda.",
   "explore_journey_count_one": "{{count}} partida",
   "explore_journey_count_other": "{{count}} partidas",
-
   "notifications_title": "Ecos",
   "notifications_filter_all": "Todos",
   "notifications_filter_comments": "Comentarios",
@@ -204,7 +193,6 @@
   "notifications_empty_comments": "Aún no hay ecos de comentarios.",
   "notifications_empty_followers": "Aún no hay ecos de seguidores.",
   "notifications_new_followers": "Nuevos seguidores",
-
   "profile_bio_placeholder": "Cuéntanos algo sobre ti…",
   "profile_save": "Guardar",
   "profile_cancel": "Cancelar",
@@ -222,7 +210,6 @@
   "feed_activity_commented_own": "ha comentado en su propia partida de {{game}}",
   "feed_activity_backlog_added_you": "Has añadido {{game}} a tu Backlog",
   "feed_activity_backlog_added": "ha añadido {{game}} a su Backlog",
-
   "profile_not_found": "Jugador no encontrado.",
   "profile_back": "Volver",
   "profile_follow": "Seguir",
@@ -241,7 +228,6 @@
   "profile_following_modal": "Siguiendo",
   "profile_backlog": "Backlog",
   "profile_backlog_empty_you": "Aún no hay nada en tu Backlog. Añade juegos que quieras jugar desde",
-
   "journey_not_found": "Partida no encontrada.",
   "journey_back": "Volver",
   "journey_follow": "Seguir",
@@ -275,7 +261,6 @@
   "journey_others_section": "Otros",
   "journey_no_others": "Nadie más en esta partida.",
   "journey_you": "Tú",
-
   "backlog_title": "Backlog",
   "backlog_subtitle": "Juegos que planeas jugar a continuación. Arrastra para reordenar: el primer puesto es lo que viene.",
   "backlog_empty": "Aquí va el lugar de tus futuras partidas.",
@@ -292,14 +277,14 @@
   "backlog_roll_result": "Tu elección es",
   "backlog_roll_view": "Ver juego",
   "backlog_roll_again": "Volver a tirar",
-
   "game_search_placeholder": "Buscar un juego…",
   "game_no_results": "No se han encontrado juegos para «{{query}}»",
   "game_change": "Cambiar",
-
+  "prev": "Anterior",
+  "next": "Siguiente",
+  "page": "Página",
   "modal_close": "Cerrar",
   "modal_no_players": "Nadie aquí todavía.",
-
   "settings_title": "Ajustes",
   "settings_account": "Cuenta",
   "settings_signout": "Cerrar sesión",
@@ -315,6 +300,12 @@
   "settings_remove_exe": "¿Eliminar {{exe}}?",
   "settings_remove": "Eliminar",
   "settings_remove_label": "Eliminar {{exe}}",
+  "settings_included_exes": "Ejecutables incluidos",
+  "settings_included_desc": "Estos ejecutables siempre se tratarán como juegos, omitiendo cualquier filtrado automático.",
+  "settings_no_inclusions": "Aún no hay inclusiones.",
+  "settings_add_inclusion_placeholder": "ej. juegazo.exe",
+  "settings_add_inclusion": "Añadir",
+  "settings_add_inclusion_empty": "El nombre del ejecutable no puede estar vacío.",
   "settings_game_hints": "Pistas de juego",
   "settings_hints_desc": "Asociaciones aprendidas entre ejecutables y juegos. Elimina una para que el agente vuelva a detectar el juego por el título de la ventana.",
   "settings_no_hints": "Aún no hay pistas.",
@@ -333,18 +324,17 @@
   "settings_updates_notifications_desc": "Recibe una notificación cuando haya una nueva versión del Agent disponible.",
   "settings_notifications_notifications": "Ecos",
   "settings_notifications_notifications_desc": "Recibe notificaciones de escritorio para tus ecos.",
+  "settings_desktop_notifications_denied": "Las notificaciones están bloqueadas en los ajustes de tu navegador.",
   "settings_danger_zone": "Zona de peligro",
   "settings_delete_account": "Eliminar cuenta",
   "settings_delete_account_desc": "Elimina permanentemente tu cuenta y todos tus datos: travesías, comentarios, seguidores y tu lista de Backlog. Esta acción no se puede deshacer.",
   "settings_delete_account_confirm": "Escribe tu identificador ({{handle}}) para confirmar.",
   "settings_delete_account_button": "Eliminar mi cuenta",
   "settings_delete_account_error": "Algo salió mal. Inténtalo de nuevo.",
-
   "notif_title": "Yurnik",
   "notif_new_comment_body": "{{actor}} comentó en {{title}}",
   "notif_new_comment_reply_body": "{{actor}} también comentó en {{title}}",
   "notif_new_follower_body": "{{actor}} ha empezado a seguirte",
-
   "time_today": "Hoy",
   "time_yesterday": "Ayer",
   "time_just_now": "ahora mismo",
@@ -354,7 +344,6 @@
   "time_hours_ago_other": "hace {{count}} horas",
   "time_days_ago_one": "hace {{count}} día",
   "time_days_ago_other": "hace {{count}} días",
-
   "legal_terms": "Términos de servicio",
   "legal_privacy": "Política de privacidad",
   "legal_whats_new": "Novedades",
@@ -363,7 +352,6 @@
   "legal_and": "y nuestra",
   "legal_last_updated": "Última actualización: {{date}}",
   "legal_updated_date": "julio de 2026",
-
   "terms_title": "Términos de servicio",
   "terms_intro_title": "Acuerdo",
   "terms_intro_body": "Yurnik es una red social abierta para compartir tus partidas, gestionada como un pequeño proyecto independiente. Al crear una cuenta o usar el sitio, aceptas estos términos.",
@@ -379,7 +367,6 @@
   "terms_changes_body": "Estos términos pueden actualizarse a medida que el proyecto evoluciona. Actualizaremos la fecha al principio de esta página cuando se realicen cambios. Seguir usando Yurnik tras un cambio implica que aceptas los nuevos términos.",
   "terms_contact_title": "Contacto",
   "terms_contact_body": "Las preguntas sobre estos términos pueden enviarse a privacy@yurnik.social.",
-
   "privacy_title": "Política de privacidad",
   "privacy_intro_title": "Resumen",
   "privacy_intro_body": "Yurnik es un proyecto pequeño, independiente y con sede en la UE. Esta página explica qué información recopilamos, por qué y durante cuánto tiempo la conservamos.",
@@ -397,7 +384,6 @@
   "privacy_contact_body": "Para preguntas sobre privacidad o para realizar una solicitud sobre tus datos, contacta con privacy@yurnik.social.",
   "load_more": "Cargar más",
   "loading": "Cargando…",
-
   "whats_new_title": "Novedades",
   "whats_new_entries": [
     {
@@ -429,6 +415,11 @@
       "date": "2026-06-29",
       "title": "Notificaciones nativas de escritorio",
       "body": "El agente de escritorio ahora usa notificaciones nativas de Windows para avisarte de actualizaciones de la aplicación, nuevos seguidores y comentarios en tus viajes. Puedes gestionar tus preferencias de notificación directamente desde los ajustes de tu cuenta."
+    },
+    {
+      "date": "2026-06-27",
+      "title": "Las partidas se confirman automáticamente",
+      "body": "¿Cansado de olvidar confirmar tus sesiones de juego? Una vez que confirmes un juego, el agente de escritorio lo recordará y confirmará automáticamente las futuras partidas de ese juego en cuanto dejes de jugar."
     },
     {
       "date": "2026-06-25",

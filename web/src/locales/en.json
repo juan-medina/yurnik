@@ -8,7 +8,6 @@
   "nav_settings": "Settings",
   "nav_admin": "Admin",
   "admin_badge": "Admin",
-
   "report_button": "Report",
   "report_title": "Report",
   "report_reason_label": "Reason",
@@ -35,7 +34,6 @@
   "report_journey_log_tooltip": "Report this journey log",
   "report_comment_tooltip": "Report this comment",
   "report_profile_tooltip": "Report this profile",
-
   "admin_title": "Admin",
   "admin_reports_title": "Reports",
   "admin_reports_empty": "No reports yet.",
@@ -80,16 +78,13 @@
   "admin_delete_comment": "Delete comment",
   "account_suspended_title": "Account suspended",
   "account_suspended_body": "Your account has been suspended. If you believe this is a mistake, please contact us at contact@yurnik.social.",
-
   "topbar_menu": "Open navigation menu",
   "topbar_switch_light": "Switch to light mode",
   "topbar_switch_dark": "Switch to dark mode",
   "topbar_notifications_label": "Notifications",
-
   "login_tagline": "An open social network for gaming journeys",
   "login_signin_discord": "Sign in with Discord",
   "login_learn_more": "What is Yurnik?",
-
   "about_signin": "Sign in",
   "about_tagline": "A free, open-source social network for your gaming life",
   "about_cta_primary": "Sign in with Discord",
@@ -98,7 +93,6 @@
   "about_step_play": "Play a game",
   "about_step_confirm": "Confirm once",
   "about_step_share": "Share your journey",
-
   "about_feature_feed_title": "Clean Social Feed",
   "about_feature_feed_body": "No ads, no engagement algorithms, no tracking. Just a chronological feed of what your friends are actually playing.",
   "about_feature_log_title": "Profiles & Hard Data",
@@ -121,7 +115,6 @@
   "about_bottom_title": "Ready to track your gaming journeys?",
   "about_bottom_sub": "Log in with Discord and join the community.",
   "about_auth_cta": "Go to Feed",
-
   "about_footer_signin": "Sign in",
   "home_explore_cta": "Explore the site",
   "settings_signin_hint": "Sign in to manage your profile, preferences, and agent settings.",
@@ -130,17 +123,14 @@
   "home_learn_more": "Learn more about Yurnik",
   "signin_prompt_title": "Sign in to continue",
   "signin_prompt_sub": "Join Yurnik with your Discord account to get started.",
-
   "agent_connected": "Agent connected",
   "agent_close_tab": "You can close this tab.",
   "agent_failed": "Failed to connect agent. Try again.",
   "agent_connecting": "Connecting agent…",
   "auth_completing": "Completing sign in…",
-
   "not_found_title": "Page not found",
   "not_found_desc": "This path doesn’t exist in Yurnik.",
   "not_found_back": "Back to Feed",
-
   "journeys_title": "Journeys",
   "journeys_add": "Add journey",
   "journeys_hint_link": "installing the Windows client",
@@ -176,14 +166,12 @@
   "journeys_exclude_btn": "Exclude",
   "journeys_never_detect": "Never detect this",
   "journeys_auto_detect_note": "Once confirmed, the agent will automatically detect and confirm this game next time.",
-
   "explore_title": "Explore",
   "explore_search_placeholder": "Search by game or genre…",
   "explore_all": "All",
   "explore_no_results": "No games match your search.",
   "explore_journey_count_one": "{{count}} journey",
   "explore_journey_count_other": "{{count}} journeys",
-
   "notifications_title": "Notifications",
   "notifications_filter_all": "All",
   "notifications_filter_comments": "Comments",
@@ -205,7 +193,6 @@
   "notifications_empty_comments": "No comment notifications yet.",
   "notifications_empty_followers": "No follower notifications yet.",
   "notifications_new_followers": "New followers",
-
   "profile_bio_placeholder": "Tell people a bit about yourself…",
   "profile_save": "Save",
   "profile_cancel": "Cancel",
@@ -223,7 +210,6 @@
   "feed_activity_commented_own": "commented on their own {{game}} journey",
   "feed_activity_backlog_added_you": "You added {{game}} to your backlog",
   "feed_activity_backlog_added": "added {{game}} to their backlog",
-
   "profile_not_found": "Player not found.",
   "profile_back": "Back",
   "profile_follow": "Follow",
@@ -242,7 +228,6 @@
   "profile_following_modal": "Following",
   "profile_backlog": "Backlog",
   "profile_backlog_empty_you": "Nothing on your backlog yet. Add games you intend to play from",
-
   "journey_not_found": "Journey not found.",
   "journey_back": "Back",
   "journey_follow": "Follow",
@@ -276,7 +261,6 @@
   "journey_others_section": "Others",
   "journey_no_others": "No one else on this journey yet.",
   "journey_you": "You",
-
   "backlog_title": "Backlog",
   "backlog_subtitle": "Games you're planning to play next. Drag to reorder — the top spot is what's coming up.",
   "backlog_empty": "This is the place for your future journeys.",
@@ -293,17 +277,14 @@
   "backlog_roll_result": "Your pick is",
   "backlog_roll_view": "View game",
   "backlog_roll_again": "Roll again",
-
   "game_search_placeholder": "Search for a game…",
   "game_no_results": "No games found for “{{query}}”",
   "game_change": "Change",
   "prev": "Prev",
   "next": "Next",
   "page": "Page",
-
   "modal_close": "Close",
   "modal_no_players": "No one here yet.",
-
   "settings_title": "Settings",
   "settings_account": "Account",
   "settings_signout": "Sign out",
@@ -344,19 +325,16 @@
   "settings_notifications_notifications": "Notifications",
   "settings_notifications_notifications_desc": "Get desktop notifications for your notifications.",
   "settings_desktop_notifications_denied": "Notifications are blocked in your browser settings.",
-
   "settings_danger_zone": "Danger zone",
   "settings_delete_account": "Delete account",
   "settings_delete_account_desc": "Permanently delete your account and all of your data — journeys, comments, follows, and your backlog list. This cannot be undone.",
   "settings_delete_account_confirm": "Type your handle ({{handle}}) to confirm.",
   "settings_delete_account_button": "Delete my account",
   "settings_delete_account_error": "Something went wrong. Please try again.",
-
   "notif_title": "Yurnik",
   "notif_new_comment_body": "{{actor}} commented on {{title}}",
   "notif_new_comment_reply_body": "{{actor}} also commented on {{title}}",
   "notif_new_follower_body": "{{actor}} started following you",
-
   "time_today": "Today",
   "time_yesterday": "Yesterday",
   "time_just_now": "just now",
@@ -366,7 +344,6 @@
   "time_hours_ago_other": "{{count}} hours ago",
   "time_days_ago_one": "{{count}} day ago",
   "time_days_ago_other": "{{count}} days ago",
-
   "legal_terms": "Terms of Service",
   "legal_privacy": "Privacy Policy",
   "legal_whats_new": "What's New",
@@ -375,7 +352,6 @@
   "legal_and": "and",
   "legal_last_updated": "Last updated: {{date}}",
   "legal_updated_date": "July 2026",
-
   "terms_title": "Terms of Service",
   "terms_intro_title": "Agreement",
   "terms_intro_body": "Yurnik is an open social network for gaming journeys, operated as a small independent project. By creating an account or using the site, you agree to these terms.",
@@ -391,7 +367,6 @@
   "terms_changes_body": "These terms may be updated as the project evolves. We'll update the date at the top of this page when changes are made. Continued use of Yurnik after a change means you accept the updated terms.",
   "terms_contact_title": "Contact",
   "terms_contact_body": "Questions about these terms can be sent to privacy@yurnik.social.",
-
   "privacy_title": "Privacy Policy",
   "privacy_intro_title": "Overview",
   "privacy_intro_body": "Yurnik is a small, independently operated, EU-based project. This page explains what information we collect, why, and how long we keep it.",
@@ -409,7 +384,6 @@
   "privacy_contact_body": "For privacy questions or to make a request about your data, contact privacy@yurnik.social.",
   "load_more": "Load more",
   "loading": "Loading…",
-
   "whats_new_title": "What's New",
   "whats_new_entries": [
     {

@@ -31,7 +31,7 @@ export default function Profile() {
           onClick={() => signIn()}
           className="rounded-md bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          {t("lore_cta_primary")}
+          {t("about_cta_primary")}
         </button>
         <Link
           to="/explore"
