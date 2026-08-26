@@ -58,10 +58,9 @@ func refreshUpcomingReleases(ctx context.Context, pool *pgxpool.Pool, igdbClient
 
 	// Find games in backlog that need refresh (no release date, or release date >= 1 year ago)
 	rows, err := pool.Query(ctx, `
-		SELECT DISTINCT h.igdb_id 
+		SELECT DISTINCT h.igdb_id
 		FROM backlog_entries h
 		JOIN igdb_games g ON h.igdb_id = g.igdb_id
-		WHERE g.release_date IS NULL OR g.release_date >= NOW() - INTERVAL '1 year'
 	`)
 	if err != nil {
 		return fmt.Errorf("query games to refresh: %w", err)
@@ -115,18 +114,18 @@ func refreshUpcomingReleases(ctx context.Context, pool *pgxpool.Pool, igdbClient
 		SELECT h.player_id, 'backlog_release', h.igdb_id, g.name, NOW()
 		FROM backlog_entries h
 		JOIN igdb_games g ON h.igdb_id = g.igdb_id
-		WHERE g.release_date BETWEEN NOW() AND NOW() + INTERVAL '7 days'
+		WHERE g.release_date BETWEEN NOW() - INTERVAL '7 days' AND NOW() + INTERVAL '7 days'
 		AND NOT EXISTS (
 			SELECT 1 FROM notifications e
-			WHERE e.recipient_id = h.player_id 
-			  AND e.subject_igdb_id = h.igdb_id 
+			WHERE e.recipient_id = h.player_id
+			  AND e.subject_igdb_id = h.igdb_id
 			  AND e.type = 'backlog_release'
 		)
 	`)
 	if err != nil {
 		return fmt.Errorf("insert backlog_release notifications: %w", err)
 	}
-	
+
 	log.Printf("Created %d new backlog_release notifications", res.RowsAffected())
 	return nil
 }
@@ -134,7 +133,7 @@ func refreshUpcomingReleases(ctx context.Context, pool *pgxpool.Pool, igdbClient
 func evictData(ctx context.Context, pool *pgxpool.Pool) error {
 	// 1. Evict pending journeys older than 30 days
 	res, err := pool.Exec(ctx, `
-		DELETE FROM pending_journeys 
+		DELETE FROM pending_journeys
 		WHERE created_at < NOW() - INTERVAL '30 days'
 	`)
 	if err != nil {
@@ -144,7 +143,7 @@ func evictData(ctx context.Context, pool *pgxpool.Pool) error {
 
 	// 2. Evict notifications older than 60 days
 	res, err = pool.Exec(ctx, `
-		DELETE FROM notifications 
+		DELETE FROM notifications
 		WHERE updated_at < NOW() - INTERVAL '60 days'
 	`)
 	if err != nil {

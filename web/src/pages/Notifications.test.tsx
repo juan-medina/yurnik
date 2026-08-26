@@ -88,7 +88,7 @@ describe("Notifications", () => {
   it("backlog_release notification links to the game detail page", async () => {
     renderNotifications();
     const release = MOCK_NOTIFICATIONS.find((e) => e.type === "backlog_release")!;
-    const links = await screen.findAllByRole("link", { name: /Elden Ring: Shadow of the Erdtree is releasing soon!/ });
+    const links = await screen.findAllByRole("link", { name: /Elden Ring: Shadow of the Erdtree is releasing!/ });
     expect(links[0]).toHaveAttribute("href", `/game/${release.subjectIgdbId}`);
   });
 

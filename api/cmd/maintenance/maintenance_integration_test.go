@@ -34,8 +34,8 @@ func TestMaintenanceEvictsOldData(t *testing.T) {
 	// Create test user 1 (for old data)
 	var userID1 string
 	err = pool.QueryRow(ctx, `
-		INSERT INTO users (provider, provider_id, handle, name) 
-		VALUES ('test', 'maint_old', 'maintold', 'Maint Old') 
+		INSERT INTO users (provider, provider_id, handle, name)
+		VALUES ('test', 'maint_old', 'maintold', 'Maint Old')
 		ON CONFLICT (provider, provider_id) DO UPDATE SET name = EXCLUDED.name
 		RETURNING id
 	`).Scan(&userID1)
@@ -49,8 +49,8 @@ func TestMaintenanceEvictsOldData(t *testing.T) {
 	// Create test user 2 (for new data)
 	var userID2 string
 	err = pool.QueryRow(ctx, `
-		INSERT INTO users (provider, provider_id, handle, name) 
-		VALUES ('test', 'maint_new', 'maintnew', 'Maint New') 
+		INSERT INTO users (provider, provider_id, handle, name)
+		VALUES ('test', 'maint_new', 'maintnew', 'Maint New')
 		ON CONFLICT (provider, provider_id) DO UPDATE SET name = EXCLUDED.name
 		RETURNING id
 	`).Scan(&userID2)
@@ -140,7 +140,7 @@ func TestMaintenanceRefreshUpcomingReleases(t *testing.T) {
 	if err != nil { t.Fatalf("insert u1: %v", err) }
 	err = pool.QueryRow(ctx, "INSERT INTO users (provider, provider_id, handle, name) VALUES ('test', 'maint_hrz_2', 'mhrz2', 'Hrz 2') RETURNING id").Scan(&u2)
 	if err != nil { t.Fatalf("insert u2: %v", err) }
-	
+
 	t.Cleanup(func() {
 		pool.Exec(ctx, "DELETE FROM users WHERE id IN ($1, $2)", u1, u2)
 		pool.Exec(ctx, "DELETE FROM igdb_games WHERE igdb_id IN (999991, 999992)")
@@ -208,4 +208,82 @@ func TestMaintenanceRefreshUpcomingReleases(t *testing.T) {
 	if c != 1 {
 		t.Errorf("expected still 1 notification for user 1, got %d", c)
 	}
+}
+
+func TestMaintenanceRefreshUpcomingReleasesWindow(t *testing.T) {
+	dbURL := os.Getenv("TEST_DATABASE_URL")
+	if dbURL == "" {
+		t.Fatal("TEST_DATABASE_URL not set")
+	}
+
+	ctx := context.Background()
+	pool, err := db.Connect(ctx, dbURL)
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer pool.Close()
+
+	// Cleanup test data
+	pool.Exec(ctx, "DELETE FROM users WHERE provider_id IN ('maint_win_1')")
+	pool.Exec(ctx, "DELETE FROM igdb_games WHERE igdb_id IN (999981, 999982, 999983, 999984)")
+
+	var u1 string
+	err = pool.QueryRow(ctx, "INSERT INTO users (provider, provider_id, handle, name) VALUES ('test', 'maint_win_1', 'mwin1', 'Win 1') RETURNING id").Scan(&u1)
+	if err != nil { t.Fatalf("insert u1: %v", err) }
+
+	t.Cleanup(func() {
+		pool.Exec(ctx, "DELETE FROM users WHERE id = $1", u1)
+		pool.Exec(ctx, "DELETE FROM igdb_games WHERE igdb_id IN (999981, 999982, 999983, 999984)")
+	})
+
+	_, err = pool.Exec(ctx, `INSERT INTO igdb_games (igdb_id, name, cover_url, genres, release_date) VALUES
+		(999981, 'Game Past 6', '', '{}', NOW() - INTERVAL '2 years'),
+		(999982, 'Game Future 6', '', '{}', NOW() - INTERVAL '2 years'),
+		(999983, 'Game Past 8', '', '{}', NOW() - INTERVAL '2 years'),
+		(999984, 'Game Future 8', '', '{}', NOW() - INTERVAL '2 years')`)
+	if err != nil { t.Fatalf("insert games: %v", err) }
+
+	_, err = pool.Exec(ctx, "INSERT INTO backlog_entries (player_id, igdb_id) VALUES ($1, 999981), ($1, 999982), ($1, 999983), ($1, 999984)", u1)
+	if err != nil { t.Fatalf("insert backlog: %v", err) }
+
+	now := time.Now().UTC()
+	d1 := now.Add(-6 * 24 * time.Hour) // 6 days ago (in window)
+	d2 := now.Add(6 * 24 * time.Hour)  // 6 days future (in window)
+	d3 := now.Add(-8 * 24 * time.Hour) // 8 days ago (outside window)
+	d4 := now.Add(8 * 24 * time.Hour)  // 8 days future (outside window)
+
+	mockFetcher := &mockIGDBFetcher{
+		dates: map[int]*time.Time{
+			999981: &d1,
+			999982: &d2,
+			999983: &d3,
+			999984: &d4,
+		},
+	}
+
+	if err := refreshUpcomingReleases(ctx, pool, mockFetcher); err != nil {
+		t.Fatalf("refreshUpcomingReleases failed: %v", err)
+	}
+
+	// Verify notifications
+	var count int
+	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM notifications WHERE recipient_id = $1 AND type = 'backlog_release' AND subject_igdb_id = 999981", u1).Scan(&count); err != nil {
+		t.Fatalf("count 999981: %v", err)
+	}
+	if count != 1 { t.Errorf("expected 1 notification for 999981 (-6 days), got %d", count) }
+
+	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM notifications WHERE recipient_id = $1 AND type = 'backlog_release' AND subject_igdb_id = 999982", u1).Scan(&count); err != nil {
+		t.Fatalf("count 999982: %v", err)
+	}
+	if count != 1 { t.Errorf("expected 1 notification for 999982 (+6 days), got %d", count) }
+
+	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM notifications WHERE recipient_id = $1 AND type = 'backlog_release' AND subject_igdb_id = 999983", u1).Scan(&count); err != nil {
+		t.Fatalf("count 999983: %v", err)
+	}
+	if count != 0 { t.Errorf("expected 0 notifications for 999983 (-8 days), got %d", count) }
+
+	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM notifications WHERE recipient_id = $1 AND type = 'backlog_release' AND subject_igdb_id = 999984", u1).Scan(&count); err != nil {
+		t.Fatalf("count 999984: %v", err)
+	}
+	if count != 0 { t.Errorf("expected 0 notifications for 999984 (+8 days), got %d", count) }
 }
