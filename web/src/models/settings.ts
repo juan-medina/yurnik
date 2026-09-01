@@ -3,6 +3,7 @@
 
 export type Exclusion = {
   exeName: string;
+  pathHash?: string;
 };
 
 export type Inclusion = {
@@ -11,5 +12,7 @@ export type Inclusion = {
 
 export type GameHint = {
   exeName: string;
+  pathHash?: string;
   game: string;
 };
+

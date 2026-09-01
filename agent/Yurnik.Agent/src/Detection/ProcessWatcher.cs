@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 using System.Diagnostics;
+using Yurnik.Agent.Auth;
 using Yurnik.Agent.Infrastructure;
 using Yurnik.Agent.Queue;
+
 
 namespace Yurnik.Agent.Detection;
 
@@ -29,6 +31,7 @@ sealed class ProcessWatcher(
     ExclusionStore exclusions,
     InclusionStore inclusions,
     DetectableGamesCache detectableGames,
+    IAuthState? auth = null,
     TimeSpan? minSessionDuration = null) : IDisposable
 {
     static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
@@ -100,8 +103,9 @@ sealed class ProcessWatcher(
 
                 var exePath = ProcessPath.TryGetExecutablePath(process.Id);
                 var exeName = exePath is not null ? Path.GetFileName(exePath) : process.ProcessName + ".exe";
+                var pathHash = HashHelper.ComputePathHash(auth?.UserId, exePath);
 
-                if (exclusions.Contains(exeName))
+                if (exclusions.Contains(exeName, pathHash))
                 {
                     if (_ignored.Add(process.Id))
                         Log.Debug($"Discarding {exeName} (pid {process.Id}): on exclusion list");
@@ -109,7 +113,7 @@ sealed class ProcessWatcher(
                 }
 
                 bool isKnownGame = inclusions.Contains(exeName);
-                bool inDiscord = detectableGames.TryGetGameName(exeName, out string? discordName);
+                bool inDiscord = detectableGames.TryGetGameName(exeName, exePath, out string? discordName);
 
                 if (inDiscord) isKnownGame = true;
                 if (!isKnownGame && exePath is not null && KnownGamePaths.IsKnownGamePath(exePath))
@@ -188,10 +192,11 @@ sealed class ProcessWatcher(
 
                 if (_seen.Contains(process.Id)) continue;
 
-                sessions.Insert(process.Id, exeName, windowTitle);
+                sessions.Insert(process.Id, exeName, pathHash, windowTitle);
                 _seen.Add(process.Id);
                 Log.Info($"Game started: {exeName} (pid {process.Id}) — \"{windowTitle}\"");
             }
+
             catch
             {
                 // Access denied on some processes is normal. Skip silently.

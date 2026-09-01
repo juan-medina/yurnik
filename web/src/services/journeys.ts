@@ -34,6 +34,7 @@ type RawPendingJourney = {
   cover_url?: string;
   genres?: string[];
   exe_name?: string;
+  path_hash?: string;
   window_title?: string;
   started_at: string;
   ended_at?: string;
@@ -97,6 +98,7 @@ export async function getPendingJourneys(): Promise<PendingJourney[]> {
       startedAt,
       endedAt,
       exeName: p.exe_name,
+      pathHash: p.path_hash,
       windowTitle: p.window_title,
     };
   });

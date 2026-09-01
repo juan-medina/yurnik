@@ -12,12 +12,13 @@ namespace Yurnik.Agent.Tests;
 class FakeAuthState : IAuthState
 {
     public bool IsAuthenticated { get; set; } = true;
+    public string? UserId => "test-user-id";
     public void OnUnauthorized() { }
 }
 
 class FakeYurnikClient : IYurnikClient
 {
-    public record Call(string ExeName, string WindowTitle, DateTimeOffset StartedAt, DateTimeOffset EndedAt);
+    public record Call(string ExeName, string? PathHash, string WindowTitle, DateTimeOffset StartedAt, DateTimeOffset EndedAt);
 
     public List<Call> Calls { get; } = [];
     public ApiResult NextResult { get; set; } = ApiResult.Ok;
@@ -31,9 +32,9 @@ class FakeYurnikClient : IYurnikClient
     public Task<InclusionsResult> GetInclusionsAsync() => Task.FromResult(new InclusionsResult(ApiResult.Ok, []));
 
     public Task<CreatePendingResult> CreatePendingJourneyAsync(
-        string exeName, string windowTitle, DateTimeOffset startedAt, DateTimeOffset endedAt)
+        string exeName, string? pathHash, string windowTitle, DateTimeOffset startedAt, DateTimeOffset endedAt)
     {
-        Calls.Add(new Call(exeName, windowTitle, startedAt, endedAt));
+        Calls.Add(new Call(exeName, pathHash, windowTitle, startedAt, endedAt));
         var id = NextResult == ApiResult.Ok ? "journey-id" : null;
         return Task.FromResult(new CreatePendingResult(NextResult, id));
     }

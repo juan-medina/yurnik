@@ -100,7 +100,7 @@ func (h *Handler) initAuth(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) callback(w http.ResponseWriter, r *http.Request) {
 	if errCode := r.URL.Query().Get("error"); errCode != "" {
 		log.Printf("auth/callback: provider error: %s — %s", errCode, r.URL.Query().Get("error_description"))
-		http.Redirect(w, r, h.cfg.FrontendURL+"/login?error="+url.QueryEscape(errCode), http.StatusFound)
+		http.Redirect(w, r, h.cfg.FrontendURL+"/?error="+url.QueryEscape(errCode), http.StatusFound)
 		return
 	}
 

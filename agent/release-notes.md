@@ -1,1 +1,1 @@
-- Update localization
+- Better game detection

@@ -3,6 +3,9 @@
 
 namespace Yurnik.Agent.Api;
 
+record ExclusionEntry(string ExeName, string PathHash);
+record ExclusionsResult(ApiResult Status, List<ExclusionEntry>? Exclusions);
+
 interface IYurnikClient
 {
     void SetToken(string token);
@@ -13,5 +16,6 @@ interface IYurnikClient
     Task<ExclusionsResult> GetExclusionsAsync();
     Task<InclusionsResult> GetInclusionsAsync();
     Task<CreatePendingResult> CreatePendingJourneyAsync(
-        string exeName, string windowTitle, DateTimeOffset startedAt, DateTimeOffset endedAt);
+        string exeName, string? pathHash, string windowTitle, DateTimeOffset startedAt, DateTimeOffset endedAt);
 }
+

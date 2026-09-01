@@ -406,6 +406,7 @@ type pendingResponse struct {
 	CoverURL    *string  `json:"cover_url,omitempty"`
 	Genres      []string `json:"genres,omitempty"`
 	ExeName     *string  `json:"exe_name,omitempty"`
+	PathHash    *string  `json:"path_hash,omitempty"`
 	WindowTitle *string  `json:"window_title,omitempty"`
 	StartedAt   string   `json:"started_at"`
 	EndedAt     *string  `json:"ended_at,omitempty"`
@@ -450,6 +451,7 @@ func (h *Handler) listPending(w http.ResponseWriter, r *http.Request) {
 			CoverURL:    p.CoverURL,
 			Genres:      p.Genres,
 			ExeName:     p.ExeName,
+			PathHash:    p.PathHash,
 			WindowTitle: p.WindowTitle,
 			StartedAt:   p.StartedAt.UTC().Format(time.RFC3339),
 		}
@@ -552,7 +554,11 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if pending.ExeName != nil {
-		if err := db.UpsertGameHint(r.Context(), h.pool, userID, *pending.ExeName, *body.IGDBID); err != nil {
+		pathHash := ""
+		if pending.PathHash != nil {
+			pathHash = *pending.PathHash
+		}
+		if err := db.UpsertGameHint(r.Context(), h.pool, userID, *pending.ExeName, pathHash, *body.IGDBID); err != nil {
 			log.Printf("journeys/confirm: upsert hint for %s: %v", *pending.ExeName, err)
 		}
 	}
@@ -598,7 +604,12 @@ func (h *Handler) exclude(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := db.InsertExclusion(r.Context(), h.pool, userID, *pending.ExeName); err != nil {
+	pathHash := ""
+	if pending.PathHash != nil {
+		pathHash = *pending.PathHash
+	}
+
+	if err := db.InsertExclusion(r.Context(), h.pool, userID, *pending.ExeName, pathHash); err != nil {
 		log.Printf("journeys/exclude: insert exclusion: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return
@@ -610,6 +621,7 @@ func (h *Handler) exclude(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
 
 func (h *Handler) add(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.Authenticate(w, r, h.jwtPriv, h.pool)

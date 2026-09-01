@@ -74,7 +74,7 @@ sealed class QueueProcessor(EventQueue queue, IYurnikClient client, IAuthState a
             }
 
             var result = await client.CreatePendingJourneyAsync(
-                journey.ExeName, journey.WindowTitle, journey.StartedAt, journey.EndedAt);
+                journey.ExeName, journey.PathHash, journey.WindowTitle, journey.StartedAt, journey.EndedAt);
 
             if (result.Status == ApiResult.Unauthorized)
             {

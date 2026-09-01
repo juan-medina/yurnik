@@ -48,12 +48,15 @@ CREATE TABLE IF NOT EXISTS pending_journeys (
     status         text        NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'ended')),
     igdb_id        integer     REFERENCES igdb_games(igdb_id),
     exe_name       text,
+    path_hash      text,
     window_title   text,
     started_at     timestamptz NOT NULL DEFAULT now(),
     ended_at       timestamptz,
     last_heartbeat timestamptz NOT NULL DEFAULT now(),
     created_at     timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE pending_journeys ADD COLUMN IF NOT EXISTS path_hash text;
 
 CREATE UNIQUE INDEX IF NOT EXISTS pending_journeys_dedup_idx
     ON pending_journeys(user_id, exe_name, started_at);
@@ -193,7 +196,7 @@ func TestUpsertPendingJourney_NewSession(t *testing.T) {
 	startedAt := time.Now().UTC().Add(-1 * time.Hour)
 	endedAt := time.Now().UTC()
 
-	id, err := db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", "My Game", startedAt, nil, &endedAt)
+	id, err := db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", nil, "My Game", startedAt, nil, &endedAt)
 	if err != nil {
 		t.Fatalf("upsert: %v", err)
 	}
@@ -212,13 +215,13 @@ func TestUpsertPendingJourney_ExactDuplicateReturnsExistingID(t *testing.T) {
 	startedAt := time.Now().UTC().Add(-1 * time.Hour)
 	endedAt := time.Now().UTC()
 
-	id1, err := db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", "My Game", startedAt, nil, &endedAt)
+	id1, err := db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", nil, "My Game", startedAt, nil, &endedAt)
 	if err != nil {
 		t.Fatalf("first upsert: %v", err)
 	}
 
 	// Identical call — simulates a retry after a network failure.
-	id2, err := db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", "My Game", startedAt, nil, &endedAt)
+	id2, err := db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", nil, "My Game", startedAt, nil, &endedAt)
 	if err != nil {
 		t.Fatalf("second upsert: %v", err)
 	}
@@ -239,7 +242,7 @@ func TestUpsertPendingJourney_MergesSessionWithinWindow(t *testing.T) {
 	firstStart := time.Now().UTC().Add(-70 * time.Minute)
 	firstEnd := time.Now().UTC().Add(-10 * time.Minute)
 
-	id1, err := db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", "My Game", firstStart, nil, &firstEnd)
+	id1, err := db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", nil, "My Game", firstStart, nil, &firstEnd)
 	if err != nil {
 		t.Fatalf("first upsert: %v", err)
 	}
@@ -248,7 +251,7 @@ func TestUpsertPendingJourney_MergesSessionWithinWindow(t *testing.T) {
 	secondStart := time.Now().UTC()
 	secondEnd := time.Now().UTC().Add(30 * time.Minute)
 
-	id2, err := db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", "My Game", secondStart, nil, &secondEnd)
+	id2, err := db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", nil, "My Game", secondStart, nil, &secondEnd)
 	if err != nil {
 		t.Fatalf("second upsert: %v", err)
 	}
@@ -280,7 +283,7 @@ func TestUpsertPendingJourney_DoesNotMergeOutsideWindow(t *testing.T) {
 	firstStart := time.Now().UTC().Add(-80 * time.Minute)
 	firstEnd := time.Now().UTC().Add(-20 * time.Minute)
 
-	_, err := db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", "My Game", firstStart, nil, &firstEnd)
+	_, err := db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", nil, "My Game", firstStart, nil, &firstEnd)
 	if err != nil {
 		t.Fatalf("first upsert: %v", err)
 	}
@@ -288,7 +291,7 @@ func TestUpsertPendingJourney_DoesNotMergeOutsideWindow(t *testing.T) {
 	secondStart := time.Now().UTC()
 	secondEnd := time.Now().UTC().Add(30 * time.Minute)
 
-	_, err = db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", "My Game", secondStart, nil, &secondEnd)
+	_, err = db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", nil, "My Game", secondStart, nil, &secondEnd)
 	if err != nil {
 		t.Fatalf("second upsert: %v", err)
 	}
@@ -304,14 +307,14 @@ func TestUpsertPendingJourney_DoesNotMergeActiveSession(t *testing.T) {
 
 	// Active session (no ended_at) — should never be a merge candidate.
 	firstStart := time.Now().UTC().Add(-5 * time.Minute)
-	_, err := db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", "My Game", firstStart, nil, nil)
+	_, err := db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", nil, "My Game", firstStart, nil, nil)
 	if err != nil {
 		t.Fatalf("first upsert: %v", err)
 	}
 
 	secondStart := time.Now().UTC()
 	secondEnd := time.Now().UTC().Add(30 * time.Minute)
-	_, err = db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", "My Game", secondStart, nil, &secondEnd)
+	_, err = db.UpsertPendingJourney(context.Background(), pool, userID, "game.exe", nil, "My Game", secondStart, nil, &secondEnd)
 	if err != nil {
 		t.Fatalf("second upsert: %v", err)
 	}
@@ -386,7 +389,7 @@ func TestUpsertPendingJourney_DoubleSubmit(t *testing.T) {
 	t.Cleanup(func() { pool.Exec(ctx, "DELETE FROM igdb_games WHERE igdb_id = $1", igdbID) })
 
 	// First submit
-	id1, err := db.UpsertPendingJourney(ctx, pool, userID, "game.exe", "Game", startedAt, &igdbID, &endedAt1)
+	id1, err := db.UpsertPendingJourney(ctx, pool, userID, "game.exe", nil, "Game", startedAt, &igdbID, &endedAt1)
 	if err != nil {
 		t.Fatalf("first upsert: %v", err)
 	}
@@ -407,10 +410,11 @@ func TestUpsertPendingJourney_DoubleSubmit(t *testing.T) {
 	_ = db.DeletePendingJourney(ctx, pool, id1, userID)
 
 	// Second submit (duplicate from agent retrying or double-queuing)
-	id2, err := db.UpsertPendingJourney(ctx, pool, userID, "game.exe", "Game", startedAt, &igdbID, &endedAt2)
+	id2, err := db.UpsertPendingJourney(ctx, pool, userID, "game.exe", nil, "Game", startedAt, &igdbID, &endedAt2)
 	if err != nil {
 		t.Fatalf("second upsert: %v", err)
 	}
+
 
 	// It should return a valid pending journey ID. The handler then attempts to insert it again.
 	_, errInsert := db.InsertJourney(ctx, pool, db.Journey{

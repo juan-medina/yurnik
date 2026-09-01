@@ -59,12 +59,35 @@ sealed class Database
             dropNotificationsCmd.CommandText = "DROP TABLE IF EXISTS notified_notifications;";
             dropNotificationsCmd.ExecuteNonQuery();
         }
+        if (version < 7)
+        {
+            Log.Info($"Schema is version {version} — migrating for path_hash support");
+            using var alterSessionsCmd = conn.CreateCommand();
+            alterSessionsCmd.CommandText = "ALTER TABLE sessions ADD COLUMN path_hash TEXT;";
+            try { alterSessionsCmd.ExecuteNonQuery(); } catch { }
+
+            using var alterQueueCmd = conn.CreateCommand();
+            alterQueueCmd.CommandText = "ALTER TABLE queue ADD COLUMN path_hash TEXT;";
+            try { alterQueueCmd.ExecuteNonQuery(); } catch { }
+
+            using var alterExclusionsCmd = conn.CreateCommand();
+            alterExclusionsCmd.CommandText = """
+                DROP TABLE IF EXISTS exclusions;
+                CREATE TABLE IF NOT EXISTS exclusions (
+                    exe_name  TEXT NOT NULL,
+                    path_hash TEXT,
+                    PRIMARY KEY (exe_name, path_hash)
+                );
+            """;
+            try { alterExclusionsCmd.ExecuteNonQuery(); } catch { }
+        }
 
         using var schemaCmd = conn.CreateCommand();
         schemaCmd.CommandText = """
             CREATE TABLE IF NOT EXISTS sessions (
                 pid             INTEGER PRIMARY KEY,
                 exe_name        TEXT    NOT NULL,
+                path_hash       TEXT,
                 window_title    TEXT    NOT NULL,
                 started_at      INTEGER NOT NULL,
                 last_running_at INTEGER NOT NULL
@@ -73,6 +96,7 @@ sealed class Database
             CREATE TABLE IF NOT EXISTS queue (
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,
                 exe_name     TEXT    NOT NULL,
+                path_hash    TEXT,
                 window_title TEXT    NOT NULL,
                 started_at   INTEGER NOT NULL,
                 ended_at     INTEGER NOT NULL,
@@ -81,7 +105,9 @@ sealed class Database
             );
 
             CREATE TABLE IF NOT EXISTS exclusions (
-                exe_name TEXT PRIMARY KEY
+                exe_name  TEXT NOT NULL,
+                path_hash TEXT,
+                PRIMARY KEY (exe_name, path_hash)
             );
 
             CREATE TABLE IF NOT EXISTS inclusions (
@@ -96,7 +122,7 @@ sealed class Database
         schemaCmd.ExecuteNonQuery();
 
         using var pragmaCmd = conn.CreateCommand();
-        pragmaCmd.CommandText = "PRAGMA user_version = 6;";
+        pragmaCmd.CommandText = "PRAGMA user_version = 7;";
         pragmaCmd.ExecuteNonQuery();
 
         Log.Info("Database migrations complete");

@@ -101,13 +101,17 @@ func (h *Handler) listExclusions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exeNames := make([]string, len(exs))
+	type row struct {
+		ExeName  string `json:"exe_name"`
+		PathHash string `json:"path_hash"`
+	}
+	resp := make([]row, len(exs))
 	for i, e := range exs {
-		exeNames[i] = e.ExeName
+		resp[i] = row{ExeName: e.ExeName, PathHash: e.PathHash}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"exclusions": exeNames})
+	_ = json.NewEncoder(w).Encode(map[string]any{"exclusions": resp})
 }
 
 // listInclusions returns the authenticated user's exe inclusion list, so the
@@ -142,10 +146,11 @@ func (h *Handler) createPending(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
-		ExeName     string `json:"exe_name"`
-		WindowTitle string `json:"window_title"`
-		StartedAt   string `json:"started_at"`
-		EndedAt     string `json:"ended_at"`
+		ExeName     string  `json:"exe_name"`
+		PathHash    *string `json:"path_hash"`
+		WindowTitle string  `json:"window_title"`
+		StartedAt   string  `json:"started_at"`
+		EndedAt     string  `json:"ended_at"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.ExeName == "" {
 		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
@@ -173,7 +178,12 @@ func (h *Handler) createPending(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	excluded, err := db.IsExcluded(r.Context(), h.pool, userID, body.ExeName)
+	pathHash := ""
+	if body.PathHash != nil {
+		pathHash = *body.PathHash
+	}
+
+	excluded, err := db.IsExcluded(r.Context(), h.pool, userID, body.ExeName, pathHash)
 	if err != nil {
 		log.Printf("agent/createPending: check exclusion: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
@@ -184,19 +194,20 @@ func (h *Handler) createPending(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	igdbID, err := db.GetGameHintIGDBID(r.Context(), h.pool, userID, body.ExeName)
+	igdbID, err := db.GetGameHintIGDBID(r.Context(), h.pool, userID, body.ExeName, pathHash)
 	if err != nil {
 		log.Printf("agent/createPending: get hint for %s: %v", body.ExeName, err)
 		// non-fatal — proceed without a hint
 		igdbID = nil
 	}
 
-	id, err := db.UpsertPendingJourney(r.Context(), h.pool, userID, body.ExeName, body.WindowTitle, startedAt, igdbID, endedAt)
+	id, err := db.UpsertPendingJourney(r.Context(), h.pool, userID, body.ExeName, body.PathHash, body.WindowTitle, startedAt, igdbID, endedAt)
 	if err != nil {
 		log.Printf("agent/createPending: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return
 	}
+
 
 	if endedAt != nil && igdbID != nil {
 		duration := int(endedAt.Sub(startedAt).Seconds())

@@ -35,7 +35,8 @@ const mockState = vi.hoisted(() => ({
 vi.mock("@/services/settings", () => ({
   getExclusions: vi.fn(() => Promise.resolve([...mockState.exclusions])),
   addExclusion: vi.fn(async () => undefined),
-  removeExclusion: vi.fn(async (exeName: string) => {
+  removeExclusion: vi.fn(async (arg: { exeName: string; pathHash?: string } | string) => {
+    const exeName = typeof arg === "string" ? arg : arg.exeName;
     mockState.exclusions = mockState.exclusions.filter((e) => e.exeName !== exeName);
   }),
   getInclusions: vi.fn(() => Promise.resolve([...mockState.inclusions])),
@@ -47,7 +48,8 @@ vi.mock("@/services/settings", () => ({
   }),
   getGameHints: vi.fn(() => Promise.resolve([...mockState.hints])),
   addGameHint: vi.fn(async () => undefined),
-  removeGameHint: vi.fn(async (exeName: string) => {
+  removeGameHint: vi.fn(async (arg: { exeName: string; pathHash?: string } | string) => {
+    const exeName = typeof arg === "string" ? arg : arg.exeName;
     mockState.hints = mockState.hints.filter((h) => h.exeName !== exeName);
   }),
   updateGameHint: vi.fn(async () => undefined),

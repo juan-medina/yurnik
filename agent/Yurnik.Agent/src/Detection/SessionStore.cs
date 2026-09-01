@@ -9,6 +9,7 @@ namespace Yurnik.Agent.Detection;
 record Session(
     int Pid,
     string ExeName,
+    string? PathHash,
     string WindowTitle,
     DateTimeOffset StartedAt,
     DateTimeOffset LastRunningAt
@@ -20,17 +21,21 @@ record Session(
 /// </summary>
 sealed class SessionStore(Database db)
 {
-    public void Insert(int pid, string exeName, string windowTitle)
+    public void Insert(int pid, string exeName, string windowTitle) =>
+        Insert(pid, exeName, null, windowTitle);
+
+    public void Insert(int pid, string exeName, string? pathHash, string windowTitle)
     {
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         using var conn = db.OpenConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            INSERT OR IGNORE INTO sessions (pid, exe_name, window_title, started_at, last_running_at)
-            VALUES ($pid, $exe, $title, $now, $now)
+            INSERT OR IGNORE INTO sessions (pid, exe_name, path_hash, window_title, started_at, last_running_at)
+            VALUES ($pid, $exe, $hash, $title, $now, $now)
             """;
         cmd.Parameters.AddWithValue("$pid", pid);
         cmd.Parameters.AddWithValue("$exe", exeName);
+        cmd.Parameters.AddWithValue("$hash", (object?)pathHash ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$title", windowTitle);
         cmd.Parameters.AddWithValue("$now", now);
         cmd.ExecuteNonQuery();
@@ -51,7 +56,7 @@ sealed class SessionStore(Database db)
     {
         using var conn = db.OpenConnection();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT pid, exe_name, window_title, started_at, last_running_at FROM sessions";
+        cmd.CommandText = "SELECT pid, exe_name, path_hash, window_title, started_at, last_running_at FROM sessions";
 
         var sessions = new List<Session>();
         using var reader = cmd.ExecuteReader();
@@ -60,13 +65,15 @@ sealed class SessionStore(Database db)
             sessions.Add(new Session(
                 Pid: reader.GetInt32(0),
                 ExeName: reader.GetString(1),
-                WindowTitle: reader.GetString(2),
-                StartedAt: DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(3)),
-                LastRunningAt: DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(4))
+                PathHash: reader.IsDBNull(2) ? null : reader.GetString(2),
+                WindowTitle: reader.GetString(3),
+                StartedAt: DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(4)),
+                LastRunningAt: DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(5))
             ));
         }
         return sessions;
     }
+
 
     public void Delete(int pid)
     {

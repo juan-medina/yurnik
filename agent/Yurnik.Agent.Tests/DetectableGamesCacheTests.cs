@@ -48,4 +48,36 @@ public class DetectableGamesCacheTests
 
         Assert.Empty(names);
     }
+
+    [Fact]
+    public void TryGetGameName_DisambiguatesByPath()
+    {
+        const string json = """
+            [
+              { "name": "Game Alpha", "executables": [ { "name": "alpha/bin/launcher.exe", "os": "win32" } ] },
+              { "name": "Game Beta", "executables": [ { "name": "beta/bin/launcher.exe", "os": "win32" } ] }
+            ]
+            """;
+
+        var tempPath = Path.Combine(Path.GetTempPath(), $"detectable_test_{Guid.NewGuid():N}.json");
+        try
+        {
+            File.WriteAllText(tempPath, json);
+            var cache = new DetectableGamesCache(tempPath);
+
+            Assert.True(cache.TryGetGameName("launcher.exe", @"C:\Games\alpha\bin\launcher.exe", out var gameAlpha));
+            Assert.Equal("Game Alpha", gameAlpha);
+
+            Assert.True(cache.TryGetGameName("launcher.exe", @"D:\Steam\steamapps\common\beta\bin\launcher.exe", out var gameBeta));
+            Assert.Equal("Game Beta", gameBeta);
+
+            Assert.True(cache.TryGetGameName("launcher.exe", out var fallback));
+            Assert.NotNull(fallback);
+        }
+        finally
+        {
+            try { File.Delete(tempPath); } catch { }
+        }
+    }
 }
+

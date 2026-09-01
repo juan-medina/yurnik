@@ -14,8 +14,7 @@ namespace Yurnik.Agent.Detection;
 /// </summary>
 sealed class SessionMonitor : IDisposable
 {
-    static readonly TimeSpan Interval = TimeSpan.FromMinutes(5);
-
+    readonly TimeSpan _interval;
     readonly SessionStore _sessions;
     readonly EventQueue _queue;
     readonly Func<int, bool> _isProcessAlive;
@@ -23,15 +22,16 @@ sealed class SessionMonitor : IDisposable
     readonly CancellationTokenSource _cts = new();
     Task? _monitorTask;
 
-    public SessionMonitor(SessionStore sessions, EventQueue queue, TimeSpan? minSessionDuration = null)
-        : this(sessions, queue, DefaultIsProcessAlive, minSessionDuration) { }
+    public SessionMonitor(SessionStore sessions, EventQueue queue, TimeSpan? minSessionDuration = null, TimeSpan? interval = null)
+        : this(sessions, queue, DefaultIsProcessAlive, minSessionDuration, interval) { }
 
-    internal SessionMonitor(SessionStore sessions, EventQueue queue, Func<int, bool> isProcessAlive, TimeSpan? minSessionDuration = null)
+    internal SessionMonitor(SessionStore sessions, EventQueue queue, Func<int, bool> isProcessAlive, TimeSpan? minSessionDuration = null, TimeSpan? interval = null)
     {
         _sessions = sessions;
         _queue = queue;
         _isProcessAlive = isProcessAlive;
         _minSessionDuration = minSessionDuration ?? TimeSpan.FromMinutes(5);
+        _interval = interval ?? _minSessionDuration;
     }
 
     public void Start()
@@ -53,7 +53,7 @@ sealed class SessionMonitor : IDisposable
         while (!ct.IsCancellationRequested)
         {
             Check();
-            await Task.Delay(Interval, ct).ConfigureAwait(false);
+            await Task.Delay(_interval, ct).ConfigureAwait(false);
         }
     }
 
@@ -64,7 +64,7 @@ sealed class SessionMonitor : IDisposable
             if (_isProcessAlive(session.Pid))
             {
                 _sessions.UpdateHeartbeat(session.Pid);
-                Log.Info($"Heartbeat: {session.ExeName} (pid {session.Pid})");
+                Log.Debug($"Heartbeat: {session.ExeName} (pid {session.Pid})");
             }
             else
             {
@@ -72,7 +72,7 @@ sealed class SessionMonitor : IDisposable
                 if (duration >= _minSessionDuration)
                 {
                     Log.Info($"Session ended: {session.ExeName} (pid {session.Pid}), last seen {session.LastRunningAt:HH:mm:ss}Z");
-                    _queue.Enqueue(session.ExeName, session.WindowTitle, session.StartedAt, session.LastRunningAt);
+                    _queue.Enqueue(session.ExeName, session.PathHash, session.WindowTitle, session.StartedAt, session.LastRunningAt);
                 }
                 else
                 {

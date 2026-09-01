@@ -14,7 +14,6 @@ enum ApiResult { Ok, Unauthorized, TransientFailure, RateLimited }
 record CreatePendingResult(ApiResult Status, string? JourneyId);
 record NotificationPreferences(bool Updates, bool Notifications);
 record MeResult(ApiResult Status, string? Handle, string? Name, NotificationPreferences? NotificationPreferences = null);
-record ExclusionsResult(ApiResult Status, List<string>? ExeNames);
 record InclusionsResult(ApiResult Status, List<string>? ExeNames);
 record Notification(string Id, string Type, int ActorCount, string? SubjectTitle, bool Read);
 record NotificationsResult(ApiResult Status, List<Notification>? Notifications);
@@ -169,13 +168,27 @@ sealed class YurnikClient : IYurnikClient
 
             var json = await resp.Content.ReadAsStringAsync();
             var doc = JsonDocument.Parse(json);
-            var exeNames = doc.RootElement.GetProperty("exclusions")
-                .EnumerateArray()
-                .Select(e => e.GetString())
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .Select(s => s!)
-                .ToList();
-            return new ExclusionsResult(ApiResult.Ok, exeNames);
+            var exclusions = new List<ExclusionEntry>();
+            if (doc.RootElement.TryGetProperty("exclusions", out var exs) && exs.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var el in exs.EnumerateArray())
+                {
+                    if (el.ValueKind == JsonValueKind.String)
+                    {
+                        var s = el.GetString();
+                        if (!string.IsNullOrWhiteSpace(s))
+                            exclusions.Add(new ExclusionEntry(s, ""));
+                    }
+                    else if (el.ValueKind == JsonValueKind.Object)
+                    {
+                        var exe = el.TryGetProperty("exe_name", out var e) ? e.GetString() : null;
+                        var hash = el.TryGetProperty("path_hash", out var h) ? h.GetString() ?? "" : "";
+                        if (!string.IsNullOrWhiteSpace(exe))
+                            exclusions.Add(new ExclusionEntry(exe, hash));
+                    }
+                }
+            }
+            return new ExclusionsResult(ApiResult.Ok, exclusions);
         }
         catch (Exception ex)
         {
@@ -265,11 +278,12 @@ sealed class YurnikClient : IYurnikClient
     /// Returns null JourneyId when the exe is excluded (204 from server).
     /// </summary>
     public async Task<CreatePendingResult> CreatePendingJourneyAsync(
-        string exeName, string windowTitle, DateTimeOffset startedAt, DateTimeOffset endedAt)
+        string exeName, string? pathHash, string windowTitle, DateTimeOffset startedAt, DateTimeOffset endedAt)
     {
         var body = JsonSerializer.Serialize(new
         {
             exe_name = exeName,
+            path_hash = pathHash,
             window_title = windowTitle,
             started_at = startedAt.UtcDateTime.ToString("O"),
             ended_at = endedAt.UtcDateTime.ToString("O"),

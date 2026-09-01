@@ -146,10 +146,10 @@ func TestListExclusions_scopedPerUser(t *testing.T) {
 	userA := createTestUser(t, pool)
 	userB := createTestUser(t, pool)
 
-	if err := db.InsertExclusion(ctx, pool, userA, "discord.exe"); err != nil {
+	if err := db.InsertExclusion(ctx, pool, userA, "discord.exe", ""); err != nil {
 		t.Fatalf("insert exclusion for userA: %v", err)
 	}
-	if err := db.InsertExclusion(ctx, pool, userB, "obs64.exe"); err != nil {
+	if err := db.InsertExclusion(ctx, pool, userB, "obs64.exe", ""); err != nil {
 		t.Fatalf("insert exclusion for userB: %v", err)
 	}
 
@@ -168,12 +168,15 @@ func TestListExclusions_scopedPerUser(t *testing.T) {
 	}
 
 	var body struct {
-		Exclusions []string `json:"exclusions"`
+		Exclusions []struct {
+			ExeName  string `json:"exe_name"`
+			PathHash string `json:"path_hash"`
+		} `json:"exclusions"`
 	}
 	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if len(body.Exclusions) != 1 || body.Exclusions[0] != "discord.exe" {
+	if len(body.Exclusions) != 1 || body.Exclusions[0].ExeName != "discord.exe" {
 		t.Errorf("exclusions = %v, want [discord.exe]", body.Exclusions)
 	}
 }
@@ -262,7 +265,7 @@ func TestCreatePending_AutoConfirm(t *testing.T) {
 	if err != nil {
 		t.Fatalf("upsert game: %v", err)
 	}
-	err = db.UpsertGameHint(ctx, pool, userID, "autoconfirm.exe", 999111)
+	err = db.UpsertGameHint(ctx, pool, userID, "autoconfirm.exe", "", 999111)
 	if err != nil {
 		t.Fatalf("upsert hint: %v", err)
 	}
@@ -334,7 +337,7 @@ func TestCreatePending_AutoConfirm_ShortDuration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("upsert game: %v", err)
 	}
-	err = db.UpsertGameHint(ctx, pool, userID, "short.exe", 999222)
+	err = db.UpsertGameHint(ctx, pool, userID, "short.exe", "", 999222)
 	if err != nil {
 		t.Fatalf("upsert hint: %v", err)
 	}

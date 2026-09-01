@@ -9,6 +9,7 @@ namespace Yurnik.Agent.Queue;
 record QueuedJourney(
     long Id,
     string ExeName,
+    string? PathHash,
     string WindowTitle,
     DateTimeOffset StartedAt,
     DateTimeOffset EndedAt,
@@ -21,15 +22,19 @@ record QueuedJourney(
 /// </summary>
 sealed class EventQueue(Database db)
 {
-    public void Enqueue(string exeName, string windowTitle, DateTimeOffset startedAt, DateTimeOffset endedAt)
+    public void Enqueue(string exeName, string windowTitle, DateTimeOffset startedAt, DateTimeOffset endedAt) =>
+        Enqueue(exeName, null, windowTitle, startedAt, endedAt);
+
+    public void Enqueue(string exeName, string? pathHash, string windowTitle, DateTimeOffset startedAt, DateTimeOffset endedAt)
     {
         using var conn = db.OpenConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            INSERT OR IGNORE INTO queue (exe_name, window_title, started_at, ended_at)
-            VALUES ($exe, $title, $start, $end)
+            INSERT OR IGNORE INTO queue (exe_name, path_hash, window_title, started_at, ended_at)
+            VALUES ($exe, $hash, $title, $start, $end)
             """;
         cmd.Parameters.AddWithValue("$exe", exeName);
+        cmd.Parameters.AddWithValue("$hash", (object?)pathHash ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$title", windowTitle);
         cmd.Parameters.AddWithValue("$start", startedAt.ToUnixTimeSeconds());
         cmd.Parameters.AddWithValue("$end", endedAt.ToUnixTimeSeconds());
@@ -43,7 +48,7 @@ sealed class EventQueue(Database db)
         using var conn = db.OpenConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            SELECT id, exe_name, window_title, started_at, ended_at, attempts
+            SELECT id, exe_name, path_hash, window_title, started_at, ended_at, attempts
             FROM queue
             ORDER BY id ASC
             LIMIT $limit
@@ -57,14 +62,16 @@ sealed class EventQueue(Database db)
             journeys.Add(new QueuedJourney(
                 Id: reader.GetInt64(0),
                 ExeName: reader.GetString(1),
-                WindowTitle: reader.GetString(2),
-                StartedAt: DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(3)),
-                EndedAt: DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(4)),
-                Attempts: reader.GetInt32(5)
+                PathHash: reader.IsDBNull(2) ? null : reader.GetString(2),
+                WindowTitle: reader.GetString(3),
+                StartedAt: DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(4)),
+                EndedAt: DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(5)),
+                Attempts: reader.GetInt32(6)
             ));
         }
         return journeys;
     }
+
 
     public void Delete(long id)
     {

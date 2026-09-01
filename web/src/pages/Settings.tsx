@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { MonitorDown, Search } from "lucide-react";
 import AvatarEditor from "@/components/AvatarEditor";
-import { useNavigate, Link } from "react-router";
+import { Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { getCurrentPlayer, signIn, signOut, deleteAccount, updateNotificationPreferences } from "@/services/auth";
@@ -19,7 +19,6 @@ const LOCALE_LABEL_KEYS: Record<string, string> = {
 export default function Settings() {
   const { t } = useTranslation();
   const { locale, setLocale } = useLocale();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data: player, isLoading: playerLoading } = useQuery({
@@ -31,9 +30,9 @@ export default function Settings() {
   const { data: hints = [] } = useQuery({ queryKey: ["settings", "hints"], queryFn: getGameHints });
   const { data: inclusions = [] } = useQuery({ queryKey: ["settings", "inclusions"], queryFn: getInclusions });
 
-  const [confirmingExe, setConfirmingExe] = useState<string | null>(null);
-  const [confirmingHintExe, setConfirmingHintExe] = useState<string | null>(null);
-  const [editingHintExe, setEditingHintExe] = useState<string | null>(null);
+  const [confirmingExe, setConfirmingExe] = useState<{ exeName: string; pathHash?: string } | null>(null);
+  const [confirmingHint, setConfirmingHint] = useState<{ exeName: string; pathHash?: string } | null>(null);
+  const [editingHint, setEditingHint] = useState<{ exeName: string; pathHash?: string } | null>(null);
   const [editQuery, setEditQuery] = useState("");
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -44,7 +43,7 @@ export default function Settings() {
   const { data: editGameResults = [] } = useQuery({
     queryKey: ["games", "search", editQuery],
     queryFn: () => searchGames(editQuery),
-    enabled: editingHintExe !== null && editQuery.length >= 2,
+    enabled: editingHint !== null && editQuery.length >= 2,
   });
 
   const removeExclusionMutation = useMutation({
@@ -75,23 +74,22 @@ export default function Settings() {
     mutationFn: removeGameHint,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings", "hints"] });
-      setConfirmingHintExe(null);
+      setConfirmingHint(null);
     },
   });
 
   const updateHintMutation = useMutation({
-    mutationFn: ({ exeName, igdbId }: { exeName: string; igdbId: number }) =>
-      updateGameHint(exeName, igdbId),
+    mutationFn: ({ exeName, igdbId, pathHash }: { exeName: string; igdbId: number; pathHash?: string }) =>
+      updateGameHint(exeName, igdbId, pathHash),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings", "hints"] });
-      setEditingHintExe(null);
+      setEditingHint(null);
       setEditQuery("");
     },
   });
 
   const signOutMutation = useMutation({
     mutationFn: signOut,
-    onSuccess: () => navigate("/login", { replace: true }),
   });
 
   const deleteAccountMutation = useMutation({
@@ -326,10 +324,14 @@ export default function Settings() {
               <p className="text-sm text-muted-foreground">{t("settings_no_hints")}</p>
             ) : (
               <ul className="space-y-2">
-                {hints.map((hint) =>
-                  editingHintExe === hint.exeName ? (
+                {hints.map((hint) => {
+                  const isEditing = editingHint?.exeName === hint.exeName && editingHint?.pathHash === hint.pathHash;
+                  const isConfirming = confirmingHint?.exeName === hint.exeName && confirmingHint?.pathHash === hint.pathHash;
+                  const key = `${hint.exeName}:${hint.pathHash ?? ""}`;
+
+                  return isEditing ? (
                     <li
-                      key={hint.exeName}
+                      key={key}
                       className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2"
                     >
                       <div className="mb-2 flex items-center gap-1.5 text-sm">
@@ -354,7 +356,7 @@ export default function Settings() {
                             <button
                               key={g.id}
                               type="button"
-                              onClick={() => updateHintMutation.mutate({ exeName: hint.exeName, igdbId: parseInt(g.id) })}
+                              onClick={() => updateHintMutation.mutate({ exeName: hint.exeName, igdbId: parseInt(g.id), pathHash: hint.pathHash })}
                               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-accent/10"
                             >
                               {g.game}
@@ -372,16 +374,16 @@ export default function Settings() {
                       )}
                       <div className="flex justify-end">
                         <button
-                          onClick={() => { setEditingHintExe(null); setEditQuery(""); }}
+                          onClick={() => { setEditingHint(null); setEditQuery(""); }}
                           className="rounded-md px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                         >
                           {t("settings_cancel")}
                         </button>
                       </div>
                     </li>
-                  ) : confirmingHintExe === hint.exeName ? (
+                  ) : isConfirming ? (
                     <li
-                      key={hint.exeName}
+                      key={key}
                       className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2"
                     >
                       <span className="text-sm text-muted-foreground">
@@ -389,13 +391,13 @@ export default function Settings() {
                       </span>
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => setConfirmingHintExe(null)}
+                          onClick={() => setConfirmingHint(null)}
                           className="rounded-md px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                         >
                           {t("settings_cancel")}
                         </button>
                         <button
-                          onClick={() => removeHintMutation.mutate(hint.exeName)}
+                          onClick={() => removeHintMutation.mutate({ exeName: hint.exeName, pathHash: hint.pathHash })}
                           className="rounded-md bg-destructive px-3 py-1 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
                         >
                           {t("settings_remove")}
@@ -404,7 +406,7 @@ export default function Settings() {
                     </li>
                   ) : (
                     <li
-                      key={hint.exeName}
+                      key={key}
                       className="flex items-center justify-between rounded-md border border-border px-3 py-2"
                     >
                       <div className="flex min-w-0 items-center gap-2 text-sm">
@@ -414,14 +416,14 @@ export default function Settings() {
                       </div>
                       <div className="ml-2 flex shrink-0 items-center gap-1">
                         <button
-                          onClick={() => { setConfirmingHintExe(null); setEditingHintExe(hint.exeName); setEditQuery(""); }}
+                          onClick={() => { setConfirmingHint(null); setEditingHint({ exeName: hint.exeName, pathHash: hint.pathHash }); setEditQuery(""); }}
                           aria-label={t("settings_edit_hint_label", { exe: hint.exeName })}
                           className="rounded-md px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                         >
                           {t("settings_edit")}
                         </button>
                         <button
-                          onClick={() => setConfirmingHintExe(hint.exeName)}
+                          onClick={() => setConfirmingHint({ exeName: hint.exeName, pathHash: hint.pathHash })}
                           aria-label={t("settings_remove_hint_label", { exe: hint.exeName })}
                           className="rounded-md px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                         >
@@ -429,8 +431,8 @@ export default function Settings() {
                         </button>
                       </div>
                     </li>
-                  ),
-                )}
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -445,10 +447,13 @@ export default function Settings() {
               <p className="text-sm text-muted-foreground">{t("settings_no_exclusions")}</p>
             ) : (
               <ul className="space-y-2">
-                {exclusions.map((exc) =>
-                  confirmingExe === exc.exeName ? (
+                {exclusions.map((exc) => {
+                  const isConfirming = confirmingExe?.exeName === exc.exeName && confirmingExe?.pathHash === exc.pathHash;
+                  const key = `${exc.exeName}:${exc.pathHash ?? ""}`;
+
+                  return isConfirming ? (
                     <li
-                      key={exc.exeName}
+                      key={key}
                       className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2"
                     >
                       <span className="text-sm text-muted-foreground">
@@ -462,7 +467,7 @@ export default function Settings() {
                           {t("settings_cancel")}
                         </button>
                         <button
-                          onClick={() => removeExclusionMutation.mutate(exc.exeName)}
+                          onClick={() => removeExclusionMutation.mutate({ exeName: exc.exeName, pathHash: exc.pathHash })}
                           className="rounded-md bg-destructive px-3 py-1 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
                         >
                           {t("settings_remove")}
@@ -471,20 +476,20 @@ export default function Settings() {
                     </li>
                   ) : (
                     <li
-                      key={exc.exeName}
+                      key={key}
                       className="flex items-center justify-between rounded-md border border-border px-3 py-2"
                     >
                       <span className="font-mono text-sm">{exc.exeName}</span>
                       <button
-                        onClick={() => setConfirmingExe(exc.exeName)}
+                        onClick={() => setConfirmingExe({ exeName: exc.exeName, pathHash: exc.pathHash })}
                         aria-label={t("settings_remove_label", { exe: exc.exeName })}
                         className="rounded-md px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                       >
                         {t("settings_remove")}
                       </button>
                     </li>
-                  ),
-                )}
+                  );
+                })}
               </ul>
             )}
           </div>

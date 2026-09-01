@@ -44,6 +44,7 @@ sealed class AuthManager : IAuthState, IDisposable
     Task? _refreshTask;
 
     public bool IsAuthenticated { get; private set; }
+    public string? UserId { get; private set; }
 
     public event Action<bool>? AuthStateChanged;
 
@@ -71,6 +72,7 @@ sealed class AuthManager : IAuthState, IDisposable
         }
 
         _client.SetToken(token);
+        UserId = ExtractUserIdFromJwt(token);
 
         var heartbeat = await _client.HeartbeatAsync();
         if (!heartbeat.Valid)
@@ -78,6 +80,7 @@ sealed class AuthManager : IAuthState, IDisposable
             Log.Warn("Stored token rejected by API — clearing");
             _store.DeleteToken();
             _client.ClearToken();
+            UserId = null;
             return false;
         }
 
@@ -86,6 +89,7 @@ sealed class AuthManager : IAuthState, IDisposable
             Log.Info("Token renewed");
             _store.SaveToken(heartbeat.NewToken);
             _client.SetToken(heartbeat.NewToken);
+            UserId = ExtractUserIdFromJwt(heartbeat.NewToken);
         }
 
         Log.Info("Token validated — authenticated");
@@ -124,9 +128,19 @@ sealed class AuthManager : IAuthState, IDisposable
     /// </summary>
     public void OnUnauthorized()
     {
-        Log.Warn("Received 401 — token invalid, clearing and requesting re-auth");
+        Log.Warn("API returned 401 — marking token invalid");
         _store.DeleteToken();
         _client.ClearToken();
+        UserId = null;
+        SetAuthenticated(false);
+    }
+
+    public void SignOut()
+    {
+        Log.Info("User requested sign out");
+        _store.DeleteToken();
+        _client.ClearToken();
+        UserId = null;
         SetAuthenticated(false);
     }
 
@@ -170,6 +184,7 @@ sealed class AuthManager : IAuthState, IDisposable
                         Log.Info("Token renewed");
                         _store.SaveToken(heartbeat.NewToken);
                         _client.SetToken(heartbeat.NewToken);
+                        UserId = ExtractUserIdFromJwt(heartbeat.NewToken);
                     }
                     else
                     {
@@ -217,6 +232,7 @@ sealed class AuthManager : IAuthState, IDisposable
         Log.Info("Received token via yurnik:// callback");
         _store.SaveToken(token);
         _client.SetToken(token);
+        UserId = ExtractUserIdFromJwt(token);
         SetAuthenticated(true);
         _ = SyncSettingsAsync();
     }
@@ -225,6 +241,31 @@ sealed class AuthManager : IAuthState, IDisposable
     {
         IsAuthenticated = value;
         AuthStateChanged?.Invoke(value);
+    }
+
+    static string? ExtractUserIdFromJwt(string jwt)
+    {
+        try
+        {
+            var parts = jwt.Split('.');
+            if (parts.Length < 2) return null;
+            var payload = parts[1];
+            payload = payload.Replace('-', '+').Replace('_', '/');
+            switch (payload.Length % 4)
+            {
+                case 2: payload += "=="; break;
+                case 3: payload += "="; break;
+            }
+            var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload));
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("sub", out var sub))
+                return sub.GetString();
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -239,10 +280,10 @@ sealed class AuthManager : IAuthState, IDisposable
         bool changed = false;
 
         var excResult = await _client.GetExclusionsAsync();
-        if (excResult.Status == ApiResult.Ok && excResult.ExeNames is not null)
+        if (excResult.Status == ApiResult.Ok && excResult.Exclusions is not null)
         {
-            _exclusions.ReplaceAll(excResult.ExeNames);
-            Log.Info($"Exclusion list synced: {excResult.ExeNames.Count} entries");
+            _exclusions.ReplaceAll(excResult.Exclusions);
+            Log.Info($"Exclusion list synced: {excResult.Exclusions.Count} entries");
             changed = true;
         }
         else

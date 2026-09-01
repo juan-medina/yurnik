@@ -30,7 +30,7 @@ sealed class DetectableGamesCache : IDisposable
     readonly HttpClient _http = new();
     readonly CancellationTokenSource _cts = new();
 
-    Dictionary<string, string> _exeNames = [];
+    Dictionary<string, List<(string Pattern, string GameName)>> _entriesByExe = [];
     Task? _refreshTask;
 
     public DetectableGamesCache(string cachePath)
@@ -39,8 +39,45 @@ sealed class DetectableGamesCache : IDisposable
         LoadFromDisk();
     }
 
-    public bool TryGetGameName(string exeName, out string? gameName) => 
-        _exeNames.TryGetValue(exeName.ToLowerInvariant(), out gameName);
+    public bool TryGetGameName(string exeName, string? fullPath, out string? gameName)
+    {
+        var lowerExe = exeName.ToLowerInvariant();
+        var lowerPath = fullPath?.ToLowerInvariant().Replace('/', '\\');
+
+        if (_entriesByExe.TryGetValue(lowerExe, out var entries))
+        {
+            if (lowerPath is not null)
+            {
+                foreach (var entry in entries)
+                {
+                    if (entry.Pattern.Contains('\\') && lowerPath.EndsWith(entry.Pattern))
+                    {
+                        gameName = entry.GameName;
+                        return true;
+                    }
+                }
+            }
+            foreach (var entry in entries)
+            {
+                if (!entry.Pattern.Contains('\\'))
+                {
+                    gameName = entry.GameName;
+                    return true;
+                }
+            }
+            if (entries.Count > 0)
+            {
+                gameName = entries[0].GameName;
+                return true;
+            }
+        }
+
+        gameName = null;
+        return false;
+    }
+
+    public bool TryGetGameName(string exeName, out string? gameName) =>
+        TryGetGameName(exeName, null, out gameName);
 
     public void Start()
     {
@@ -92,12 +129,12 @@ sealed class DetectableGamesCache : IDisposable
         try
         {
             var json = await _http.GetStringAsync(DetectableUrl);
-            var names = ParseExeNames(json);
-            if (names.Count == 0) return false;
+            var entries = ParseEntries(json);
+            if (entries.Count == 0) return false;
 
-            _exeNames = names;
+            _entriesByExe = entries;
             File.WriteAllText(_cachePath, json);
-            Log.Info($"Detectable games list refreshed: {names.Count} executables");
+            Log.Info($"Detectable games list refreshed: {entries.Count} executables");
             return true;
         }
         catch (Exception ex)
@@ -112,7 +149,7 @@ sealed class DetectableGamesCache : IDisposable
         if (!File.Exists(_cachePath)) return;
         try
         {
-            _exeNames = ParseExeNames(File.ReadAllText(_cachePath));
+            _entriesByExe = ParseEntries(File.ReadAllText(_cachePath));
         }
         catch (Exception ex)
         {
@@ -120,9 +157,9 @@ sealed class DetectableGamesCache : IDisposable
         }
     }
 
-    internal static Dictionary<string, string> ParseExeNames(string json)
+    internal static Dictionary<string, List<(string Pattern, string GameName)>> ParseEntries(string json)
     {
-        var names = new Dictionary<string, string>();
+        var result = new Dictionary<string, List<(string Pattern, string GameName)>>();
         using var doc = JsonDocument.Parse(json);
         foreach (var app in doc.RootElement.EnumerateArray())
         {
@@ -135,16 +172,38 @@ sealed class DetectableGamesCache : IDisposable
             foreach (var exe in executables.EnumerateArray())
             {
                 if (!exe.TryGetProperty("name", out var nameProp)) continue;
-                var path = nameProp.GetString();
-                if (string.IsNullOrWhiteSpace(path)) continue;
+                var rawPath = nameProp.GetString();
+                if (string.IsNullOrWhiteSpace(rawPath)) continue;
 
-                var exeName = path.Replace('/', '\\').Split('\\')[^1];
+                var pattern = rawPath.Replace('/', '\\').ToLowerInvariant();
+                var exeName = pattern.Split('\\')[^1];
                 if (!string.IsNullOrWhiteSpace(exeName))
-                    names[exeName.ToLowerInvariant()] = gameName;
+                {
+                    if (!result.TryGetValue(exeName, out var list))
+                    {
+                        list = [];
+                        result[exeName] = list;
+                    }
+                    list.Add((pattern, gameName));
+                }
             }
         }
-        return names;
+        return result;
+    }
+
+    // For backwards-compatibility with existing tests
+    internal static Dictionary<string, string> ParseExeNames(string json)
+    {
+        var entries = ParseEntries(json);
+        var map = new Dictionary<string, string>();
+        foreach (var (k, list) in entries)
+        {
+            if (list.Count > 0)
+                map[k] = list[0].GameName;
+        }
+        return map;
     }
 
     public void Dispose() => Stop();
 }
+

@@ -6,5 +6,7 @@ namespace Yurnik.Agent.Auth;
 interface IAuthState
 {
     bool IsAuthenticated { get; }
+    string? UserId { get; }
     void OnUnauthorized();
 }
+

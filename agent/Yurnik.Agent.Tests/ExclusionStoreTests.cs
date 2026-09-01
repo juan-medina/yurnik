@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 
+using Yurnik.Agent.Api;
 using Yurnik.Agent.Detection;
 using Yurnik.Agent.Infrastructure;
 using Xunit;
@@ -30,7 +31,7 @@ public class ExclusionStoreTests : IDisposable
     [Fact]
     public void Contains_AfterReplaceAll_ReturnsTrueForSyncedExe()
     {
-        _store.ReplaceAll(["discord.exe", "obs64.exe"]);
+        _store.ReplaceAll([new ExclusionEntry("discord.exe", ""), new ExclusionEntry("obs64.exe", "")]);
 
         Assert.True(_store.Contains("discord.exe"));
         Assert.True(_store.Contains("obs64.exe"));
@@ -40,7 +41,7 @@ public class ExclusionStoreTests : IDisposable
     [Fact]
     public void Contains_IsCaseInsensitive()
     {
-        _store.ReplaceAll(["Discord.exe"]);
+        _store.ReplaceAll([new ExclusionEntry("Discord.exe", "")]);
 
         Assert.True(_store.Contains("discord.exe"));
         Assert.True(_store.Contains("DISCORD.EXE"));
@@ -49,11 +50,25 @@ public class ExclusionStoreTests : IDisposable
     [Fact]
     public void ReplaceAll_DropsExesNoLongerInTheList()
     {
-        _store.ReplaceAll(["discord.exe"]);
-        _store.ReplaceAll(["obs64.exe"]);
+        _store.ReplaceAll([new ExclusionEntry("discord.exe", "")]);
+        _store.ReplaceAll([new ExclusionEntry("obs64.exe", "")]);
 
         Assert.False(_store.Contains("discord.exe"));
         Assert.True(_store.Contains("obs64.exe"));
+    }
+
+    [Fact]
+    public void Contains_PathHashMatchesSpecificOrGlobal()
+    {
+        _store.ReplaceAll([
+            new ExclusionEntry("launcher.exe", "hash123"),
+            new ExclusionEntry("global.exe", "")
+        ]);
+
+        Assert.True(_store.Contains("launcher.exe", "hash123"));
+        Assert.False(_store.Contains("launcher.exe", "hash456"));
+        Assert.True(_store.Contains("global.exe", "anyhash"));
+        Assert.True(_store.Contains("global.exe", null));
     }
 
     public void Dispose()
@@ -61,3 +76,4 @@ public class ExclusionStoreTests : IDisposable
         try { File.Delete(_dbPath); } catch { }
     }
 }
+

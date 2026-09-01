@@ -27,6 +27,7 @@ type PendingJourney struct {
 	Genres        []string
 	ReleaseYear   *int
 	ExeName       *string
+	PathHash      *string
 	WindowTitle   *string
 	StartedAt     time.Time
 	EndedAt       *time.Time
@@ -38,12 +39,12 @@ type PendingJourney struct {
 func GetPendingJourney(ctx context.Context, pool *pgxpool.Pool, id, userID string) (PendingJourney, error) {
 	var p PendingJourney
 	err := pool.QueryRow(ctx, `
-		SELECT id, user_id, status, igdb_id, exe_name, window_title, started_at, ended_at, last_heartbeat
+		SELECT id, user_id, status, igdb_id, exe_name, path_hash, window_title, started_at, ended_at, last_heartbeat
 		FROM pending_journeys
 		WHERE id = $1 AND user_id = $2
 	`, id, userID).Scan(
 		&p.ID, &p.UserID, &p.Status, &p.IGDBID,
-		&p.ExeName, &p.WindowTitle,
+		&p.ExeName, &p.PathHash, &p.WindowTitle,
 		&p.StartedAt, &p.EndedAt, &p.LastHeartbeat,
 	)
 	if err == pgx.ErrNoRows {
@@ -71,7 +72,7 @@ func DeletePendingJourney(ctx context.Context, pool *pgxpool.Pool, id, userID st
 func ListPendingJourneys(ctx context.Context, pool *pgxpool.Pool, userID string) ([]PendingJourney, error) {
 	rows, err := pool.Query(ctx, `
 		SELECT p.id, p.user_id, p.status, p.igdb_id, g.name, g.cover_url, g.genres, g.release_year,
-		       p.exe_name, p.window_title, p.started_at, p.ended_at, p.last_heartbeat
+		       p.exe_name, p.path_hash, p.window_title, p.started_at, p.ended_at, p.last_heartbeat
 		FROM pending_journeys p
 		LEFT JOIN igdb_games g ON g.igdb_id = p.igdb_id
 		WHERE p.user_id = $1 AND p.status = 'ended'
@@ -87,7 +88,7 @@ func ListPendingJourneys(ctx context.Context, pool *pgxpool.Pool, userID string)
 		var p PendingJourney
 		if err := rows.Scan(
 			&p.ID, &p.UserID, &p.Status, &p.IGDBID, &p.GameName, &p.CoverURL, &p.Genres, &p.ReleaseYear,
-			&p.ExeName, &p.WindowTitle,
+			&p.ExeName, &p.PathHash, &p.WindowTitle,
 			&p.StartedAt, &p.EndedAt, &p.LastHeartbeat,
 		); err != nil {
 			return nil, err
@@ -127,13 +128,13 @@ type Journey struct {
 
 // UpsertPendingJourney creates, deduplicates, or extends a pending journey atomically.
 //
-//   - Exact duplicate (same user, exe, started_at, ended_at): returns the existing ID unchanged.
-//   - Merge candidate: a pending journey for the same exe whose ended_at falls within 15 minutes
+//   - Exact duplicate (same user, exe, path_hash, started_at, ended_at): returns the existing ID unchanged.
+//   - Merge candidate: a pending journey for the same exe and path_hash whose ended_at falls within 15 minutes
 //     before startedAt — its ended_at is extended to endedAt and its ID is returned.
 //   - Otherwise: a new pending journey row is inserted and its ID is returned.
 //
 // igdbID and endedAt may be nil.
-func UpsertPendingJourney(ctx context.Context, pool *pgxpool.Pool, userID, exeName, windowTitle string, startedAt time.Time, igdbID *int, endedAt *time.Time) (string, error) {
+func UpsertPendingJourney(ctx context.Context, pool *pgxpool.Pool, userID, exeName string, pathHash *string, windowTitle string, startedAt time.Time, igdbID *int, endedAt *time.Time) (string, error) {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return "", fmt.Errorf("begin upsert: %w", err)
@@ -145,10 +146,10 @@ func UpsertPendingJourney(ctx context.Context, pool *pgxpool.Pool, userID, exeNa
 	var existingEndedAt *time.Time
 	err = tx.QueryRow(ctx, `
 		SELECT id, ended_at FROM pending_journeys
-		WHERE user_id = $1 AND exe_name = $2 AND started_at = $3
+		WHERE user_id = $1 AND exe_name = $2 AND COALESCE(path_hash, '') = COALESCE($3, '') AND started_at = $4
 		LIMIT 1
 		FOR UPDATE
-	`, userID, exeName, startedAt).Scan(&id, &existingEndedAt)
+	`, userID, exeName, pathHash, startedAt).Scan(&id, &existingEndedAt)
 	if err == nil {
 		if endedAt != nil && (existingEndedAt == nil || !existingEndedAt.Equal(*endedAt)) {
 			if _, errUpdate := tx.Exec(ctx, `UPDATE pending_journeys SET ended_at = $1, status = 'ended' WHERE id = $2`, endedAt, id); errUpdate != nil {
@@ -161,16 +162,16 @@ func UpsertPendingJourney(ctx context.Context, pool *pgxpool.Pool, userID, exeNa
 		return "", fmt.Errorf("check duplicate pending journey: %w", err)
 	}
 
-	// 2. Merge candidate — same exe, ended within 15 minutes before this session started.
+	// 2. Merge candidate — same exe & path_hash, ended within 15 minutes before this session started.
 	mergeWindowStart := startedAt.Add(-15 * time.Minute)
 	err = tx.QueryRow(ctx, `
 		SELECT id FROM pending_journeys
-		WHERE user_id = $1 AND exe_name = $2 AND status = 'ended'
-		  AND ended_at BETWEEN $3 AND $4
+		WHERE user_id = $1 AND exe_name = $2 AND COALESCE(path_hash, '') = COALESCE($3, '') AND status = 'ended'
+		  AND ended_at BETWEEN $4 AND $5
 		ORDER BY ended_at DESC
 		LIMIT 1
 		FOR UPDATE
-	`, userID, exeName, mergeWindowStart, startedAt).Scan(&id)
+	`, userID, exeName, pathHash, mergeWindowStart, startedAt).Scan(&id)
 	if err == nil {
 		if _, err = tx.Exec(ctx, `
 			UPDATE pending_journeys SET ended_at = $1 WHERE id = $2
@@ -189,14 +190,15 @@ func UpsertPendingJourney(ctx context.Context, pool *pgxpool.Pool, userID, exeNa
 		status = "ended"
 	}
 	if err = tx.QueryRow(ctx, `
-		INSERT INTO pending_journeys (user_id, exe_name, window_title, started_at, igdb_id, ended_at, status)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO pending_journeys (user_id, exe_name, path_hash, window_title, started_at, igdb_id, ended_at, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id
-	`, userID, exeName, windowTitle, startedAt, igdbID, endedAt, status).Scan(&id); err != nil {
+	`, userID, exeName, pathHash, windowTitle, startedAt, igdbID, endedAt, status).Scan(&id); err != nil {
 		return "", fmt.Errorf("insert pending journey: %w", err)
 	}
 	return id, tx.Commit(ctx)
 }
+
 
 // EndPendingJourney sets ended_at and transitions status to 'ended'.
 func EndPendingJourney(ctx context.Context, pool *pgxpool.Pool, id, userID string, endedAt time.Time) error {

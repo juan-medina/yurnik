@@ -65,11 +65,12 @@ func (h *Handler) listExclusions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type row struct {
-		ExeName string `json:"exe_name"`
+		ExeName  string `json:"exe_name"`
+		PathHash string `json:"path_hash"`
 	}
 	resp := make([]row, len(exs))
 	for i, e := range exs {
-		resp[i] = row{ExeName: e.ExeName}
+		resp[i] = row{ExeName: e.ExeName, PathHash: e.PathHash}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"exclusions": resp})
@@ -81,13 +82,14 @@ func (h *Handler) addExclusion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		ExeName string `json:"exe_name"`
+		ExeName  string `json:"exe_name"`
+		PathHash string `json:"path_hash"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.ExeName == "" {
 		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
 		return
 	}
-	if err := db.InsertExclusion(r.Context(), h.pool, userID, body.ExeName); err != nil {
+	if err := db.InsertExclusion(r.Context(), h.pool, userID, body.ExeName, body.PathHash); err != nil {
 		log.Printf("settings/addExclusion: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return
@@ -101,7 +103,8 @@ func (h *Handler) deleteExclusion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	exeName := r.PathValue("exeName")
-	if err := db.DeleteExclusion(r.Context(), h.pool, userID, exeName); err != nil {
+	pathHash := r.URL.Query().Get("path_hash")
+	if err := db.DeleteExclusion(r.Context(), h.pool, userID, exeName, pathHash); err != nil {
 		log.Printf("settings/deleteExclusion: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return
@@ -177,13 +180,14 @@ func (h *Handler) listHints(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type row struct {
-		ExeName string `json:"exe_name"`
-		IGDBID  int    `json:"igdb_id"`
-		Title   string `json:"title"`
+		ExeName  string `json:"exe_name"`
+		PathHash string `json:"path_hash"`
+		IGDBID   int    `json:"igdb_id"`
+		Title    string `json:"title"`
 	}
 	resp := make([]row, len(hints))
 	for i, hint := range hints {
-		resp[i] = row{ExeName: hint.ExeName, IGDBID: hint.IGDBID, Title: hint.Title}
+		resp[i] = row{ExeName: hint.ExeName, PathHash: hint.PathHash, IGDBID: hint.IGDBID, Title: hint.Title}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"hints": resp})
@@ -196,13 +200,14 @@ func (h *Handler) upsertHint(w http.ResponseWriter, r *http.Request) {
 	}
 	exeName := r.PathValue("exeName")
 	var body struct {
-		IGDBID int `json:"igdb_id"`
+		PathHash string `json:"path_hash"`
+		IGDBID   int    `json:"igdb_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.IGDBID == 0 {
 		http.Error(w, `{"error":"invalid_request"}`, http.StatusBadRequest)
 		return
 	}
-	if err := db.UpsertGameHint(r.Context(), h.pool, userID, exeName, body.IGDBID); err != nil {
+	if err := db.UpsertGameHint(r.Context(), h.pool, userID, exeName, body.PathHash, body.IGDBID); err != nil {
 		log.Printf("settings/upsertHint: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return
@@ -216,10 +221,12 @@ func (h *Handler) deleteHint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	exeName := r.PathValue("exeName")
-	if err := db.DeleteGameHint(r.Context(), h.pool, userID, exeName); err != nil {
+	pathHash := r.URL.Query().Get("path_hash")
+	if err := db.DeleteGameHint(r.Context(), h.pool, userID, exeName, pathHash); err != nil {
 		log.Printf("settings/deleteHint: %v", err)
 		http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+

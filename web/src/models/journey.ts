@@ -35,6 +35,7 @@ export type PendingJourney = {
   startedAt: Date;
   endedAt: Date;
   exeName?: string;
+  pathHash?: string;
   windowTitle?: string;
 };
 

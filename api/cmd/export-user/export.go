@@ -104,11 +104,13 @@ type NotificationRow struct {
 type ExclusionRow struct {
 	ID        string    `json:"id"`
 	ExeName   string    `json:"exe_name"`
+	PathHash  string    `json:"path_hash"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
 type GameHintRow struct {
 	ExeName   string    `json:"exe_name"`
+	PathHash  string    `json:"path_hash"`
 	IGDBID    int       `json:"igdb_id"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -189,10 +191,10 @@ func buildExport(ctx context.Context, pool *pgxpool.Pool, userID string) (Export
 	export.Notifications = notifications
 
 	exclusions, err := queryRows(ctx, pool, `
-		SELECT id, exe_name, created_at FROM exe_exclusions WHERE user_id = $1 ORDER BY created_at
+		SELECT id, exe_name, path_hash, created_at FROM exe_exclusions WHERE user_id = $1 ORDER BY created_at
 	`, userID, func(scan scanFunc) (ExclusionRow, error) {
 		var r ExclusionRow
-		err := scan(&r.ID, &r.ExeName, &r.CreatedAt)
+		err := scan(&r.ID, &r.ExeName, &r.PathHash, &r.CreatedAt)
 		return r, err
 	})
 	if err != nil {
@@ -201,16 +203,17 @@ func buildExport(ctx context.Context, pool *pgxpool.Pool, userID string) (Export
 	export.ExeExclusions = exclusions
 
 	hints, err := queryRows(ctx, pool, `
-		SELECT exe_name, igdb_id, updated_at FROM exe_game_hints WHERE user_id = $1 ORDER BY exe_name
+		SELECT exe_name, path_hash, igdb_id, updated_at FROM exe_game_hints WHERE user_id = $1 ORDER BY exe_name, path_hash
 	`, userID, func(scan scanFunc) (GameHintRow, error) {
 		var r GameHintRow
-		err := scan(&r.ExeName, &r.IGDBID, &r.UpdatedAt)
+		err := scan(&r.ExeName, &r.PathHash, &r.IGDBID, &r.UpdatedAt)
 		return r, err
 	})
 	if err != nil {
 		return Export{}, fmt.Errorf("query exe_game_hints: %w", err)
 	}
 	export.ExeGameHints = hints
+
 
 	return export, nil
 }

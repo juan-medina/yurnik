@@ -75,7 +75,7 @@ static class Program
         var eventQueue = new EventQueue(db);
         var sessionMonitor = new SessionMonitor(sessionStore, eventQueue, config.MinSessionDuration);
         var queueProcessor = new QueueProcessor(eventQueue, agentClient, authManager);
-        var processWatcher = new ProcessWatcher(sessionStore, exclusionStore, inclusionStore, detectableGames, config.MinSessionDuration);
+        var processWatcher = new ProcessWatcher(sessionStore, exclusionStore, inclusionStore, detectableGames, authManager, config.MinSessionDuration);
         var updater = new Updater();
         var notificationStore = new NotificationStore(db);
         var notificationMonitor = new NotificationMonitor(agentClient, config, notificationStore);

@@ -1,15 +1,13 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import { getAgentToken, SessionExpiredError } from "@/services/auth";
+import { getAgentToken, SessionExpiredError, signIn } from "@/services/auth";
 
 type State = "loading" | "success" | "error";
 
 export default function AgentAuth() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const started = useRef(false);
   const [state, setState] = useState<State>("loading");
 
@@ -26,12 +24,12 @@ export default function AgentAuth() {
       .catch((err) => {
         if (err instanceof SessionExpiredError) {
           sessionStorage.setItem("auth_next", "/auth/agent");
-          navigate("/login", { replace: true });
+          signIn();
         } else {
           setState("error");
         }
       });
-  }, [navigate]);
+  }, []);
 
   if (state === "success") {
     return (
