@@ -527,5 +527,36 @@ func TestJourneys_TotalDurationSeconds(t *testing.T) {
 			t.Errorf("game journey %s: expected total duration 5400, got %d", gj.JourneyID, gj.TotalDurationSeconds)
 		}
 	}
+
+	// 4. GetUserGameStats
+	stats, err := db.GetUserGameStats(ctx, pool, userID, igdbID)
+	if err != nil {
+		t.Fatalf("get user game stats: %v", err)
+	}
+	if stats == nil {
+		t.Fatal("expected non-nil user game stats")
+	}
+	if stats.TotalSeconds != 5400 {
+		t.Errorf("expected stats total seconds 5400, got %d", stats.TotalSeconds)
+	}
+	if stats.JourneyCount != 2 {
+		t.Errorf("expected stats journey count 2, got %d", stats.JourneyCount)
+	}
+	if stats.FirstPlayed == nil || stats.FirstPlayed.Format(db.DateFormat) != t1.Format(db.DateFormat) {
+		t.Errorf("expected first played %s, got %v", t1.Format(db.DateFormat), stats.FirstPlayed)
+	}
+	if stats.LastPlayed == nil || stats.LastPlayed.Format(db.DateFormat) != t2.Format(db.DateFormat) {
+		t.Errorf("expected last played %s, got %v", t2.Format(db.DateFormat), stats.LastPlayed)
+	}
+
+	// 5. GetUserGameStats for unplayed game returns nil
+	noStats, err := db.GetUserGameStats(ctx, pool, userID, 99999)
+	if err != nil {
+		t.Fatalf("get user game stats for unplayed game: %v", err)
+	}
+	if noStats != nil {
+		t.Errorf("expected nil stats for unplayed game, got %+v", noStats)
+	}
+
 	_ = j2
 }

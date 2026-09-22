@@ -391,6 +391,10 @@
   "load_more": "Cargar más",
   "loading": "Cargando...",
   "journey_total_playtime": "{{total}} en total",
+  "game_your_playtime": "Tu tiempo de juego: {{time}}",
+  "game_your_journeys_one": "{{count}} partida",
+  "game_your_journeys_other": "{{count}} partidas",
+  "game_first_played": "Primera partida el {{date}}",
   "whats_new_title": "Novedades",
   "whats_new_entries": [
     {

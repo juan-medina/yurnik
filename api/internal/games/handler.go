@@ -125,6 +125,13 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 		genres = []string{}
 	}
 
+	type userGameStatsResp struct {
+		TotalSeconds int     `json:"total_seconds"`
+		JourneyCount int     `json:"journey_count"`
+		FirstPlayed  *string `json:"first_played,omitempty"`
+		LastPlayed   *string `json:"last_played,omitempty"`
+	}
+
 	type resp struct {
 		ID               string            `json:"id"`
 		Name             string            `json:"name"`
@@ -144,6 +151,7 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 		AggregatedRating *float64          `json:"aggregated_rating,omitempty"`
 		Rating           *float64          `json:"rating,omitempty"`
 		InBacklog        bool              `json:"in_backlog"`
+		UserStats        *userGameStatsResp `json:"user_stats,omitempty"`
 	}
 
 	var coverURL *string
@@ -163,10 +171,31 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var inBacklog bool
+	var userStats *userGameStatsResp
 	if userID, ok := h.tryAuthenticate(r); ok {
 		inBacklog, err = db.IsInBacklog(r.Context(), h.pool, userID, igdbID)
 		if err != nil {
 			log.Printf("games/detail: in_backlog %d: %v", igdbID, err)
+		}
+		stats, err := db.GetUserGameStats(r.Context(), h.pool, userID, igdbID)
+		if err != nil {
+			log.Printf("games/detail: user_stats %d: %v", igdbID, err)
+		} else if stats != nil {
+			var firstStr, lastStr *string
+			if stats.FirstPlayed != nil {
+				s := stats.FirstPlayed.Format(db.DateFormat)
+				firstStr = &s
+			}
+			if stats.LastPlayed != nil {
+				s := stats.LastPlayed.Format(db.DateFormat)
+				lastStr = &s
+			}
+			userStats = &userGameStatsResp{
+				TotalSeconds: stats.TotalSeconds,
+				JourneyCount: stats.JourneyCount,
+				FirstPlayed:  firstStr,
+				LastPlayed:   lastStr,
+			}
 		}
 	}
 
@@ -190,6 +219,7 @@ func (h *Handler) detail(w http.ResponseWriter, r *http.Request) {
 		AggregatedRating: detail.AggregatedRating,
 		Rating:           detail.Rating,
 		InBacklog:        inBacklog,
+		UserStats:        userStats,
 	})
 }
 

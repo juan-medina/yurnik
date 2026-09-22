@@ -32,6 +32,12 @@ export async function getGameDetail(igdbId: string): Promise<GameDetail | undefi
     platforms: string[]; developer?: string; publisher?: string; summary?: string;
     screenshots: string[]; videos?: string[]; store_links?: Record<string, string>;
     aggregated_rating?: number; rating?: number; in_backlog?: boolean;
+    user_stats?: {
+      total_seconds: number;
+      journey_count: number;
+      first_played?: string;
+      last_played?: string;
+    };
   } = await resp.json();
   return {
     id: g.id,
@@ -51,6 +57,14 @@ export async function getGameDetail(igdbId: string): Promise<GameDetail | undefi
     aggregatedRating: g.aggregated_rating,
     rating: g.rating,
     inBacklog: g.in_backlog ?? false,
+    userStats: g.user_stats
+      ? {
+          totalSeconds: g.user_stats.total_seconds,
+          journeyCount: g.user_stats.journey_count,
+          firstPlayed: g.user_stats.first_played ? parseLocalDate(g.user_stats.first_played) : undefined,
+          lastPlayed: g.user_stats.last_played ? parseLocalDate(g.user_stats.last_played) : undefined,
+        }
+      : undefined,
   };
 }
 

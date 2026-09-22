@@ -10,7 +10,12 @@ import { _reset as resetPlayers } from "@/services/players";
 import { renderWithProviders } from "@/test/utils";
 import GameDetail from "./GameDetail";
 
-function gameDetailResponse(withTrailer: boolean, withStoreLinks: boolean, inBacklog = false) {
+function gameDetailResponse(
+  withTrailer: boolean,
+  withStoreLinks: boolean,
+  inBacklog = false,
+  userStats?: { total_seconds: number; journey_count: number; first_played?: string; last_played?: string },
+) {
   return JSON.stringify({
     id: MOCK_GAME_DETAIL.id,
     name: MOCK_GAME_DETAIL.name,
@@ -25,6 +30,7 @@ function gameDetailResponse(withTrailer: boolean, withStoreLinks: boolean, inBac
     videos: withTrailer ? MOCK_GAME_DETAIL.videos : [],
     store_links: withStoreLinks ? MOCK_GAME_DETAIL.storeLinks : {},
     in_backlog: inBacklog,
+    user_stats: userStats,
   });
 }
 
@@ -57,7 +63,25 @@ function multipleOwnJourneysResponse() {
   });
 }
 
-function makeFetch({ withTrailer = true, withStoreLinks = true, withFollowing = true, notFound = false, inBacklog = false, anonymous = false, journeysBody = "" } = {}) {
+function makeFetch({
+  withTrailer = true,
+  withStoreLinks = true,
+  withFollowing = true,
+  notFound = false,
+  inBacklog = false,
+  anonymous = false,
+  journeysBody = "",
+  userStats,
+}: {
+  withTrailer?: boolean;
+  withStoreLinks?: boolean;
+  withFollowing?: boolean;
+  notFound?: boolean;
+  inBacklog?: boolean;
+  anonymous?: boolean;
+  journeysBody?: string;
+  userStats?: { total_seconds: number; journey_count: number; first_played?: string; last_played?: string };
+} = {}) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = input.toString();
     const method = init?.method ?? "GET";
@@ -81,7 +105,7 @@ function makeFetch({ withTrailer = true, withStoreLinks = true, withFollowing = 
     }
     if (/\/api\/games\/\d+$/.test(url)) {
       if (notFound) return new Response("not found", { status: 404 });
-      return json(gameDetailResponse(withTrailer, withStoreLinks, inBacklog));
+      return json(gameDetailResponse(withTrailer, withStoreLinks, inBacklog, userStats));
     }
     return new Response("not found", { status: 404 });
   });
@@ -261,5 +285,34 @@ describe("GameDetail", () => {
 
     expect(await screen.findByRole("heading", { name: /Elden Ring/ })).toBeInTheDocument();
     expect(screen.getByText("Others")).toBeInTheDocument();
+  });
+
+  it("renders personal playtime stats card when user_stats is present", async () => {
+    vi.stubGlobal(
+      "fetch",
+      makeFetch({
+        userStats: {
+          total_seconds: 18000,
+          journey_count: 3,
+          first_played: "2026-05-01",
+          last_played: "2026-06-15",
+        },
+      }),
+    );
+
+    renderGame(MOCK_GAME_DETAIL.id);
+
+    expect(await screen.findByText("Your playtime: 5h")).toBeInTheDocument();
+    expect(screen.getByText("· 3 journeys")).toBeInTheDocument();
+    expect(screen.getByText(/First logged May 1/)).toBeInTheDocument();
+  });
+
+  it("does not render personal playtime stats card when user_stats is absent", async () => {
+    vi.stubGlobal("fetch", makeFetch({ userStats: undefined }));
+
+    renderGame(MOCK_GAME_DETAIL.id);
+
+    await screen.findByRole("heading", { name: /Elden Ring/ });
+    expect(screen.queryByText(/Your playtime:/)).not.toBeInTheDocument();
   });
 });

@@ -391,6 +391,10 @@
   "load_more": "Load more",
   "loading": "Loading…",
   "journey_total_playtime": "{{total}} total",
+  "game_your_playtime": "Your playtime: {{time}}",
+  "game_your_journeys_one": "{{count}} journey",
+  "game_your_journeys_other": "{{count}} journeys",
+  "game_first_played": "First logged {{date}}",
   "whats_new_title": "What's New",
   "whats_new_entries": [
     {

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { ChevronLeft, ChevronRight, Check, UserPlus, ExternalLink, Monitor, Gamepad2, Smartphone, Library, X, Play } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Clock, UserPlus, ExternalLink, Monitor, Gamepad2, Smartphone, Library, X, Play } from "lucide-react";
 import { siPlaystation, siSteam, siAndroid, siApple, siLinux } from "simple-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -12,7 +12,7 @@ import { getCurrentPlayer } from "@/services/auth";
 import { addToBacklog } from "@/services/backlog";
 import { playerHref } from "@/lib/display";
 import PlayerAvatar from "@/components/PlayerAvatar";
-import { formatJourneyDate, formatReleaseDate } from "@/lib/time";
+import { formatDuration, formatJourneyDate, formatReleaseDate } from "@/lib/time";
 import GenreChip from "@/components/GenreChip";
 import SignInPromptModal from "@/components/SignInPromptModal";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -476,6 +476,30 @@ export default function GameDetail() {
                 )}
               </div>
             </div>
+
+            {/* User Playtime Stats */}
+            {game.userStats && (
+              <div className="mt-4 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Clock size={18} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-sm font-semibold text-foreground">
+                      {t("game_your_playtime", { time: formatDuration(game.userStats.totalSeconds) })}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      · {t("game_your_journeys", { count: game.userStats.journeyCount })}
+                    </span>
+                  </div>
+                  {game.userStats.firstPlayed && (
+                    <p className="text-xs text-muted-foreground">
+                      {t("game_first_played", { date: formatJourneyDate(game.userStats.firstPlayed) })}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Platforms */}
             {game.platforms.length > 0 && (

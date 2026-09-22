@@ -12,6 +12,13 @@ export type Game = {
   category?: number;
 };
 
+export type UserGameStats = {
+  totalSeconds: number;
+  journeyCount: number;
+  firstPlayed?: Date;
+  lastPlayed?: Date;
+};
+
 export type GameDetail = {
   id: string;
   name: string;
@@ -30,6 +37,7 @@ export type GameDetail = {
   aggregatedRating?: number;
   rating?: number;
   inBacklog: boolean;
+  userStats?: UserGameStats;
 };
 
 export type JourneyEntry = {

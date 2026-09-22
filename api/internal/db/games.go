@@ -139,3 +139,40 @@ func UpsertGame(ctx context.Context, pool *pgxpool.Pool, g CachedGame) error {
 	`, g.IGDBID, g.Name, coverURL, g.Genres, g.ReleaseYear, g.ReleaseDate, g.Category)
 	return err
 }
+
+// UserGameStats holds the user's aggregate stats for a specific game.
+type UserGameStats struct {
+	TotalSeconds int
+	JourneyCount int
+	FirstPlayed  *time.Time
+	LastPlayed   *time.Time
+}
+
+// GetUserGameStats returns the total playtime and journey count for a user on a game.
+// Returns nil, nil if the user has logged no journeys for the game.
+func GetUserGameStats(ctx context.Context, pool *pgxpool.Pool, userID string, igdbID int) (*UserGameStats, error) {
+	var totalSeconds int
+	var count int
+	var firstPlayed, lastPlayed *time.Time
+	err := pool.QueryRow(ctx, `
+		SELECT COALESCE(SUM(duration_seconds), 0),
+		       COUNT(*),
+		       MIN(played_at),
+		       MAX(played_at)
+		FROM journeys
+		WHERE user_id = $1 AND igdb_id = $2
+	`, userID, igdbID).Scan(&totalSeconds, &count, &firstPlayed, &lastPlayed)
+	if err != nil {
+		return nil, err
+	}
+	if count == 0 {
+		return nil, nil
+	}
+	return &UserGameStats{
+		TotalSeconds: totalSeconds,
+		JourneyCount: count,
+		FirstPlayed:  firstPlayed,
+		LastPlayed:   lastPlayed,
+	}, nil
+}
+
