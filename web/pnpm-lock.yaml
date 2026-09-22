@@ -63,8 +63,8 @@ importers:
         specifier: ^17.0.8
         version: 17.0.8(i18next@26.3.0(typescript@6.0.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
       react-router:
-        specifier: latest
-        version: 7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        specifier: ^7.18.4
+        version: 7.18.4(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       simple-icons:
         specifier: ^16.23.0
         version: 16.23.0
@@ -1754,8 +1754,8 @@ packages:
       '@types/react':
         optional: true
 
-  react-router@7.15.1:
-    resolution: {integrity: sha512-R8rl9HhgikFYoPJymnUtPXWbnDb3oget6lQnfIoupbt61aT9aOhRkDsY2XRhZRyX1Z/8a5sL74fXmFNm3NRK5A==}
+  react-router@7.18.4:
+    resolution: {integrity: sha512-PUPQcMhMGRAslLcvtlPz/kmzBEWPhLdgLFrL7pLNepBL6dX0lWj4WD2cUYVgYCuT3jxvghYFg81cDTj44DhetQ==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
       react: '>=18'
@@ -3406,7 +3406,7 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.14
 
-  react-router@7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
+  react-router@7.18.4(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
     dependencies:
       cookie: 1.1.1
       react: 19.2.6

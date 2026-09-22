@@ -1,1 +1,1 @@
-- Better game detection
+- Update dependencies

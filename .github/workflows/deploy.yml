@@ -160,8 +160,64 @@ jobs:
       - name: Build
         run: make build-agent
 
+  audit-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+      - name: Audit API
+        run: make audit-api
+
+  audit-maintenance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+      - name: Audit Maintenance
+        run: make audit-maintenance
+
+  audit-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/package.json
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: Install dependencies
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+      - name: Audit Web
+        run: make audit-web
+
+  audit-agent:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('agent/**/*.csproj', 'agent/Yurnik.sln') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+      - name: Audit Agent
+        run: make audit-agent
+
   build-api:
-    needs: [test-unit-api, test-integration-api]
+    needs: [test-unit-api, test-integration-api, audit-api]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -173,7 +229,7 @@ jobs:
         run: make build-api
 
   build-maintenance:
-    needs: [test-unit-maintenance, test-integration-maintenance]
+    needs: [test-unit-maintenance, test-integration-maintenance, audit-maintenance]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -185,7 +241,7 @@ jobs:
         run: make build-maintenance
 
   build-web:
-    needs: [test-web]
+    needs: [test-web, audit-web]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -208,7 +264,7 @@ jobs:
         run: make build-web
 
   deploy-api:
-    needs: [build-api, build-web, test-and-build-agent, build-maintenance]
+    needs: [build-api, build-web, test-and-build-agent, build-maintenance, audit-agent]
     runs-on: ubuntu-latest
     steps:
       - name: Set up SSH

@@ -1,4 +1,4 @@
-.PHONY: run-api run-maintenance run-agent run-web test test-api test-maintenance test-agent test-web test-integration test-integration-api test-integration-maintenance build build-api build-maintenance build-web build-agent deploy-api deploy-maintenance deploy-web release-agent gen-keys export-user lint setup db-init db-migrate db-force db-start db-stop
+.PHONY: run-api run-maintenance run-agent run-web test test-api test-maintenance test-agent test-web test-integration test-integration-api test-integration-maintenance build build-api build-maintenance build-web build-agent deploy-api deploy-maintenance deploy-web release-agent gen-keys export-user lint setup db-init db-migrate db-force db-start db-stop tidy audit audit-api audit-maintenance audit-agent audit-web
 
 ifeq ($(OS),Windows_NT)
 PLATFORM := windows
@@ -57,6 +57,23 @@ endif
 test-integration: test-integration-api test-integration-maintenance
 
 build: build-api build-maintenance build-web build-agent
+
+tidy:
+	cd api && go mod tidy
+
+audit: audit-api audit-maintenance audit-agent audit-web
+
+audit-api:
+	cd api && go run golang.org/x/vuln/cmd/govulncheck@latest ./cmd/api/... ./internal/...
+
+audit-maintenance:
+	cd api && go run golang.org/x/vuln/cmd/govulncheck@latest ./cmd/maintenance/... ./internal/...
+
+audit-agent:
+	cd agent && dotnet list Yurnik.sln package --vulnerable --include-transitive
+
+audit-web:
+	cd web && pnpm audit --prod
 
 build-api:
 ifeq ($(YURNIK_ENV),production)
