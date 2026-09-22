@@ -14,6 +14,8 @@ node_modules/
 web/node_modules/
 web/dist/
 web/.vite/
+coverage/
+web/coverage/
 pnpm-debug.log*
 
 # Environment — never commit secrets

@@ -11,10 +11,10 @@ import { getExclusions, removeExclusion, getGameHints, removeGameHint, updateGam
 import { searchGames } from "@/services/games";
 import { useLocale, SUPPORTED_LOCALES } from "@/hooks/useLocale";
 
-const LOCALE_LABEL_KEYS: Record<string, string> = {
+const LOCALE_LABEL_KEYS = {
   en: "settings_language_en",
   es: "settings_language_es",
-};
+} as const;
 
 export default function Settings() {
   const { t } = useTranslation();

@@ -199,17 +199,17 @@ export default function Notifications() {
     if (player) markReadMutation.mutate();
   }, [player]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filterLabels: { value: Filter; labelKey: string }[] = [
+  const filterLabels = [
     { value: "all", labelKey: "notifications_filter_all" },
     { value: "comments", labelKey: "notifications_filter_comments" },
     { value: "followers", labelKey: "notifications_filter_followers" },
-  ];
+  ] as const;
 
-  const emptyKey: Record<Filter, string> = {
+  const emptyKey = {
     all: "notifications_empty_all",
     comments: "notifications_empty_comments",
     followers: "notifications_empty_followers",
-  };
+  } as const;
 
   const visible = allNotifications.filter((e) => {
     if (filter === "comments") return e.type === "new_comment" || e.type === "new_comment_reply" || e.type === "new_mention";

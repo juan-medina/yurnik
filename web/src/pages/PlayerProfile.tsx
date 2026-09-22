@@ -283,7 +283,7 @@ export default function PlayerProfile() {
         onTabChange={setActiveTab}
         allGamesContent={
           <PlayerGames 
-            playerId={profile.player.id} 
+            playerHandle={profile.player.handle} 
             genres={profile.genreHours.map(g => g.genre)} 
           />
         }

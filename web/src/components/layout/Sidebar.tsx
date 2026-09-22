@@ -10,9 +10,19 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { usePendingJourneysCount } from "@/hooks/usePendingJourneysCount";
 import { cn } from "@/lib/utils";
 
+type NavKey =
+  | "nav_feed"
+  | "nav_journeys"
+  | "nav_explore"
+  | "nav_notifications"
+  | "nav_backlog"
+  | "nav_profile"
+  | "nav_settings"
+  | "nav_admin";
+
 type NavItem = {
   to: string;
-  labelKey: string;
+  labelKey: NavKey;
   icon: LucideIcon;
   end?: boolean;
 };
@@ -34,7 +44,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }: SidebarP
     { to: "/backlog", labelKey: "nav_backlog", icon: Library },
     { to: currentPlayer ? `/player/${currentPlayer.handle}` : "/profile", labelKey: "nav_profile", icon: User },
     { to: "/settings", labelKey: "nav_settings", icon: Settings },
-    ...(currentPlayer?.isAdmin ? [{ to: "/admin", labelKey: "nav_admin", icon: ShieldAlert }] : []),
+    ...(currentPlayer?.isAdmin ? [{ to: "/admin", labelKey: "nav_admin" as const, icon: ShieldAlert }] : []),
   ];
 
   return (

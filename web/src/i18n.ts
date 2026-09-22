@@ -28,4 +28,14 @@ i18next.use(initReactI18next).init({
   },
 });
 
+declare module "i18next" {
+  interface CustomTypeOptions {
+    defaultNS: "translation";
+    resources: {
+      translation: typeof en;
+    };
+  }
+}
+
 export default i18next;
+

@@ -21,10 +21,20 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  test: {
+    test: {
     environment: "jsdom",
     globals: true,
     setupFiles: "./src/test/setup.ts",
     css: true,
+    coverage: {
+      provider: "v8",
+      reporter: ["text"],
+      thresholds: {
+        lines: 75,
+        statements: 70,
+        functions: 55,
+        branches: 60,
+      },
+    },
   },
 });

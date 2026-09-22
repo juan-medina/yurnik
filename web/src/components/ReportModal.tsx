@@ -20,7 +20,7 @@ const REASONS: ReportReason[] = [
   "other",
 ];
 
-const REASON_KEYS: Record<ReportReason, string> = {
+const REASON_KEYS = {
   spam: "report_reason_spam",
   harassment: "report_reason_harassment",
   hate_speech: "report_reason_hate_speech",
@@ -28,7 +28,7 @@ const REASON_KEYS: Record<ReportReason, string> = {
   impersonation: "report_reason_impersonation",
   private_info: "report_reason_private_info",
   other: "report_reason_other",
-};
+} as const;
 
 type Props = {
   targetType: ReportTargetType;

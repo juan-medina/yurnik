@@ -6,6 +6,8 @@ import { useTranslation } from "react-i18next";
 import { Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getPlayerGames } from "@/services/players";
+import { genreColor } from "@/lib/genres";
+import { cn } from "@/lib/utils";
 import type { ProfileGame } from "@/models/player";
 
 function formatSeconds(seconds: number): string {
@@ -17,11 +19,11 @@ function formatSeconds(seconds: number): string {
 }
 
 interface PlayerGamesProps {
-  playerId: string;
+  playerHandle: string;
   genres: string[];
 }
 
-export default function PlayerGames({ playerId, genres }: PlayerGamesProps) {
+export default function PlayerGames({ playerHandle, genres }: PlayerGamesProps) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [activeGenre, setActiveGenre] = useState("");
@@ -38,8 +40,8 @@ export default function PlayerGames({ playerId, genres }: PlayerGamesProps) {
   }, [search]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["player-games", playerId, debouncedSearch, activeGenre],
-    queryFn: () => getPlayerGames(playerId, 20, undefined, debouncedSearch, activeGenre),
+    queryKey: ["player-games", playerHandle, debouncedSearch, activeGenre],
+    queryFn: () => getPlayerGames(playerHandle, 20, undefined, debouncedSearch, activeGenre),
   });
 
   useEffect(() => {
@@ -53,7 +55,7 @@ export default function PlayerGames({ playerId, genres }: PlayerGamesProps) {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
     try {
-      const page = await getPlayerGames(playerId, 20, nextCursor, debouncedSearch, activeGenre);
+      const page = await getPlayerGames(playerHandle, 20, nextCursor, debouncedSearch, activeGenre);
       setGames((prev) => [...prev, ...page.games]);
       setNextCursor(page.nextCursor);
     } finally {
@@ -68,22 +70,33 @@ export default function PlayerGames({ playerId, genres }: PlayerGamesProps) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
           <input
             type="text"
-            placeholder={t("explore_search_placeholder", "Search games or genres...")}
+            placeholder={t("explore_search_placeholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-md border border-border bg-card py-2 pl-10 pr-4 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setActiveGenre("")}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              activeGenre === ""
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            }`}
+          >
+            {t("explore_all")}
+          </button>
           {genres.map((g) => (
             <button
               key={g}
               onClick={() => setActiveGenre((prev) => (prev === g ? "" : g))}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              className={cn(
+                "rounded-full px-3 py-1 text-xs font-medium transition-opacity",
                 activeGenre === g
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground"
-              }`}
+                  ? "bg-primary text-primary-foreground"
+                  : cn(genreColor(g), "hover:opacity-80"),
+              )}
             >
               {g}
             </button>
@@ -95,7 +108,7 @@ export default function PlayerGames({ playerId, genres }: PlayerGamesProps) {
         <div className="py-12 text-center text-sm text-muted-foreground">{t("loading")}</div>
       ) : games.length === 0 ? (
         <div className="rounded-lg border border-border bg-card px-4 py-12 text-center text-sm text-muted-foreground">
-          {t("profile_games_empty", "No games found.")}
+          {t("profile_games_empty")}
         </div>
       ) : (
         <>

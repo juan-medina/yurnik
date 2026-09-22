@@ -283,4 +283,44 @@ describe("PlayerProfile", () => {
     await user.click(await screen.findByRole("button", { name: /Following/ }));
     expect(await screen.findByText(followee.name)).toBeInTheDocument();
   });
+
+  it("clicking All Games tab loads player's games and allows searching", async () => {
+    const user = userEvent.setup();
+    const player = PLAYERS[1]; // Alex Torres — has Baldur's Gate 3 & Dead Cells
+    renderProfile(player.handle);
+
+    const gamesTab = await screen.findByRole("button", { name: "All Games" });
+    await user.click(gamesTab);
+
+    expect(await screen.findByText("Baldur's Gate 3")).toBeInTheDocument();
+    expect(screen.getByText("Dead Cells")).toBeInTheDocument();
+
+    const searchInput = screen.getByPlaceholderText("Search by game or genre…");
+    await user.type(searchInput, "Baldur");
+
+    await waitFor(() => {
+      expect(screen.getByText("Baldur's Gate 3")).toBeInTheDocument();
+      expect(screen.queryByText("Dead Cells")).not.toBeInTheDocument();
+    });
+  });
+
+  it("clicking a genre chip filters the games list", async () => {
+    const user = userEvent.setup();
+    const player = PLAYERS[1];
+    renderProfile(player.handle);
+
+    const gamesTab = await screen.findByRole("button", { name: "All Games" });
+    await user.click(gamesTab);
+
+    expect(await screen.findByText("Baldur's Gate 3")).toBeInTheDocument();
+    expect(screen.getByText("Dead Cells")).toBeInTheDocument();
+
+    const roguelikeChip = screen.getByRole("button", { name: "Roguelike" });
+    await user.click(roguelikeChip);
+
+    await waitFor(() => {
+      expect(screen.getByText("Dead Cells")).toBeInTheDocument();
+      expect(screen.queryByText("Baldur's Gate 3")).not.toBeInTheDocument();
+    });
+  });
 });

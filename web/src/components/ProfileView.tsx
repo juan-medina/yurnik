@@ -154,7 +154,7 @@ export default function ProfileView({
 
       {/* Stats */}
       <div className="mb-6 grid grid-cols-2 divide-x divide-y divide-border rounded-lg border border-border bg-card sm:grid-cols-4 sm:divide-y-0">
-        {[
+        {([
           { labelKey: "profile_stat_journeys", value: journeyCount, onClick: undefined },
           { labelKey: "profile_stat_hours", value: formatSeconds(totalSeconds), onClick: undefined },
           {
@@ -167,7 +167,7 @@ export default function ProfileView({
             value: player.following ?? following.length,
             onClick: () => setFollowList({ title: t("profile_following_modal"), kind: "following" }),
           },
-        ].map(({ labelKey, value, onClick }) =>
+        ] as const).map(({ labelKey, value, onClick }) =>
           onClick ? (
             <button
               key={labelKey}

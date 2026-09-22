@@ -314,6 +314,42 @@ function makeDefaultFetch() {
       );
     }
 
+    // GET /api/players/:handle/games
+    const playerGamesMatch = url.match(/\/api\/players\/([^/]+)\/games(\?.*)?$/);
+    if (playerGamesMatch && method === "GET") {
+      const player = resolvePlayer(playerGamesMatch[1]);
+      if (!player) return new Response("not found", { status: 404 });
+      const searchParams = new URL(url).searchParams;
+      const q = searchParams.get("q")?.toLowerCase();
+      const genre = searchParams.get("genre");
+      const pid = player.id;
+      const pJourneys = JOURNEYS.filter((j) => j.player.id === pid);
+      let pGames = [...new Map(pJourneys.map((j) => [j.game, j])).values()].map((j) => ({
+        igdb_id: j.igdbId ?? 0,
+        name: j.game,
+        cover_url: j.coverUrl ?? null,
+        release_year: 2024,
+        genres: j.genres,
+        last_played: formatLocalDate(j.playedAt),
+        seconds_played: 7200,
+      }));
+      if (q) {
+        pGames = pGames.filter(
+          (g) => g.name.toLowerCase().includes(q) || g.genres.some((item) => item.toLowerCase().includes(q)),
+        );
+      }
+      if (genre) {
+        pGames = pGames.filter((g) => g.genres.includes(genre));
+      }
+      return new Response(
+        JSON.stringify({
+          data: pGames,
+          cursor: undefined,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     // GET /api/players/:handle/backlog
     const backlogMatch = url.match(/\/api\/players\/([^/]+)\/backlog$/);
     if (backlogMatch && method === "GET") {

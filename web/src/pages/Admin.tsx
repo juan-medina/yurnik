@@ -11,9 +11,9 @@ import { getCurrentPlayer } from "@/services/auth";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { initials } from "@/lib/display";
 import NotFound from "@/pages/NotFound";
-import type { AdminReport, ReportReason, ReportTargetType, SuspendedUser, RecentUser } from "@/models";
+import type { AdminReport, SuspendedUser, RecentUser } from "@/models";
 
-const REASON_KEYS: Record<ReportReason, string> = {
+const REASON_KEYS = {
   spam: "admin_report_reason_spam",
   harassment: "admin_report_reason_harassment",
   hate_speech: "admin_report_reason_hate_speech",
@@ -21,13 +21,13 @@ const REASON_KEYS: Record<ReportReason, string> = {
   impersonation: "admin_report_reason_impersonation",
   private_info: "admin_report_reason_private_info",
   other: "admin_report_reason_other",
-};
+} as const;
 
-const TARGET_KEYS: Record<ReportTargetType, string> = {
+const TARGET_KEYS = {
   journey_log: "admin_target_journey_log",
   comment: "admin_target_comment",
   profile: "admin_target_profile",
-};
+} as const;
 
 function targetHref(report: AdminReport): string {
   switch (report.targetType) {

@@ -171,13 +171,13 @@ export async function searchPlayers(query: string): Promise<Player[]> {
 }
 
 export async function getPlayerGames(
-  playerId: string,
+  playerHandle: string,
   limit = 20,
   cursor?: string,
   q?: string,
   genre?: string,
 ): Promise<{ games: ProfileGame[]; nextCursor?: string }> {
-  const url = new URL(`${API_BASE}/api/players/${playerId}/games`);
+  const url = new URL(`${API_BASE}/api/players/${playerHandle}/games`);
   url.searchParams.set("limit", limit.toString());
   if (cursor) url.searchParams.set("cursor", cursor);
   if (q) url.searchParams.set("q", q);
