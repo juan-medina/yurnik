@@ -39,6 +39,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/players/search", h.searchPlayers)
 	mux.HandleFunc("GET /api/players/{handle}", h.getPlayer)
 	mux.HandleFunc("GET /api/players/{handle}/profile", h.getPlayerProfile)
+	mux.HandleFunc("GET /api/players/{handle}/games", h.getPlayerGames)
 	mux.HandleFunc("GET /api/players/{handle}/activity", h.getPlayerActivity)
 	mux.HandleFunc("GET /api/players/{handle}/followers", h.getFollowers)
 	mux.HandleFunc("GET /api/players/{handle}/following", h.getFollowing)
@@ -813,4 +814,68 @@ func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type playerGameResponse struct {
+	IGDBID        int      `json:"igdb_id"`
+	Name          string   `json:"name"`
+	CoverURL      *string  `json:"cover_url"`
+	ReleaseYear   *int     `json:"release_year"`
+	Genres        []string `json:"genres"`
+	LastPlayed    string   `json:"last_played"`
+	SecondsPlayed int      `json:"seconds_played"`
+}
+
+type playerGamesResponse struct {
+	Data   []playerGameResponse `json:"data"`
+	Cursor string               `json:"cursor"`
+}
+
+func (h *Handler) getPlayerGames(w http.ResponseWriter, r *http.Request) {
+	user, ok := h.resolvePlayer(w, r)
+	if !ok {
+		return
+	}
+
+	limit := 20
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 50 {
+			limit = parsed
+		}
+	}
+	cursor := r.URL.Query().Get("cursor")
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	genre := strings.TrimSpace(r.URL.Query().Get("genre"))
+
+	games, err := db.GetPlayerGames(r.Context(), h.pool, user.ID, limit+1, cursor, q, genre)
+	if err != nil {
+		log.Printf("profile: get player games %s: %v", user.ID, err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	var nextCursor string
+	if len(games) > limit {
+		nextCursor = db.EncodeGameCursor(games[limit].LastPlayed, games[limit].IGDBID)
+		games = games[:limit]
+	}
+
+	resp := playerGamesResponse{
+		Data:   make([]playerGameResponse, 0, len(games)),
+		Cursor: nextCursor,
+	}
+	for _, g := range games {
+		resp.Data = append(resp.Data, playerGameResponse{
+			IGDBID:        g.IGDBID,
+			Name:          g.Name,
+			CoverURL:      g.CoverURL,
+			ReleaseYear:   g.ReleaseYear,
+			Genres:        g.Genres,
+			LastPlayed:    g.LastPlayed.Format("2006-01-02"),
+			SecondsPlayed: g.SecondsPlayed,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
 }

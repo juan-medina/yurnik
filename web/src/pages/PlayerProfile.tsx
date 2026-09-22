@@ -17,6 +17,7 @@ import type { FeedItem } from "@/models/feed";
 import type { Player } from "@/models/player";
 import { getCurrentPlayer, updateProfile } from "@/services/auth";
 import ProfileView from "@/components/ProfileView";
+import PlayerGames from "@/components/PlayerGames";
 import AvatarEditor from "@/components/AvatarEditor";
 import EditProfileModal from "@/components/EditProfileModal";
 import SignInPromptModal from "@/components/SignInPromptModal";
@@ -40,6 +41,7 @@ export default function PlayerProfile() {
     enabled: !!handle,
   });
 
+  const [activeTab, setActiveTab] = useState<"summary" | "games">("summary");
   const [allActivity, setAllActivity] = useState<FeedItem[]>([]);
   const [nextActivityCursor, setNextActivityCursor] = useState<string | undefined>();
   const [loadingMoreActivity, setLoadingMoreActivity] = useState(false);
@@ -276,6 +278,14 @@ export default function PlayerProfile() {
               </button>
             </div>
           ) : undefined
+        }
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        allGamesContent={
+          <PlayerGames 
+            playerId={profile.player.id} 
+            genres={profile.genreHours.map(g => g.genre)} 
+          />
         }
       />
 

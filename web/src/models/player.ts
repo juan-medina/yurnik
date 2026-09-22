@@ -31,6 +31,16 @@ export type RecentGame = {
   secondsPlayed: number;
 };
 
+export type ProfileGame = {
+  igdbId: number;
+  name: string;
+  coverUrl?: string;
+  releaseYear?: number;
+  genres: string[];
+  lastPlayed: Date;
+  secondsPlayed: number;
+};
+
 export type GenreHours = {
   genre: string;
   seconds: number;

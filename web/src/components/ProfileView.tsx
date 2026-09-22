@@ -47,6 +47,9 @@ interface ProfileViewProps {
   hasMoreFollowing?: boolean;
   loadingMoreFollowing?: boolean;
   onLoadMoreFollowing?: () => void;
+  activeTab?: "summary" | "games";
+  onTabChange?: (tab: "summary" | "games") => void;
+  allGamesContent?: ReactNode;
 }
 
 export default function ProfileView({
@@ -69,6 +72,9 @@ export default function ProfileView({
   hasMoreFollowing,
   loadingMoreFollowing,
   onLoadMoreFollowing,
+  activeTab = "summary",
+  onTabChange,
+  allGamesContent,
 }: ProfileViewProps) {
   const { t } = useTranslation();
   const [followList, setFollowList] = useState<{ title: string; kind: "followers" | "following" } | null>(null);
@@ -180,131 +186,163 @@ export default function ProfileView({
         )}
       </div>
 
-      {/* Recent games */}
-      {recentGames.length > 0 && (
-        <div className="mb-6">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            {t("profile_recent_games")}
-          </h2>
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
-            {recentGames.map((g) => (
-              <Link key={g.igdbId} to={`/game/${g.igdbId}`} className="group block">
-                <div className="relative mb-2 aspect-[3/4] w-full">
-                  {g.coverUrl ? (
-                    <img
-                      src={g.coverUrl}
-                      alt={g.name}
-                      className="h-full w-full rounded-md object-cover transition-opacity group-hover:opacity-80"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center rounded-md bg-muted transition-opacity group-hover:opacity-80">
-                      <span className="px-1 text-center text-xs text-muted-foreground">{g.name}</span>
-                    </div>
-                  )}
-                  {g.secondsPlayed > 0 && (
-                    <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                      {formatSeconds(g.secondsPlayed)}
-                    </span>
-                  )}
-                </div>
-                <p className="truncate text-xs font-medium group-hover:underline" title={g.name}>
-                  {g.name}
-                </p>
-                {g.releaseYear && (
-                  <p className="text-xs text-muted-foreground">{g.releaseYear}</p>
-                )}
-              </Link>
-            ))}
-          </div>
+      {/* Tabs */}
+      {onTabChange && (
+        <div className="mb-6 flex space-x-1 rounded-lg border border-border bg-card p-1">
+          <button
+            onClick={() => onTabChange("summary")}
+            className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
+              activeTab === "summary"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            {t("profile_tab_summary")}
+          </button>
+          <button
+            onClick={() => onTabChange("games")}
+            className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
+              activeTab === "games"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            {t("profile_tab_games")}
+          </button>
         </div>
       )}
 
-      {/* Genre hours bars */}
-      {genreHours.length > 0 && (
-        <div className="mb-6">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            {t("profile_genres")}
-          </h2>
-          <div className="flex flex-col gap-2">
-            {genreHours.map((g) => (
-              <div key={g.genre} className="flex items-center gap-3">
-                <div className="w-32 shrink-0">
-                  <GenreChip genre={g.genre} size="sm" />
-                </div>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${(g.seconds / maxGenreSeconds) * 100}%`,
-                      backgroundColor: genreBarColor(g.genre),
-                    }}
-                  />
-                </div>
-                <span className="w-12 shrink-0 text-right text-xs text-muted-foreground">
-                  {formatSeconds(g.seconds)}
-                </span>
+      {activeTab === "games" ? (
+        allGamesContent
+      ) : (
+        <>
+          {/* Recent games */}
+          {recentGames.length > 0 && (
+            <div className="mb-6">
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                {t("profile_recent_games")}
+              </h2>
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+                {recentGames.map((g) => (
+                  <Link key={g.igdbId} to={`/game/${g.igdbId}`} className="group block">
+                    <div className="relative mb-2 aspect-[3/4] w-full">
+                      {g.coverUrl ? (
+                        <img
+                          src={g.coverUrl}
+                          alt={g.name}
+                          className="h-full w-full rounded-md object-cover transition-opacity group-hover:opacity-80"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center rounded-md bg-muted transition-opacity group-hover:opacity-80">
+                          <span className="px-1 text-center text-xs text-muted-foreground">{g.name}</span>
+                        </div>
+                      )}
+                      {g.secondsPlayed > 0 && (
+                        <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                          {formatSeconds(g.secondsPlayed)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="truncate text-xs font-medium group-hover:underline" title={g.name}>
+                      {g.name}
+                    </p>
+                    {g.releaseYear && (
+                      <p className="text-xs text-muted-foreground">{g.releaseYear}</p>
+                    )}
+                  </Link>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Backlog */}
-      {(backlog.length > 0 || isOwnProfile) && (
-        <div className="mb-6">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            {t("profile_backlog")}
-          </h2>
-          {backlog.length > 0 ? (
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
-              {backlog.map((g) => (
-                <Link key={g.igdbId} to={`/game/${g.igdbId}`} className="group block">
-                  {g.coverUrl ? (
-                    <img
-                      src={g.coverUrl}
-                      alt={g.name}
-                      className="mb-2 aspect-[3/4] w-full rounded-md object-cover transition-opacity group-hover:opacity-80"
-                    />
-                  ) : (
-                    <div className="mb-2 flex aspect-[3/4] w-full items-center justify-center rounded-md bg-muted transition-opacity group-hover:opacity-80">
-                      <span className="px-1 text-center text-xs text-muted-foreground">{g.name}</span>
-                    </div>
-                  )}
-                  <p className="truncate text-xs font-medium group-hover:underline" title={g.name}>
-                    {g.name}
-                  </p>
-                  {g.releaseYear && (
-                    <p className="text-xs text-muted-foreground">{g.releaseYear}</p>
-                  )}
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
-              {t("profile_backlog_empty_you")}{" "}
-              <Link to="/backlog" className="text-primary underline-offset-2 hover:underline">
-                {t("nav_backlog")}
-              </Link>
             </div>
           )}
-        </div>
+
+          {/* Genre hours bars */}
+          {genreHours.length > 0 && (
+            <div className="mb-6">
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                {t("profile_genres")}
+              </h2>
+              <div className="flex flex-col gap-2">
+                {genreHours.map((g) => (
+                  <div key={g.genre} className="flex items-center gap-3">
+                    <div className="w-32 shrink-0">
+                      <GenreChip genre={g.genre} size="sm" />
+                    </div>
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${(g.seconds / maxGenreSeconds) * 100}%`,
+                          backgroundColor: genreBarColor(g.genre),
+                        }}
+                      />
+                    </div>
+                    <span className="w-12 shrink-0 text-right text-xs text-muted-foreground">
+                      {formatSeconds(g.seconds)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Backlog */}
+          {(backlog.length > 0 || isOwnProfile) && (
+            <div className="mb-6">
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                {t("profile_backlog")}
+              </h2>
+              {backlog.length > 0 ? (
+                <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+                  {backlog.map((g) => (
+                    <Link key={g.igdbId} to={`/game/${g.igdbId}`} className="group block">
+                      {g.coverUrl ? (
+                        <img
+                          src={g.coverUrl}
+                          alt={g.name}
+                          className="mb-2 aspect-[3/4] w-full rounded-md object-cover transition-opacity group-hover:opacity-80"
+                        />
+                      ) : (
+                        <div className="mb-2 flex aspect-[3/4] w-full items-center justify-center rounded-md bg-muted transition-opacity group-hover:opacity-80">
+                          <span className="px-1 text-center text-xs text-muted-foreground">{g.name}</span>
+                        </div>
+                      )}
+                      <p className="truncate text-xs font-medium group-hover:underline" title={g.name}>
+                        {g.name}
+                      </p>
+                      {g.releaseYear && (
+                        <p className="text-xs text-muted-foreground">{g.releaseYear}</p>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
+                  {t("profile_backlog_empty_you")}{" "}
+                  <Link to="/backlog" className="text-primary underline-offset-2 hover:underline">
+                    {t("nav_backlog")}
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Activity */}
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            {sectionTitle}
+          </h2>
+
+          <ActivityFeed
+            items={items}
+            viewerId={viewerId}
+            emptyState={
+              <div className="rounded-lg border border-border bg-card px-4 py-12 text-center text-sm text-muted-foreground">
+                {t("profile_no_activity")}
+              </div>
+            }
+          />
+          {activityFooter}
+        </>
       )}
-
-      {/* Activity */}
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-        {sectionTitle}
-      </h2>
-
-      <ActivityFeed
-        items={items}
-        viewerId={viewerId}
-        emptyState={
-          <div className="rounded-lg border border-border bg-card px-4 py-12 text-center text-sm text-muted-foreground">
-            {t("profile_no_activity")}
-          </div>
-        }
-      />
-      {activityFooter}
 
       <div className="h-8" />
 

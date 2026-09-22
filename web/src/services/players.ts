@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Juan Medina
 // SPDX-License-Identifier: MIT
 
-import type { Player, PlayerProfile } from "@/models/player";
+import type { Player, PlayerProfile, ProfileGame } from "@/models/player";
 import { API_BASE, apiFetch } from "@/lib/api";
 
 type RawPlayer = {
@@ -168,6 +168,48 @@ export async function searchPlayers(query: string): Promise<Player[]> {
   if (!resp.ok) return [];
   const data: { players: RawPlayer[] } = await resp.json();
   return (data.players ?? []).map(rawToPlayer);
+}
+
+export async function getPlayerGames(
+  playerId: string,
+  limit = 20,
+  cursor?: string,
+  q?: string,
+  genre?: string,
+): Promise<{ games: ProfileGame[]; nextCursor?: string }> {
+  const url = new URL(`${API_BASE}/api/players/${playerId}/games`);
+  url.searchParams.set("limit", limit.toString());
+  if (cursor) url.searchParams.set("cursor", cursor);
+  if (q) url.searchParams.set("q", q);
+  if (genre) url.searchParams.set("genre", genre);
+
+  const resp = await apiFetch(url.toString(), { credentials: "include" });
+  if (!resp.ok) throw new Error(`get player games: ${resp.status}`);
+  const data: {
+    data: {
+      igdb_id: number;
+      name: string;
+      cover_url?: string;
+      release_year?: number;
+      genres: string[];
+      last_played: string;
+      seconds_played: number;
+    }[];
+    cursor?: string;
+  } = await resp.json();
+
+  return {
+    games: (data.data ?? []).map((g) => ({
+      igdbId: g.igdb_id,
+      name: g.name,
+      coverUrl: g.cover_url,
+      releaseYear: g.release_year,
+      genres: g.genres ?? [],
+      lastPlayed: new Date(g.last_played),
+      secondsPlayed: g.seconds_played,
+    })),
+    nextCursor: data.cursor,
+  };
 }
 
 export function _reset(): void {}
