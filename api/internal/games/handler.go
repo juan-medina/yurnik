@@ -231,10 +231,11 @@ func (h *Handler) journeys(w http.ResponseWriter, r *http.Request) {
 		IsSelf      bool    `json:"is_self"`
 	}
 	type entryResp struct {
-		JourneyID       string     `json:"journey_id"`
-		Player          playerResp `json:"player"`
-		DurationSeconds int        `json:"duration_seconds"`
-		PlayedAt        string     `json:"played_at"`
+		JourneyID            string     `json:"journey_id"`
+		Player               playerResp `json:"player"`
+		DurationSeconds      int        `json:"duration_seconds"`
+		TotalDurationSeconds int        `json:"total_duration_seconds"`
+		PlayedAt             string     `json:"played_at"`
 	}
 
 	entries := make([]entryResp, 0, len(players))
@@ -250,8 +251,9 @@ func (h *Handler) journeys(w http.ResponseWriter, r *http.Request) {
 				IsFollowing: followingIDs[p.UserID],
 				IsSelf:      authed && p.UserID == callerID,
 			},
-			DurationSeconds: p.DurationSeconds,
-			PlayedAt:        p.PlayedAt.Format(db.DateFormat),
+			DurationSeconds:      p.DurationSeconds,
+			TotalDurationSeconds: p.TotalDurationSeconds,
+			PlayedAt:             p.PlayedAt.Format(db.DateFormat),
 		})
 	}
 
@@ -345,11 +347,12 @@ func (h *Handler) activity(w http.ResponseWriter, r *http.Request) {
 		Color     string  `json:"color"`
 	}
 	type entryResp struct {
-		SessionID       string     `json:"session_id"`
-		Player          playerResp `json:"player"`
-		DurationSeconds int        `json:"duration_seconds"`
-		PlayedAt        string     `json:"played_at"`
-		Log             *string    `json:"log,omitempty"`
+		SessionID            string     `json:"session_id"`
+		Player               playerResp `json:"player"`
+		DurationSeconds      int        `json:"duration_seconds"`
+		TotalDurationSeconds int        `json:"total_duration_seconds"`
+		PlayedAt             string     `json:"played_at"`
+		Log                  *string    `json:"log,omitempty"`
 	}
 	type gameResp struct {
 		ID          string      `json:"id"`
@@ -389,9 +392,10 @@ func (h *Handler) activity(w http.ResponseWriter, r *http.Request) {
 				AvatarURL: e.PlayerAvatarURL,
 				Color:     e.PlayerColor,
 			},
-			DurationSeconds: e.DurationSeconds,
-			PlayedAt:        e.PlayedAt.Format(db.DateFormat),
-			Log:             e.Log,
+			DurationSeconds:      e.DurationSeconds,
+			TotalDurationSeconds: e.TotalDurationSeconds,
+			PlayedAt:             e.PlayedAt.Format(db.DateFormat),
+			Log:                  e.Log,
 		})
 	}
 

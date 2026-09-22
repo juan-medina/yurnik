@@ -21,6 +21,7 @@ type RawJourneyEntry = {
   genres: string[];
   release_year?: number;
   duration_seconds: number;
+  total_duration_seconds?: number;
   log?: string;
   played_at: string;
   player: RawPlayer;
@@ -78,6 +79,7 @@ function toFeedItem(item: RawFeedItem): FeedItem {
       genres: j.genres,
       releaseYear: j.release_year,
       duration: formatDuration(j.duration_seconds),
+      totalDurationSeconds: j.total_duration_seconds,
       playedAt: parseLocalDate(j.played_at),
       log: j.log,
     },

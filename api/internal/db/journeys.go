@@ -118,12 +118,13 @@ type Journey struct {
 	CoverURL        *string
 	Genres          []string
 	ReleaseYear     *int
-	StartedAt       time.Time
-	EndedAt         time.Time
-	DurationSeconds int
-	Log             *string
-	PlayedAt        time.Time
-	CreatedAt       time.Time
+	StartedAt            time.Time
+	EndedAt              time.Time
+	DurationSeconds      int
+	TotalDurationSeconds int
+	Log                  *string
+	PlayedAt             time.Time
+	CreatedAt            time.Time
 }
 
 // UpsertPendingJourney creates, deduplicates, or extends a pending journey atomically.
@@ -288,15 +289,16 @@ type JourneyWithPlayer struct {
 	GameName        string
 	CoverURL        *string
 	Genres          []string
-	ReleaseYear     *int
-	DurationSeconds int
-	Log             *string
-	PlayedAt        time.Time
-	CreatedAt       time.Time
-	PlayerHandle    string
-	PlayerName      string
-	PlayerAvatarURL *string
-	PlayerColor     string
+	ReleaseYear          *int
+	DurationSeconds      int
+	TotalDurationSeconds int
+	Log                  *string
+	PlayedAt             time.Time
+	CreatedAt            time.Time
+	PlayerHandle         string
+	PlayerName           string
+	PlayerAvatarURL      *string
+	PlayerColor          string
 }
 
 // GetJourneyByID returns a single confirmed journey by ID, joined with igdb_games and users.
@@ -304,14 +306,16 @@ func GetJourneyByID(ctx context.Context, pool *pgxpool.Pool, id string) (Journey
 	var j JourneyWithPlayer
 	err := pool.QueryRow(ctx, `
 		SELECT j.id, j.user_id, j.igdb_id, g.name, g.cover_url, g.genres, g.release_year,
-		       j.duration_seconds, j.log, j.played_at,
+		       j.duration_seconds,
+		       COALESCE((SELECT SUM(duration_seconds) FROM journeys WHERE user_id = j.user_id AND igdb_id = j.igdb_id), j.duration_seconds),
+		       j.log, j.played_at,
 		       u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.color
 		FROM journeys j
 		JOIN igdb_games g ON g.igdb_id = j.igdb_id
 		JOIN users u ON u.id = j.user_id
 		WHERE j.id = $1`, id).Scan(
 		&j.ID, &j.UserID, &j.IGDBID, &j.GameName, &j.CoverURL, &j.Genres, &j.ReleaseYear,
-		&j.DurationSeconds, &j.Log, &j.PlayedAt,
+		&j.DurationSeconds, &j.TotalDurationSeconds, &j.Log, &j.PlayedAt,
 		&j.PlayerHandle, &j.PlayerName, &j.PlayerAvatarURL, &j.PlayerColor,
 	)
 	if err == pgx.ErrNoRows {
@@ -322,15 +326,16 @@ func GetJourneyByID(ctx context.Context, pool *pgxpool.Pool, id string) (Journey
 
 // PlayerOnJourney is a player who has a journey for the same game as another journey.
 type PlayerOnJourney struct {
-	JourneyID       string
-	DurationSeconds int
-	PlayedAt        time.Time
-	CreatedAt       time.Time
-	UserID          string
-	Handle          string
-	Name            string
-	AvatarURL       *string
-	Color           string
+	JourneyID            string
+	DurationSeconds      int
+	TotalDurationSeconds int
+	PlayedAt             time.Time
+	CreatedAt            time.Time
+	UserID               string
+	Handle               string
+	Name                 string
+	AvatarURL            *string
+	Color                string
 }
 
 // ListOthersOnJourney returns players who have journeys for the same IGDB game as
@@ -338,7 +343,9 @@ type PlayerOnJourney struct {
 func ListOthersOnJourney(ctx context.Context, pool *pgxpool.Pool, journeyID string) ([]PlayerOnJourney, error) {
 	rows, err := pool.Query(ctx, `
 		WITH src AS (SELECT igdb_id, user_id FROM journeys WHERE id = $1)
-		SELECT j.id, j.duration_seconds, j.played_at, j.created_at,
+		SELECT j.id, j.duration_seconds,
+		       COALESCE((SELECT SUM(duration_seconds) FROM journeys WHERE user_id = j.user_id AND igdb_id = j.igdb_id), j.duration_seconds),
+		       j.played_at, j.created_at,
 		       u.id, u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.color
 		FROM journeys j
 		JOIN users u ON u.id = j.user_id
@@ -355,7 +362,7 @@ func ListOthersOnJourney(ctx context.Context, pool *pgxpool.Pool, journeyID stri
 	for rows.Next() {
 		var p PlayerOnJourney
 		if err := rows.Scan(
-			&p.JourneyID, &p.DurationSeconds, &p.PlayedAt, &p.CreatedAt,
+			&p.JourneyID, &p.DurationSeconds, &p.TotalDurationSeconds, &p.PlayedAt, &p.CreatedAt,
 			&p.UserID, &p.Handle, &p.Name, &p.AvatarURL, &p.Color,
 		); err != nil {
 			return nil, err
@@ -374,7 +381,9 @@ func ListJourneysByIGDBID(ctx context.Context, pool *pgxpool.Pool, igdbID, limit
 
 	if cursor == "" {
 		rows, err = pool.Query(ctx, `
-			SELECT j.id, j.duration_seconds, j.played_at, j.created_at,
+			SELECT j.id, j.duration_seconds,
+			       COALESCE((SELECT SUM(duration_seconds) FROM journeys WHERE user_id = j.user_id AND igdb_id = j.igdb_id), j.duration_seconds),
+			       j.played_at, j.created_at,
 			       u.id, u.handle, COALESCE(u.display_name, u.name),
 			       COALESCE(u.custom_avatar_url, u.avatar_url), u.color
 			FROM journeys j
@@ -389,7 +398,9 @@ func ListJourneysByIGDBID(ctx context.Context, pool *pgxpool.Pool, igdbID, limit
 			return nil, err2
 		}
 		rows, err = pool.Query(ctx, `
-			SELECT j.id, j.duration_seconds, j.played_at, j.created_at,
+			SELECT j.id, j.duration_seconds,
+			       COALESCE((SELECT SUM(duration_seconds) FROM journeys WHERE user_id = j.user_id AND igdb_id = j.igdb_id), j.duration_seconds),
+			       j.played_at, j.created_at,
 			       u.id, u.handle, COALESCE(u.display_name, u.name),
 			       COALESCE(u.custom_avatar_url, u.avatar_url), u.color
 			FROM journeys j
@@ -408,7 +419,7 @@ func ListJourneysByIGDBID(ctx context.Context, pool *pgxpool.Pool, igdbID, limit
 	for rows.Next() {
 		var p PlayerOnJourney
 		if err := rows.Scan(
-			&p.JourneyID, &p.DurationSeconds, &p.PlayedAt, &p.CreatedAt,
+			&p.JourneyID, &p.DurationSeconds, &p.TotalDurationSeconds, &p.PlayedAt, &p.CreatedAt,
 			&p.UserID, &p.Handle, &p.Name, &p.AvatarURL, &p.Color,
 		); err != nil {
 			return nil, err
@@ -420,20 +431,21 @@ func ListJourneysByIGDBID(ctx context.Context, pool *pgxpool.Pool, igdbID, limit
 
 // ActivityEntry is a single journey row for the discovery feed, joined with game and player info.
 type ActivityEntry struct {
-	SessionID       string
-	UserID          string
-	IGDBID          int
-	GameName        string
-	CoverURL        *string
-	Genres          []string
-	ReleaseYear     *int
-	DurationSeconds int
-	Log             *string
-	PlayedAt        time.Time
-	PlayerHandle    string
-	PlayerName      string
-	PlayerAvatarURL *string
-	PlayerColor     string
+	SessionID            string
+	UserID               string
+	IGDBID               int
+	GameName             string
+	CoverURL             *string
+	Genres               []string
+	ReleaseYear          *int
+	DurationSeconds      int
+	TotalDurationSeconds int
+	Log                  *string
+	PlayedAt             time.Time
+	PlayerHandle         string
+	PlayerName           string
+	PlayerAvatarURL      *string
+	PlayerColor          string
 }
 
 // GetGameActivity returns the diversity-capped discovery feed: at most 12 games ranked
@@ -442,7 +454,9 @@ func GetGameActivity(ctx context.Context, pool *pgxpool.Pool) ([]ActivityEntry, 
 	rows, err := pool.Query(ctx, `
 		WITH latest_per_player_game AS (
 			SELECT DISTINCT ON (j.user_id, j.igdb_id)
-				j.id, j.user_id, j.igdb_id, j.duration_seconds, j.log, j.played_at, j.created_at,
+				j.id, j.user_id, j.igdb_id, j.duration_seconds,
+				COALESCE((SELECT SUM(duration_seconds) FROM journeys WHERE user_id = j.user_id AND igdb_id = j.igdb_id), j.duration_seconds) AS total_duration_seconds,
+				j.log, j.played_at, j.created_at,
 				g.name AS game_name, g.cover_url, g.genres, g.release_year,
 				u.handle, COALESCE(u.display_name, u.name) AS player_name, COALESCE(u.custom_avatar_url, u.avatar_url) AS avatar_url, u.color
 			FROM journeys j
@@ -462,7 +476,7 @@ func GetGameActivity(ctx context.Context, pool *pgxpool.Pool) ([]ActivityEntry, 
 			LIMIT 12
 		),
 		ranked_entries AS (
-			SELECT l.id, l.user_id, l.igdb_id, l.duration_seconds, l.log, l.played_at, l.created_at,
+			SELECT l.id, l.user_id, l.igdb_id, l.duration_seconds, l.total_duration_seconds, l.log, l.played_at, l.created_at,
 			       l.game_name, l.cover_url, l.genres, l.release_year,
 			       l.handle, l.player_name, l.avatar_url, l.color,
 			       t.game_rank,
@@ -471,7 +485,7 @@ func GetGameActivity(ctx context.Context, pool *pgxpool.Pool) ([]ActivityEntry, 
 			JOIN top_games t ON t.igdb_id = l.igdb_id
 		)
 		SELECT id, user_id, igdb_id, game_name, cover_url, genres, release_year,
-		       duration_seconds, log, played_at,
+		       duration_seconds, total_duration_seconds, log, played_at,
 		       handle, player_name, avatar_url, color
 		FROM ranked_entries
 		WHERE entry_rank <= 4
@@ -487,7 +501,7 @@ func GetGameActivity(ctx context.Context, pool *pgxpool.Pool) ([]ActivityEntry, 
 		var e ActivityEntry
 		if err := rows.Scan(
 			&e.SessionID, &e.UserID, &e.IGDBID, &e.GameName, &e.CoverURL, &e.Genres, &e.ReleaseYear,
-			&e.DurationSeconds, &e.Log, &e.PlayedAt,
+			&e.DurationSeconds, &e.TotalDurationSeconds, &e.Log, &e.PlayedAt,
 			&e.PlayerHandle, &e.PlayerName, &e.PlayerAvatarURL, &e.PlayerColor,
 		); err != nil {
 			return nil, err
@@ -504,7 +518,9 @@ func GetGameActivity(ctx context.Context, pool *pgxpool.Pool) ([]ActivityEntry, 
 func GetFollowingFeed(ctx context.Context, pool *pgxpool.Pool, userID string, limit int, cursor string) ([]JourneyWithPlayer, error) {
 	const cols = `
 		j.id, j.user_id, j.igdb_id, g.name, g.cover_url, g.genres, g.release_year,
-		j.duration_seconds, j.log, j.played_at, j.created_at,
+		j.duration_seconds,
+		COALESCE((SELECT SUM(duration_seconds) FROM journeys WHERE user_id = j.user_id AND igdb_id = j.igdb_id), j.duration_seconds),
+		j.log, j.played_at, j.created_at,
 		u.handle, COALESCE(u.display_name, u.name), COALESCE(u.custom_avatar_url, u.avatar_url), u.color`
 
 	var rows pgx.Rows
@@ -547,7 +563,7 @@ func GetFollowingFeed(ctx context.Context, pool *pgxpool.Pool, userID string, li
 		var j JourneyWithPlayer
 		if err := rows.Scan(
 			&j.ID, &j.UserID, &j.IGDBID, &j.GameName, &j.CoverURL, &j.Genres, &j.ReleaseYear,
-			&j.DurationSeconds, &j.Log, &j.PlayedAt, &j.CreatedAt,
+			&j.DurationSeconds, &j.TotalDurationSeconds, &j.Log, &j.PlayedAt, &j.CreatedAt,
 			&j.PlayerHandle, &j.PlayerName, &j.PlayerAvatarURL, &j.PlayerColor,
 		); err != nil {
 			return nil, err
@@ -755,7 +771,9 @@ func DeleteComment(ctx context.Context, pool *pgxpool.Pool, commentID, userID st
 func ListJourneysByUser(ctx context.Context, pool *pgxpool.Pool, userID string, limit int, cursor string) ([]Journey, error) {
 	const query = `
 		SELECT j.id, j.user_id, j.igdb_id, g.name, g.cover_url, g.genres, g.release_year,
-		       j.started_at, j.ended_at, j.duration_seconds, j.log, j.played_at, j.created_at
+		       j.started_at, j.ended_at, j.duration_seconds,
+		       COALESCE((SELECT SUM(duration_seconds) FROM journeys WHERE user_id = j.user_id AND igdb_id = j.igdb_id), j.duration_seconds),
+		       j.log, j.played_at, j.created_at
 		FROM journeys j
 		JOIN igdb_games g ON g.igdb_id = j.igdb_id`
 
@@ -785,7 +803,7 @@ func ListJourneysByUser(ctx context.Context, pool *pgxpool.Pool, userID string, 
 		var j Journey
 		if err := rows.Scan(
 			&j.ID, &j.UserID, &j.IGDBID, &j.GameName, &j.CoverURL, &j.Genres, &j.ReleaseYear,
-			&j.StartedAt, &j.EndedAt, &j.DurationSeconds,
+			&j.StartedAt, &j.EndedAt, &j.DurationSeconds, &j.TotalDurationSeconds,
 			&j.Log, &j.PlayedAt, &j.CreatedAt,
 		); err != nil {
 			return nil, err

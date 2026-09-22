@@ -15,6 +15,7 @@ type RawJourneyDetail = {
   genres: string[];
   release_year?: number;
   duration_seconds: number;
+  total_duration_seconds?: number;
   log?: string;
   played_at: string;
   player: {
@@ -49,6 +50,7 @@ type RawJourney = {
   release_year?: number;
   played_at: string;
   duration_seconds: number;
+  total_duration_seconds?: number;
   log?: string;
 };
 
@@ -69,6 +71,7 @@ export async function getUserJourneys(cursor?: string): Promise<{ journeys: Jour
       genres: j.genres,
       releaseYear: j.release_year,
       duration: formatDuration(j.duration_seconds ?? 0),
+      totalDurationSeconds: j.total_duration_seconds,
       playedAt: parseLocalDate(j.played_at),
       log: j.log,
     })),
@@ -219,6 +222,7 @@ export async function getJourney(id: string): Promise<Journey | undefined> {
     genres: j.genres,
     releaseYear: j.release_year,
     duration: formatDuration(j.duration_seconds),
+    totalDurationSeconds: j.total_duration_seconds,
     playedAt: parseLocalDate(j.played_at),
     log: j.log,
   };
@@ -266,6 +270,7 @@ export async function getJourneyPlayers(journeyId: string): Promise<{
       journey_id: string;
       player: { id: string; handle: string; name: string; avatar_url?: string; color: string; is_following: boolean };
       duration_seconds: number;
+      total_duration_seconds?: number;
       played_at: string;
     }[];
   } = await resp.json();
@@ -279,6 +284,7 @@ export async function getJourneyPlayers(journeyId: string): Promise<{
       color: p.player.color,
     },
     duration: formatDuration(p.duration_seconds),
+    totalDurationSeconds: p.total_duration_seconds,
     playedAt: parseLocalDate(p.played_at),
     isFollowing: p.player.is_following,
     isSelf: false,

@@ -19,7 +19,7 @@ import { useCooldown } from "@/hooks/useCooldown";
 import { RateLimitedError } from "@/lib/api";
 import { JourneyForm } from "@/components/JourneyForm";
 import { LimitedTextarea } from "@/components/LimitedTextarea";
-import { formatCommentAge, formatJourneyDate } from "@/lib/time";
+import { formatCommentAge, formatDuration, formatJourneyDate } from "@/lib/time";
 import type { Comment, JourneyPlayer } from "@/models";
 import { renderCommentText } from "@/lib/mentions";
 
@@ -51,6 +51,11 @@ function JourneyPlayerRow({ entry, currentPlayerId }: { entry: JourneyPlayer; cu
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Clock size={11} />
             <span>{entry.duration}</span>
+            {entry.totalDurationSeconds !== undefined && (
+              <span className="text-muted-foreground/75">
+                ({t("journey_total_playtime", { total: formatDuration(entry.totalDurationSeconds) })})
+              </span>
+            )}
             <span className="mx-1 opacity-40">·</span>
             <span>{formatJourneyDate(entry.playedAt)}</span>
           </div>
@@ -470,6 +475,11 @@ export default function JourneyDetail() {
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <Clock size={13} />
                   <span>{journey.duration}</span>
+                  {journey.totalDurationSeconds !== undefined && (
+                    <span className="text-muted-foreground/75">
+                      ({t("journey_total_playtime", { total: formatDuration(journey.totalDurationSeconds) })})
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

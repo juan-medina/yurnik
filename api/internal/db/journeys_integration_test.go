@@ -445,3 +445,87 @@ func TestUpsertPendingJourney_DoubleSubmit(t *testing.T) {
 		t.Fatalf("expected journey ID to match the first insert")
 	}
 }
+
+func TestJourneys_TotalDurationSeconds(t *testing.T) {
+	pool := connectTestDB(t)
+	ctx := context.Background()
+	userID := createTestUser(t, pool)
+
+	igdbID := 90901
+	_, err := pool.Exec(ctx, `
+		INSERT INTO igdb_games (igdb_id, name) VALUES ($1, 'Total Duration Game')
+		ON CONFLICT (igdb_id) DO NOTHING
+	`, igdbID)
+	if err != nil {
+		t.Fatalf("insert igdb_games: %v", err)
+	}
+	t.Cleanup(func() { pool.Exec(ctx, "DELETE FROM igdb_games WHERE igdb_id = $1", igdbID) })
+
+	t1 := time.Date(2026, 6, 1, 10, 0, 0, 0, time.UTC)
+	t2 := time.Date(2026, 6, 2, 10, 0, 0, 0, time.UTC)
+
+	j1, err := db.InsertJourney(ctx, pool, db.Journey{
+		UserID:          userID,
+		IGDBID:          igdbID,
+		StartedAt:       t1,
+		EndedAt:         t1.Add(3600 * time.Second),
+		DurationSeconds: 3600,
+		PlayedAt:        t1,
+	})
+	if err != nil {
+		t.Fatalf("insert journey 1: %v", err)
+	}
+
+	j2, err := db.InsertJourney(ctx, pool, db.Journey{
+		UserID:          userID,
+		IGDBID:          igdbID,
+		StartedAt:       t2,
+		EndedAt:         t2.Add(1800 * time.Second),
+		DurationSeconds: 1800,
+		PlayedAt:        t2,
+	})
+	if err != nil {
+		t.Fatalf("insert journey 2: %v", err)
+	}
+
+	// 1. GetJourneyByID
+	gotJ1, err := db.GetJourneyByID(ctx, pool, j1)
+	if err != nil {
+		t.Fatalf("get journey 1: %v", err)
+	}
+	if gotJ1.DurationSeconds != 3600 {
+		t.Errorf("expected session duration 3600, got %d", gotJ1.DurationSeconds)
+	}
+	if gotJ1.TotalDurationSeconds != 5400 {
+		t.Errorf("expected total duration 5400, got %d", gotJ1.TotalDurationSeconds)
+	}
+
+	// 2. ListJourneysByUser
+	userJourneys, err := db.ListJourneysByUser(ctx, pool, userID, 10, "")
+	if err != nil {
+		t.Fatalf("list journeys by user: %v", err)
+	}
+	if len(userJourneys) != 2 {
+		t.Fatalf("expected 2 journeys, got %d", len(userJourneys))
+	}
+	for _, uj := range userJourneys {
+		if uj.TotalDurationSeconds != 5400 {
+			t.Errorf("journey %s: expected total duration 5400, got %d", uj.ID, uj.TotalDurationSeconds)
+		}
+	}
+
+	// 3. ListJourneysByIGDBID
+	gameJourneys, err := db.ListJourneysByIGDBID(ctx, pool, igdbID, 10, "")
+	if err != nil {
+		t.Fatalf("list journeys by igdb: %v", err)
+	}
+	if len(gameJourneys) != 2 {
+		t.Fatalf("expected 2 game journeys, got %d", len(gameJourneys))
+	}
+	for _, gj := range gameJourneys {
+		if gj.TotalDurationSeconds != 5400 {
+			t.Errorf("game journey %s: expected total duration 5400, got %d", gj.JourneyID, gj.TotalDurationSeconds)
+		}
+	}
+	_ = j2
+}

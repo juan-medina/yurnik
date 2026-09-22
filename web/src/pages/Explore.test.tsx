@@ -79,4 +79,10 @@ describe("Explore", () => {
     await user.type(screen.getByPlaceholderText("Search by game or genre…"), "xyznothing");
     expect(screen.getByText("No games match your search.")).toBeInTheDocument();
   });
+
+  it("displays total playtime alongside session duration in journey rows", async () => {
+    renderExplore();
+    await screen.findByText(MOCK_GAME_ACTIVITY[0].game);
+    expect(await screen.findAllByText("(2h total)")).not.toHaveLength(0);
+  });
 });

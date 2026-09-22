@@ -12,6 +12,7 @@ export type Journey = {
   genres: string[];
   releaseYear?: number;
   duration: string;
+  totalDurationSeconds?: number;
   playedAt: Date;
   log?: string;
 };

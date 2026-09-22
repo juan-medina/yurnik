@@ -415,17 +415,18 @@ type pendingResponse struct {
 
 // journeyResponse is the JSON shape for a confirmed journey.
 type journeyResponse struct {
-	ID              string   `json:"id"`
-	IGDBID          int      `json:"igdb_id"`
-	GameTitle       string   `json:"game"`
-	CoverURL        *string  `json:"cover_url,omitempty"`
-	Genres          []string `json:"genres"`
-	ReleaseYear     *int     `json:"release_year,omitempty"`
-	StartedAt       string   `json:"started_at"`
-	EndedAt         string   `json:"ended_at"`
-	DurationSeconds int      `json:"duration_seconds"`
-	Log             *string  `json:"log,omitempty"`
-	PlayedAt        string   `json:"played_at"`
+	ID                   string   `json:"id"`
+	IGDBID               int      `json:"igdb_id"`
+	GameTitle            string   `json:"game"`
+	CoverURL             *string  `json:"cover_url,omitempty"`
+	Genres               []string `json:"genres"`
+	ReleaseYear          *int     `json:"release_year,omitempty"`
+	StartedAt            string   `json:"started_at"`
+	EndedAt              string   `json:"ended_at"`
+	DurationSeconds      int      `json:"duration_seconds"`
+	TotalDurationSeconds int      `json:"total_duration_seconds"`
+	Log                  *string  `json:"log,omitempty"`
+	PlayedAt             string   `json:"played_at"`
 }
 
 func (h *Handler) listPending(w http.ResponseWriter, r *http.Request) {
@@ -800,17 +801,18 @@ func (h *Handler) listMine(w http.ResponseWriter, r *http.Request) {
 	resp := make([]journeyResponse, 0, len(journeys))
 	for _, j := range journeys {
 		item := journeyResponse{
-			ID:              j.ID,
-			IGDBID:          j.IGDBID,
-			GameTitle:       j.GameName,
-			CoverURL:        j.CoverURL,
-			Genres:          j.Genres,
-			ReleaseYear:     j.ReleaseYear,
-			StartedAt:       j.StartedAt.UTC().Format(time.RFC3339),
-			EndedAt:         j.EndedAt.UTC().Format(time.RFC3339),
-			DurationSeconds: j.DurationSeconds,
-			Log:             j.Log,
-			PlayedAt:        j.PlayedAt.Format(db.DateFormat),
+			ID:                   j.ID,
+			IGDBID:               j.IGDBID,
+			GameTitle:            j.GameName,
+			CoverURL:             j.CoverURL,
+			Genres:               j.Genres,
+			ReleaseYear:          j.ReleaseYear,
+			StartedAt:            j.StartedAt.UTC().Format(time.RFC3339),
+			EndedAt:              j.EndedAt.UTC().Format(time.RFC3339),
+			DurationSeconds:      j.DurationSeconds,
+			TotalDurationSeconds: j.TotalDurationSeconds,
+			Log:                  j.Log,
+			PlayedAt:             j.PlayedAt.Format(db.DateFormat),
 		}
 		resp = append(resp, item)
 	}
@@ -858,17 +860,18 @@ func (h *Handler) listByPlayer(w http.ResponseWriter, r *http.Request) {
 	resp := make([]journeyResponse, 0, len(journeys))
 	for _, j := range journeys {
 		item := journeyResponse{
-			ID:              j.ID,
-			IGDBID:          j.IGDBID,
-			GameTitle:       j.GameName,
-			CoverURL:        j.CoverURL,
-			Genres:          j.Genres,
-			ReleaseYear:     j.ReleaseYear,
-			StartedAt:       j.StartedAt.UTC().Format(time.RFC3339),
-			EndedAt:         j.EndedAt.UTC().Format(time.RFC3339),
-			DurationSeconds: j.DurationSeconds,
-			Log:             j.Log,
-			PlayedAt:        j.PlayedAt.Format(db.DateFormat),
+			ID:                   j.ID,
+			IGDBID:               j.IGDBID,
+			GameTitle:            j.GameName,
+			CoverURL:             j.CoverURL,
+			Genres:               j.Genres,
+			ReleaseYear:          j.ReleaseYear,
+			StartedAt:            j.StartedAt.UTC().Format(time.RFC3339),
+			EndedAt:              j.EndedAt.UTC().Format(time.RFC3339),
+			DurationSeconds:      j.DurationSeconds,
+			TotalDurationSeconds: j.TotalDurationSeconds,
+			Log:                  j.Log,
+			PlayedAt:             j.PlayedAt.Format(db.DateFormat),
 		}
 		resp = append(resp, item)
 	}

@@ -11,7 +11,7 @@ import PlayerAvatar from "@/components/PlayerAvatar";
 import { cn } from "@/lib/utils";
 import { genreColor } from "@/lib/genres";
 import GenreChip from "@/components/GenreChip";
-import { formatJourneyDate } from "@/lib/time";
+import { formatDuration, formatJourneyDate } from "@/lib/time";
 import type { GameActivity, JourneyEntry } from "@/models";
 
 function GameCover({ id, game, coverUrl }: { id: string; game: string; coverUrl?: string }) {
@@ -30,6 +30,7 @@ function GameCover({ id, game, coverUrl }: { id: string; game: string; coverUrl?
 
 function JourneyRow({ entry }: { entry: JourneyEntry }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   return (
     <div
       className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/5"
@@ -52,6 +53,11 @@ function JourneyRow({ entry }: { entry: JourneyEntry }) {
       <div className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
         <Clock size={11} />
         <span>{entry.duration}</span>
+        {entry.totalDurationSeconds !== undefined && (
+          <span className="text-muted-foreground/75">
+            ({t("journey_total_playtime", { total: formatDuration(entry.totalDurationSeconds) })})
+          </span>
+        )}
         <span className="ml-1.5">{formatJourneyDate(entry.playedAt)}</span>
       </div>
     </div>

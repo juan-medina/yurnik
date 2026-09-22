@@ -304,16 +304,17 @@ type playerResp struct {
 }
 
 type feedEntry struct {
-	ID              string     `json:"id"`
-	IGDBID          int        `json:"igdb_id"`
-	GameTitle       string     `json:"game"`
-	CoverURL        *string    `json:"cover_url,omitempty"`
-	Genres          []string   `json:"genres"`
-	ReleaseYear     *int       `json:"release_year,omitempty"`
-	DurationSeconds int        `json:"duration_seconds"`
-	Log             *string    `json:"log,omitempty"`
-	PlayedAt        string     `json:"played_at"`
-	Player          playerResp `json:"player"`
+	ID                   string     `json:"id"`
+	IGDBID               int        `json:"igdb_id"`
+	GameTitle            string     `json:"game"`
+	CoverURL             *string    `json:"cover_url,omitempty"`
+	Genres               []string   `json:"genres"`
+	ReleaseYear          *int       `json:"release_year,omitempty"`
+	DurationSeconds      int        `json:"duration_seconds"`
+	TotalDurationSeconds int        `json:"total_duration_seconds"`
+	Log                  *string    `json:"log,omitempty"`
+	PlayedAt             string     `json:"played_at"`
+	Player               playerResp `json:"player"`
 }
 
 type activityResp struct {
@@ -335,15 +336,16 @@ type feedItem struct {
 
 func journeyToFeedEntry(j db.JourneyWithPlayer) feedEntry {
 	return feedEntry{
-		ID:              j.ID,
-		IGDBID:          j.IGDBID,
-		GameTitle:       j.GameName,
-		CoverURL:        j.CoverURL,
-		Genres:          j.Genres,
-		ReleaseYear:     j.ReleaseYear,
-		DurationSeconds: j.DurationSeconds,
-		Log:             j.Log,
-		PlayedAt:        j.PlayedAt.Format(db.DateFormat),
+		ID:                   j.ID,
+		IGDBID:               j.IGDBID,
+		GameTitle:            j.GameName,
+		CoverURL:             j.CoverURL,
+		Genres:               j.Genres,
+		ReleaseYear:          j.ReleaseYear,
+		DurationSeconds:      j.DurationSeconds,
+		TotalDurationSeconds: j.TotalDurationSeconds,
+		Log:                  j.Log,
+		PlayedAt:             j.PlayedAt.Format(db.DateFormat),
 		Player: playerResp{
 			ID:        j.UserID,
 			Handle:    j.PlayerHandle,
@@ -478,21 +480,22 @@ func (h *Handler) getFeed(w http.ResponseWriter, r *http.Request) {
 // for reuse with mergeFeedItems/journeyToFeedEntry.
 func journeyWithPlayer(j db.Journey, user db.User) db.JourneyWithPlayer {
 	return db.JourneyWithPlayer{
-		ID:              j.ID,
-		UserID:          j.UserID,
-		IGDBID:          j.IGDBID,
-		GameName:        j.GameName,
-		CoverURL:        j.CoverURL,
-		Genres:          j.Genres,
-		ReleaseYear:     j.ReleaseYear,
-		DurationSeconds: j.DurationSeconds,
-		Log:             j.Log,
-		PlayedAt:        j.PlayedAt,
-		CreatedAt:       j.CreatedAt,
-		PlayerHandle:    user.Handle,
-		PlayerName:      user.Name,
-		PlayerAvatarURL: user.AvatarURL,
-		PlayerColor:     user.Color,
+		ID:                   j.ID,
+		UserID:               j.UserID,
+		IGDBID:               j.IGDBID,
+		GameName:             j.GameName,
+		CoverURL:             j.CoverURL,
+		Genres:               j.Genres,
+		ReleaseYear:          j.ReleaseYear,
+		DurationSeconds:      j.DurationSeconds,
+		TotalDurationSeconds: j.TotalDurationSeconds,
+		Log:                  j.Log,
+		PlayedAt:             j.PlayedAt,
+		CreatedAt:            j.CreatedAt,
+		PlayerHandle:         user.Handle,
+		PlayerName:           user.Name,
+		PlayerAvatarURL:      user.AvatarURL,
+		PlayerColor:          user.Color,
 	}
 }
 

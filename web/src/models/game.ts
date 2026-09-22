@@ -36,6 +36,7 @@ export type JourneyEntry = {
   sessionId: string;
   player: Player;
   duration: string;
+  totalDurationSeconds?: number;
   playedAt: Date;
   log?: string;
 };
@@ -69,6 +70,7 @@ export type JourneyPlayer = {
   journeyId: string;
   player: Player;
   duration: string;
+  totalDurationSeconds?: number;
   playedAt: Date;
   isFollowing: boolean;
   isSelf: boolean;

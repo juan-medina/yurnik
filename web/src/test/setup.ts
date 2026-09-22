@@ -138,6 +138,7 @@ function makeDefaultFetch() {
                 color: e.player.color,
               },
               duration_seconds: 0,
+              total_duration_seconds: e.totalDurationSeconds ?? 7200,
               played_at: formatLocalDate(e.playedAt),
               log: e.log ?? null,
             })),

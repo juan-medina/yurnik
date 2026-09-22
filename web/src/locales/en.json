@@ -390,6 +390,7 @@
   "privacy_contact_body": "For privacy questions or to make a request about your data, contact privacy@yurnik.social.",
   "load_more": "Load more",
   "loading": "Loading…",
+  "journey_total_playtime": "{{total}} total",
   "whats_new_title": "What's New",
   "whats_new_entries": [
     {

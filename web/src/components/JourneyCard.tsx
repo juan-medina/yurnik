@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: MIT
 import { Link, useNavigate } from "react-router";
 import { Clock, Info } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { playerHref } from "@/lib/display";
 import PlayerAvatar from "@/components/PlayerAvatar";
-import { formatJourneyDate } from "@/lib/time";
+import { formatDuration, formatJourneyDate } from "@/lib/time";
 import type { Journey } from "@/models";
 import GenreChip from "@/components/GenreChip";
 
@@ -15,6 +16,7 @@ interface JourneyCardProps {
 
 export default function JourneyCard({ journey, showPlayer = false }: JourneyCardProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <article
@@ -77,6 +79,11 @@ export default function JourneyCard({ journey, showPlayer = false }: JourneyCard
         <div className="mb-2 flex items-center gap-1 text-xs text-muted-foreground">
           <Clock size={12} />
           <span>{journey.duration}</span>
+          {journey.totalDurationSeconds !== undefined && (
+            <span className="text-muted-foreground/75">
+              ({t("journey_total_playtime", { total: formatDuration(journey.totalDurationSeconds) })})
+            </span>
+          )}
         </div>
 
         {journey.log && (

@@ -17,6 +17,7 @@ type RawJourneyPlayer = {
     is_self: boolean;
   };
   duration_seconds: number;
+  total_duration_seconds?: number;
   played_at: string;
 };
 
@@ -74,6 +75,7 @@ export async function getGameJourneys(igdbId: string, cursor?: string): Promise<
       journeyId: p.journey_id,
       player: { id: p.player.id, handle: p.player.handle, name: p.player.name, avatarUrl: p.player.avatar_url, color: p.player.color },
       duration: formatDuration(p.duration_seconds),
+      totalDurationSeconds: p.total_duration_seconds,
       playedAt: parseLocalDate(p.played_at),
       isFollowing: p.player.is_following,
       isSelf: p.player.is_self,
@@ -120,6 +122,7 @@ export async function getGameActivity(): Promise<GameActivity[]> {
         session_id: string;
         player: { id: string; handle: string; name: string; avatar_url?: string; color: string };
         duration_seconds: number;
+        total_duration_seconds?: number;
         played_at: string;
         log?: string;
       }[];
@@ -141,6 +144,7 @@ export async function getGameActivity(): Promise<GameActivity[]> {
         color: e.player.color,
       },
       duration: formatDuration(e.duration_seconds),
+      totalDurationSeconds: e.total_duration_seconds,
       playedAt: parseLocalDate(e.played_at),
       log: e.log,
     })),

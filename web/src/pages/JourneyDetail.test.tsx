@@ -18,11 +18,13 @@ const initiallyFollowed = new Set(["p2", "p3", "p4"]);
 let followedIds: Set<string>;
 let mockComments: typeof MOCK_COMMENTS;
 
-function journeyResponse(j: typeof s1, igdbId: number, durationSeconds: number) {
+function journeyResponse(j: typeof s1, igdbId: number, durationSeconds: number, totalDurationSeconds?: number) {
   return JSON.stringify({
     id: j.id, igdb_id: igdbId, game: j.game,
     cover_url: j.coverUrl ?? null, genres: j.genres,
-    duration_seconds: durationSeconds, log: j.log ?? null,
+    duration_seconds: durationSeconds,
+    total_duration_seconds: totalDurationSeconds ?? durationSeconds,
+    log: j.log ?? null,
     played_at: formatLocalDate(j.playedAt),
     player: { id: j.player.id, handle: j.player.handle, name: j.player.name, avatar_url: null, color: j.player.color },
   });
@@ -295,5 +297,24 @@ describe("JourneyDetail", () => {
     );
 
     expect(await screen.findByText(MOCK_COMMENTS[0].text)).toBeInTheDocument();
+  });
+
+  it("displays total playtime when total_duration_seconds is present", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+      if (url.includes("/api/journeys/s1/players")) {
+        return new Response(JSON.stringify({ players: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      if (url.includes("/api/journeys/s1/comments")) {
+        return new Response(JSON.stringify({ comments: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      if (url.includes("/api/journeys/s1")) {
+        return new Response(journeyResponse(s1, 1, 3600, 18000), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      return new Response("not found", { status: 404 });
+    }));
+
+    renderJourney("s1");
+    expect(await screen.findByText("(5h total)")).toBeInTheDocument();
   });
 });
