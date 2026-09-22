@@ -49,7 +49,7 @@ supabase/.temp/
 # Other
 .*/
 
-# worflows
+# workflows
 !.github/
 !.github/workflows/
 !.github/workflows/**
