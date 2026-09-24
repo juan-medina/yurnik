@@ -31,6 +31,12 @@ static class Program
         // with the URL as the first argument. Forward it to the running instance
         // via the named pipe and exit — never start the full app in this case.
         var args = Environment.GetCommandLineArgs();
+        if (args.Contains("--smoke-test"))
+        {
+            ApplicationConfiguration.Initialize();
+            return;
+        }
+
         if (args.Length > 1 && args[1].StartsWith("yurnik://", StringComparison.OrdinalIgnoreCase))
         {
             UrlSchemeListener.TryForward(args[1]);

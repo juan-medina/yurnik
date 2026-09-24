@@ -107,6 +107,7 @@ make test                        # run every test suite below
 make test-api                    # Go unit tests for API
 make test-maintenance            # Go unit tests for maintenance binary
 make test-agent                  # .NET/xUnit tests (agent/)
+make smoke-test-agent            # smoke test for tray agent
 make test-web                    # Vitest tests (web/)
 make test-integration            # run all integration tests below
 make test-integration-api        # API tests against a real Postgres instance

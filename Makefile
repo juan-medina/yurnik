@@ -1,4 +1,4 @@
-.PHONY: run-api run-maintenance run-agent run-web test test-api test-maintenance test-agent test-web test-integration test-integration-api test-integration-maintenance build build-api build-maintenance build-web build-agent deploy-api deploy-maintenance deploy-web release-agent gen-keys export-user lint setup db-init db-migrate db-force db-start db-stop tidy audit audit-api audit-maintenance audit-agent audit-web
+.PHONY: run-api run-maintenance run-agent run-web test test-api test-maintenance test-agent test-web smoke-test-agent test-integration test-integration-api test-integration-maintenance build build-api build-maintenance build-web build-agent deploy-api deploy-maintenance deploy-web release-agent gen-keys export-user lint setup db-init db-migrate db-force db-start db-stop tidy audit audit-api audit-maintenance audit-agent audit-web
 
 ifeq ($(OS),Windows_NT)
 PLATFORM := windows
@@ -36,6 +36,13 @@ test-maintenance:
 
 test-agent:
 	cd agent && dotnet test Yurnik.sln
+
+smoke-test-agent:
+ifeq ($(PLATFORM),windows)
+	powershell -ExecutionPolicy Bypass -File scripts/smoke-test-agent.ps1
+else
+	@echo "Agent smoke test is Windows-only"
+endif
 
 test-web:
 	cd web && pnpm test --run
